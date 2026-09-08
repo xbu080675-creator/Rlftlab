@@ -34,7 +34,24 @@ data class ScheduledEsportsMatch(
 data class EsportsTeamRef(
     val id: String,
     val code: String,
-    val name: String
+    val name: String,
+    val slug: String = "",
+    val imageUrl: String = ""
+)
+
+data class EsportsPlayerRef(
+    val id: String,
+    val summonerName: String,
+    val role: String,
+    val imageUrl: String = ""
+)
+
+data class EsportsTeamDetails(
+    val id: String,
+    val slug: String,
+    val code: String,
+    val name: String,
+    val players: List<EsportsPlayerRef>
 )
 
 data class LivePlayerSnapshot(
