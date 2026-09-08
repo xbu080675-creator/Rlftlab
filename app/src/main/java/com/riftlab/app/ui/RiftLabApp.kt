@@ -188,6 +188,8 @@ private fun PreScreen() {
             }
         }
 
+        item { SideSelectionPrePanel() }
+
         item { SectionTitle("STARTING ROSTER / 首发") }
         items(data.blueRoster.zip(data.redRoster)) { pair -> RosterRow(pair.first, pair.second) }
         item {
