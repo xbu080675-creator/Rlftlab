@@ -227,7 +227,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 standings = selectedStandings,
                                 scheduleMatches = selectedBucket.matches,
                                 onTeamClick = { team ->
-                                    TeamDetailRepository.open(team, selectedBucket.matches)
+                                    TeamDetailRepository.open(team, center.matches)
                                     selectedTeam = team
                                 }
                             )
