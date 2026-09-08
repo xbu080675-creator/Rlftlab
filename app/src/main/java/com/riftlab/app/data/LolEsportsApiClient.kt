@@ -7,6 +7,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 import java.time.Instant
 import kotlin.math.max
 
@@ -35,10 +36,59 @@ internal data class LiveGameRef(
 
 internal class LolEsportsApiClient {
 
+    /**
+     * Riot getSchedule is paged. A single response is only a moving window around "now",
+     * so the schedule center follows both older/newer page tokens and de-duplicates events.
+     */
     suspend fun fetchLplSchedule(): List<ScheduledEsportsMatch> {
-        val root = getJson(
-            "${LolEsportsConfig.PERSISTED_BASE}/getSchedule?hl=en-US&leagueId=${LolEsportsConfig.LPL_LEAGUE_ID}"
-        )
+        val pages = mutableListOf<JSONObject>()
+        val visitedTokens = mutableSetOf<String>()
+
+        val center = fetchSchedulePage(null)
+        pages += center
+
+        var older = schedulePageToken(center, "older")
+        repeat(3) {
+            if (older.isBlank() || !visitedTokens.add("older:$older")) return@repeat
+            val page = fetchSchedulePage(older)
+            pages += page
+            older = schedulePageToken(page, "older")
+        }
+
+        var newer = schedulePageToken(center, "newer")
+        repeat(3) {
+            if (newer.isBlank() || !visitedTokens.add("newer:$newer")) return@repeat
+            val page = fetchSchedulePage(newer)
+            pages += page
+            newer = schedulePageToken(page, "newer")
+        }
+
+        return pages
+            .flatMap(::parseSchedulePage)
+            .distinctBy { it.eventId.ifBlank { it.matchId } }
+            .sortedWith(compareBy<ScheduledEsportsMatch> { parseInstant(it.startTimeIso) ?: Instant.MAX }
+                .thenBy { it.eventId })
+    }
+
+    private suspend fun fetchSchedulePage(pageToken: String?): JSONObject {
+        val url = buildString {
+            append("${LolEsportsConfig.PERSISTED_BASE}/getSchedule?hl=en-US")
+            append("&leagueId=${LolEsportsConfig.LPL_LEAGUE_ID}")
+            if (!pageToken.isNullOrBlank()) {
+                append("&pageToken=").append(URLEncoder.encode(pageToken, "UTF-8"))
+            }
+        }
+        return getJson(url)
+    }
+
+    private fun schedulePageToken(root: JSONObject, direction: String): String =
+        root.optJSONObject("data")
+            ?.optJSONObject("schedule")
+            ?.optJSONObject("pages")
+            ?.optString(direction)
+            .orEmpty()
+
+    private fun parseSchedulePage(root: JSONObject): List<ScheduledEsportsMatch> {
         val events = root.optJSONObject("data")
             ?.optJSONObject("schedule")
             ?.optJSONArray("events") ?: JSONArray()
@@ -47,6 +97,7 @@ internal class LolEsportsApiClient {
             for (i in 0 until events.length()) {
                 val event = events.optJSONObject(i) ?: continue
                 if (event.optString("type") != "match") continue
+
                 val league = event.optJSONObject("league")
                 val leagueId = league?.optString("id").orEmpty()
                 val leagueSlug = league?.optString("slug").orEmpty()
@@ -74,7 +125,7 @@ internal class LolEsportsApiClient {
 
     suspend fun fetchTeamDetails(slug: String): EsportsTeamDetails? {
         if (slug.isBlank()) return null
-        val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
+        val encoded = URLEncoder.encode(slug, "UTF-8")
         val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getTeams?hl=en-US&id=$encoded")
         val teams = root.optJSONObject("data")?.optJSONArray("teams") ?: return null
         if (teams.length() == 0) return null
@@ -115,7 +166,10 @@ internal class LolEsportsApiClient {
         )
     }
 
-    suspend fun findLiveLplEvent(preferredTeamCodes: Set<String> = emptySet()): LiveEventRef? {
+    suspend fun findLiveLplEvent(
+        preferredMatchId: String = "",
+        preferredTeamCodes: Set<String> = emptySet()
+    ): LiveEventRef? {
         val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getLive?hl=en-US")
         val events = root.optJSONObject("data")
             ?.optJSONObject("schedule")
@@ -145,12 +199,21 @@ internal class LolEsportsApiClient {
         }
 
         if (candidates.isEmpty()) return null
-        if (preferredTeamCodes.isEmpty()) return candidates.first()
 
-        return candidates.firstOrNull { event ->
-            val codes = event.teams.map { it.code.uppercase() }.toSet()
-            preferredTeamCodes.all { it.uppercase() in codes }
-        } ?: candidates.first()
+        if (preferredMatchId.isNotBlank()) {
+            candidates.firstOrNull {
+                it.matchId == preferredMatchId || it.eventId == preferredMatchId
+            }?.let { return it }
+        }
+
+        if (preferredTeamCodes.isNotEmpty()) {
+            candidates.firstOrNull { event ->
+                val codes = event.teams.map { it.code.uppercase() }.toSet()
+                preferredTeamCodes.all { it.uppercase() in codes }
+            }?.let { return it }
+        }
+
+        return candidates.first()
     }
 
     suspend fun fetchLiveGame(event: LiveEventRef): LiveGameRef? {
@@ -184,7 +247,9 @@ internal class LolEsportsApiClient {
         val startingTime = event.startTimeIso.takeIf { it.isNotBlank() }
         val url = buildString {
             append("${LolEsportsConfig.LIVE_BASE}/window/${game.gameId}")
-            if (startingTime != null) append("?startingTime=").append(java.net.URLEncoder.encode(startingTime, "UTF-8"))
+            if (startingTime != null) {
+                append("?startingTime=").append(URLEncoder.encode(startingTime, "UTF-8"))
+            }
         }
         val root = getJson(url)
         val frames = root.optJSONArray("frames") ?: throw IOException("Live window has no frames")
@@ -273,13 +338,19 @@ internal class LolEsportsApiClient {
                 val code = team.optString("code").ifBlank {
                     name.filter { it.isLetterOrDigit() }.take(4).uppercase()
                 }
+                val result = team.optJSONObject("result") ?: JSONObject()
+                val record = team.optJSONObject("record") ?: JSONObject()
                 add(
                     EsportsTeamRef(
                         id = team.optString("id"),
                         code = code,
                         name = name.ifBlank { code },
                         slug = team.optString("slug"),
-                        imageUrl = team.optString("image")
+                        imageUrl = team.optString("image"),
+                        gameWins = result.optInt("gameWins", 0),
+                        outcome = result.optString("outcome"),
+                        recordWins = record.optInt("wins", 0),
+                        recordLosses = record.optInt("losses", 0)
                     )
                 )
             }
