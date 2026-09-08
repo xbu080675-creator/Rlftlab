@@ -65,6 +65,19 @@ internal class LplHistoricalPostMatchResolver {
     val status: StateFlow<String> = _status.asStateFlow()
 
     private var lastResolvedScheduleKey: String = ""
+    private val resolvedByScheduleKey = linkedMapOf<String, CompletedSeriesSnapshot>()
+
+    /** Resolve one explicit schedule match and return only that match's terminal series snapshot. */
+    suspend fun resolve(match: ScheduledEsportsMatch): CompletedSeriesSnapshot? {
+        val key = scheduleKeyFor(match)
+        refresh(match)
+        return resolvedByScheduleKey[key]
+    }
+
+    private fun scheduleKeyFor(match: ScheduledEsportsMatch): String =
+        match.eventId.ifBlank { match.matchId }.ifBlank {
+            match.teams.take(2).joinToString("|") { team -> team.code.ifBlank { team.name } } + "|" + match.startTimeIso
+        }
 
     suspend fun refresh(match: ScheduledEsportsMatch) {
         try {
@@ -75,12 +88,11 @@ internal class LplHistoricalPostMatchResolver {
     }
 
     private suspend fun refreshInternal(match: ScheduledEsportsMatch) {
-        val scheduleKey = match.eventId.ifBlank { match.matchId }.ifBlank {
-            match.teams.take(2).joinToString("|") { team -> team.code.ifBlank { team.name } } + "|" + match.startTimeIso
-        }
+        val scheduleKey = scheduleKeyFor(match)
 
         val already = CompletedGameArchive.series.value
         if (already != null && already.seriesFinished && lastResolvedScheduleKey == scheduleKey) {
+            resolvedByScheduleKey[scheduleKey] = already
             _status.value = "POST · 已恢复 ${already.teamA} ${already.scoreA}:${already.scoreB} ${already.teamB} · ${already.games.size} 局"
             return
         }
@@ -146,6 +158,7 @@ internal class LplHistoricalPostMatchResolver {
             source = "LPL Historical BMatch → TJStats matchDetail FINAL"
         )
         CompletedGameArchive.publishSeries(snapshot)
+        resolvedByScheduleKey[scheduleKey] = snapshot
         lastResolvedScheduleKey = scheduleKey
         _status.value = "POST · 已恢复 ${snapshot.teamA} ${snapshot.scoreA}:${snapshot.scoreB} ${snapshot.teamB} · ${snapshot.games.size} 局 · bmid=${ref.bmid}"
     }

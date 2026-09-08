@@ -38,7 +38,7 @@ internal data class AppUpdateState(
     val error: String? = null
 )
 
-object AppUpdateManager {
+internal object AppUpdateManager {
     private const val RELEASE_API = "https://api.github.com/repos/xbu080675-creator/Rlftlab/releases/tags/dev-latest"
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var appContext: Context? = null
