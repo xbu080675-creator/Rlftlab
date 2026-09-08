@@ -30,16 +30,24 @@ class RiftOverlayView(
     private val title = text("LIVE · G2", 11f, 0xFF6CEBFF.toInt(), bold = true)
     private val timer = text("18:42", 11f, 0xFF94A0B2.toInt())
     private val modeChip = text("COMPACT ›", 9f, 0xFF6CEBFF.toInt(), bold = true)
-    private val blue = text("BLG", 18f, Color.WHITE, bold = true)
-    private val red = text("AL", 18f, Color.WHITE, bold = true)
-    private val goldDiff = text("+1.6K", 24f, 0xFF6CEBFF.toInt(), bold = true)
+    private val blue = text("BLG", 18f, Color.WHITE, bold = true).apply {
+        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+    }
+    private val red = text("AL", 18f, Color.WHITE, bold = true).apply {
+        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+    }
+    private val goldDiff = text("+1.6K", 22f, 0xFF6CEBFF.toInt(), bold = true).apply {
+        gravity = Gravity.CENTER
+        minWidth = dp(84)
+        setPadding(dp(10), 0, dp(10), 0)
+    }
     private val miniLine = text("BLG   +1.6K   AL", 17f, Color.WHITE, bold = true).apply {
         gravity = Gravity.CENTER
     }
     private val metrics = text("K 8:6   T 4:3   D 2:1", 12f, 0xFFD1D7E2.toInt())
     private val goldLine = text("GOLD 34.7K : 33.1K", 11f, 0xFFD1D7E2.toInt())
     private val event = text("EVENT · 18:37 · BLG 获得小龙", 10f, 0xFF8C98AA.toInt())
-    private val hint = text("点击切换尺寸 · 拖动可移动", 9f, 0xFF667386.toInt())
+    private val hint = text("轻点切换尺寸 · 拖动可移动", 9f, 0xFF667386.toInt())
     private val accent = View(context)
     private val teams = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -54,7 +62,7 @@ class RiftOverlayView(
             setStroke(dp(1), 0xFF233347.toInt())
         }
 
-        addView(root, LayoutParams(dp(300), LayoutParams.WRAP_CONTENT))
+        addView(root, LayoutParams(dp(308), LayoutParams.WRAP_CONTENT))
 
         val top = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -81,12 +89,11 @@ class RiftOverlayView(
         root.addView(miniLine)
 
         teams.addView(blue, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        teams.addView(goldDiff)
-        teams.addView(red, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-            gravity = Gravity.END
-        })
+        teams.addView(goldDiff, LinearLayout.LayoutParams(dp(96), LayoutParams.WRAP_CONTENT))
+        teams.addView(red, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         root.addView(teams)
 
+        metrics.gravity = Gravity.CENTER_HORIZONTAL
         metrics.setPadding(0, dp(5), 0, 0)
         root.addView(metrics)
         goldLine.setPadding(0, dp(6), 0, 0)
@@ -114,10 +121,11 @@ class RiftOverlayView(
         blue.text = snapshot.blue
         red.text = snapshot.red
         val diff = formatDiff(snapshot.goldDiff)
+        val leadColor = if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt()
         goldDiff.text = diff
-        goldDiff.setTextColor(if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt())
-        miniLine.text = "${snapshot.blue}   $diff   ${snapshot.red}"
-        miniLine.setTextColor(if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt())
+        goldDiff.setTextColor(leadColor)
+        miniLine.text = "${snapshot.blue}     $diff     ${snapshot.red}"
+        miniLine.setTextColor(leadColor)
         metrics.text = "K ${snapshot.blueKills}:${snapshot.redKills}   T ${snapshot.blueTowers}:${snapshot.redTowers}   D ${snapshot.blueDragons}:${snapshot.redDragons}"
         goldLine.text = "GOLD %.1fK : %.1fK   LEAD $diff".format(snapshot.blueGold / 1000f, snapshot.redGold / 1000f)
         event.text = "EVENT · ${snapshot.latestEvent}"
@@ -135,7 +143,7 @@ class RiftOverlayView(
                 goldLine.visibility = View.GONE
                 event.visibility = View.GONE
                 hint.visibility = View.GONE
-                setRootWidth(220)
+                setRootWidth(228)
             }
             Mode.COMPACT -> {
                 modeChip.text = "COMPACT ›"
@@ -146,7 +154,7 @@ class RiftOverlayView(
                 goldLine.visibility = View.GONE
                 event.visibility = View.GONE
                 hint.visibility = View.GONE
-                setRootWidth(300)
+                setRootWidth(308)
             }
             Mode.EXPANDED -> {
                 modeChip.text = "EXPANDED ›"
@@ -157,7 +165,7 @@ class RiftOverlayView(
                 goldLine.visibility = View.VISIBLE
                 event.visibility = View.VISIBLE
                 hint.visibility = View.VISIBLE
-                setRootWidth(340)
+                setRootWidth(348)
             }
         }
         requestLayout()
