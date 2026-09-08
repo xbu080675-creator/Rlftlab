@@ -1,0 +1,28 @@
+name: Patch TJStats post schema fallback
+
+on:
+  push:
+    paths:
+      - 'tools/patch_post_schema_fallback.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python3 tools/patch_post_schema_fallback.py
+      - name: Commit patch
+        run: |
+          git config user.name "RiftLab CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/LplHistoricalPostMatchResolver.kt
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "fix: support TJStats terminal game schemas"
+            git push
+          fi
