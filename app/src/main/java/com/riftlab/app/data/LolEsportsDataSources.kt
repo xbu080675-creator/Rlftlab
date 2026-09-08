@@ -12,7 +12,31 @@ import kotlinx.coroutines.isActive
 internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
-    override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> = client.fetchLplSchedule()
+    override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> =
+        client.fetchLplSchedule().map(::verifySeriesCompletion)
+
+    /**
+     * Riot's schedule endpoint can transiently mark a not-yet-played series completed.
+     * Treat the series score as the completion proof: BO5 requires 3 wins, BO3 requires 2.
+     * Outcome flags are intentionally ignored because they can appear before play begins.
+     */
+    private fun verifySeriesCompletion(match: ScheduledEsportsMatch): ScheduledEsportsMatch {
+        val normalized = match.state.lowercase()
+            .replace("_", "")
+            .replace("-", "")
+            .replace(" ", "")
+        val claimsCompleted = normalized.contains("complete") || normalized == "finished"
+        if (!claimsCompleted) return match
+
+        val requiredWins = if (match.bestOf > 0) match.bestOf / 2 + 1 else 1
+        val maxGameWins = match.teams.maxOfOrNull { it.gameWins } ?: 0
+
+        return if (maxGameWins >= requiredWins) {
+            match
+        } else {
+            match.copy(state = "unstarted")
+        }
+    }
 }
 
 internal class LolEsportsStandingsDataSource(
