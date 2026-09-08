@@ -89,6 +89,8 @@ object MatchDetailRepository {
     private val resolver = LplHistoricalPostMatchResolver()
     private val awardsProvider = LplOfficialAwardsProvider()
     private val draftProvider = LplOfficialDraftProvider()
+    private val opggProvider = OpggMatchSupplementProvider()
+    private val teamAssetProvider = RiotTeamAssetProvider()
     private val resolverMutex = Mutex()
     private val cache = linkedMapOf<String, MatchDetailState>()
     private var loadJob: Job? = null
@@ -100,18 +102,19 @@ object MatchDetailRepository {
         val key = MatchDetailKey.from(match)
         val cached = cache[key.stableId]
         if (!forceRefresh && cached != null) {
-            _state.value = cached.copy(match = match, key = key)
+            _state.value = cached.copy(key = key)
             return
         }
 
         loadJob?.cancel()
         loadJob = scope.launch {
-            val phase = MatchSessionStore.schedulePhase(match)
+            val matchWithRiotAssets = runCatching { enrichTeamImages(match) }.getOrDefault(match)
+            val phase = MatchSessionStore.schedulePhase(matchWithRiotAssets)
             val base = MatchDetailState(
                 key = key,
-                match = match,
+                match = matchWithRiotAssets,
                 loading = phase == ScheduleMatchPhase.COMPLETED,
-                liveGame = if (phase == ScheduleMatchPhase.LIVE) currentLiveFor(match) else null,
+                liveGame = if (phase == ScheduleMatchPhase.LIVE) currentLiveFor(matchWithRiotAssets) else null,
                 status = when (phase) {
                     ScheduleMatchPhase.UPCOMING -> "比赛尚未开始 · 当前展示赛程与赛前元数据"
                     ScheduleMatchPhase.LIVE -> "比赛进行中 · 当前局实时数据由赛中 Provider Router 提供"
@@ -127,9 +130,10 @@ object MatchDetailRepository {
             }
 
             val result = runCatching {
-                resolverMutex.withLock { resolver.resolve(match) }
+                resolverMutex.withLock { resolver.resolve(matchWithRiotAssets) }
             }
-            val resolved = result.getOrNull()?.normalizeDetailRoles()
+            val rawResolved = result.getOrNull()?.normalizeDetailRoles()
+            val resolved = rawResolved?.let { alignSeriesToMatch(it, matchWithRiotAssets) }
             val bmid = resolved?.matchKey
                 ?.takeIf { it.startsWith("TJ:") }
                 ?.removePrefix("TJ:")
@@ -142,23 +146,43 @@ object MatchDetailRepository {
             } else {
                 OfficialAwardsResult(status = "MVP / POG 等待历史 bMatchId")
             }
+
             val draftResult = runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
                 OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
             }
-            val decoratedDrafts = runCatching { ChampionCatalog.decorateDrafts(draftResult.drafts) }
-                .getOrDefault(draftResult.drafts)
+
+            val opgg = runCatching { opggProvider.fetch(matchWithRiotAssets) }.getOrElse {
+                OpggMatchSupplement(status = "OP.GG 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+            }
+            val enrichedMatch = runCatching { enrichTeamImages(matchWithRiotAssets, opgg.teamImages) }
+                .getOrDefault(matchWithRiotAssets)
+
+            val officialGameMvps = awards.gameMvps.map { it.withDisplaySource(enrichedMatch) }
+            val opggGameMvps = opgg.gameMvps.map { it.withDisplaySource(enrichedMatch) }
+            val mergedGameMvps = mergeGameMvps(officialGameMvps, opggGameMvps)
+            val mergedVotes = if (awards.votes.isNotEmpty()) {
+                awards.votes.map { it.withDisplaySource(enrichedMatch) }
+            } else {
+                opgg.panels.map { it.withDisplaySource(enrichedMatch) }
+            }
+
+            val mergedRawDrafts = mergeDrafts(draftResult.drafts, opgg.drafts)
+            val decoratedDrafts = runCatching { ChampionCatalog.decorateDrafts(mergedRawDrafts) }
+                .getOrDefault(mergedRawDrafts)
+                .map { it.withDisplaySource(enrichedMatch) }
 
             val finalState = base.copy(
+                match = enrichedMatch,
                 loading = false,
                 series = resolved,
-                seriesMvp = awards.seriesMvp?.withDisplaySource(match),
-                gameMvps = awards.gameMvps.map { it.withDisplaySource(match) },
-                votes = awards.votes.map { it.withDisplaySource(match) },
-                drafts = decoratedDrafts.map { it.withDisplaySource(match) },
+                seriesMvp = awards.seriesMvp?.withDisplaySource(enrichedMatch),
+                gameMvps = mergedGameMvps,
+                votes = mergedVotes,
+                drafts = decoratedDrafts,
                 status = when {
-                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${draftResult.status}"
-                    result.isFailure -> "比赛详情同步失败"
-                    else -> resolver.status.value
+                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${draftResult.status} · ${opgg.status}"
+                    result.isFailure -> "比赛详情同步失败 · ${opgg.status}"
+                    else -> "${resolver.status.value} · ${opgg.status}"
                 },
                 errorMessage = result.exceptionOrNull()?.message,
                 updatedAtEpochMs = System.currentTimeMillis()
@@ -184,6 +208,50 @@ object MatchDetailRepository {
         return MatchSessionStore.live.value.takeIf { same && it.game > 0 }
     }
 
+    private suspend fun enrichTeamImages(
+        match: ScheduledEsportsMatch,
+        extraImages: Map<String, String> = emptyMap()
+    ): ScheduledEsportsMatch {
+        val teams = match.teams.map { team ->
+            if (team.imageUrl.isNotBlank()) return@map team
+            val extra = listOf(team.id, team.code, team.name, team.slug)
+                .asSequence()
+                .map(::teamToken)
+                .firstNotNullOfOrNull { key -> extraImages[key]?.takeIf { it.isNotBlank() } }
+            val image = extra ?: runCatching { teamAssetProvider.resolve(team) }.getOrDefault("")
+            if (image.isBlank()) team else team.copy(imageUrl = image)
+        }
+        return match.copy(teams = teams)
+    }
+
+    private fun mergeGameMvps(
+        primary: List<OfficialMvpRecord>,
+        fallback: List<OfficialMvpRecord>
+    ): List<OfficialMvpRecord> {
+        val byGame = linkedMapOf<Int, OfficialMvpRecord>()
+        primary.filter { (it.game ?: 0) > 0 }.forEach { byGame[it.game!!] = it }
+        fallback.filter { (it.game ?: 0) > 0 }.forEach { record -> byGame.putIfAbsent(record.game!!, record) }
+        return byGame.values.sortedBy { it.game }
+    }
+
+    private fun mergeDrafts(
+        primary: List<DraftPickRecord>,
+        fallback: List<DraftPickRecord>
+    ): List<DraftPickRecord> {
+        val primaryByGame = primary.associateBy { it.game }
+        val fallbackByGame = fallback.associateBy { it.game }
+        return (primaryByGame.keys + fallbackByGame.keys).distinct().sorted().mapNotNull { game ->
+            val official = primaryByGame[game]
+            val thirdParty = fallbackByGame[game]
+            when {
+                official != null && (official.blueBans.isNotEmpty() || official.redBans.isNotEmpty()) -> official
+                thirdParty != null && (thirdParty.blueBans.isNotEmpty() || thirdParty.redBans.isNotEmpty()) -> thirdParty
+                official != null -> official
+                else -> thirdParty
+            }
+        }
+    }
+
     private fun CompletedSeriesSnapshot.normalizeDetailRoles(): CompletedSeriesSnapshot = copy(
         games = games.map { game ->
             game.copy(
@@ -192,6 +260,36 @@ object MatchDetailRepository {
             )
         }
     )
+
+    /** Keep the series score aligned to the schedule card's left/right team order. */
+    private fun alignSeriesToMatch(
+        series: CompletedSeriesSnapshot,
+        match: ScheduledEsportsMatch
+    ): CompletedSeriesSnapshot {
+        val left = match.teams.getOrNull(0) ?: return series
+        val right = match.teams.getOrNull(1) ?: return series
+        val direct = labelMatchesTeam(series.teamA, left) && labelMatchesTeam(series.teamB, right)
+        val swapped = labelMatchesTeam(series.teamA, right) && labelMatchesTeam(series.teamB, left)
+        val leftLabel = left.code.ifBlank { left.name }
+        val rightLabel = right.code.ifBlank { right.name }
+        return when {
+            swapped -> series.copy(
+                teamA = leftLabel,
+                teamB = rightLabel,
+                scoreA = series.scoreB,
+                scoreB = series.scoreA
+            )
+            direct -> series.copy(teamA = leftLabel, teamB = rightLabel)
+            else -> series
+        }
+    }
+
+    private fun labelMatchesTeam(label: String, team: EsportsTeamRef): Boolean {
+        val a = teamToken(label)
+        if (a.isBlank()) return false
+        val candidates = listOf(team.id, team.code, team.name, team.slug).map(::teamToken).filter { it.isNotBlank() }
+        return candidates.any { b -> a == b || (a.length >= 3 && b.contains(a)) || (b.length >= 3 && a.contains(b)) }
+    }
 
     private fun normalizeRole(raw: String): String {
         val key = raw.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "")
@@ -234,4 +332,6 @@ object MatchDetailRepository {
 
     private fun String.ensurePrefix(prefix: String): String =
         if (startsWith(prefix, ignoreCase = true)) this else "$prefix · $this"
+
+    private fun teamToken(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 }
