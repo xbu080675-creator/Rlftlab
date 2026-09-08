@@ -40,7 +40,7 @@ jobs:
           OUT="dist/RiftLab-${VERSION_NAME}.apk"
           if [ "$APK" != "$OUT" ]; then cp "$APK" "$OUT"; fi
           SHA=$(sha256sum "$OUT" | awk '{print $1}')
-          CHANGELOG=$(git log -1 --pretty=%s | tr '\n' ' ')
+          CHANGELOG=$(tr '\n' ' ' < DEV_CHANGELOG.txt | sed 's/[[:space:]]\+/ /g' | sed 's/^ //;s/ $//')
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "apk=$OUT" >> "$GITHUB_OUTPUT"
