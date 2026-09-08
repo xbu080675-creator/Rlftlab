@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Stable identity shared by schedule, post-match and future MVP/vote/BP providers. */
 data class MatchDetailKey(
@@ -54,6 +56,15 @@ data class OfficialVoteRecord(
     val source: String
 )
 
+data class DraftPickRecord(
+    val game: Int,
+    val blueBans: List<String> = emptyList(),
+    val redBans: List<String> = emptyList(),
+    val bluePicks: List<String> = emptyList(),
+    val redPicks: List<String> = emptyList(),
+    val source: String
+)
+
 data class MatchDetailState(
     val key: MatchDetailKey? = null,
     val match: ScheduledEsportsMatch? = null,
@@ -63,20 +74,23 @@ data class MatchDetailState(
     val seriesMvp: OfficialMvpRecord? = null,
     val gameMvps: List<OfficialMvpRecord> = emptyList(),
     val votes: List<OfficialVoteRecord> = emptyList(),
+    val drafts: List<DraftPickRecord> = emptyList(),
     val status: String = "选择一场比赛查看详情",
+    val errorMessage: String? = null,
     val updatedAtEpochMs: Long = 0L
 )
 
 /**
- * Match detail is keyed by the schedule entry, not by "the latest match".
+ * Match detail is keyed by the schedule entry, never by "the latest match".
  *
- * Lightweight schedule data is always available immediately. Heavy post-match data is fetched
- * on demand and cached per match. MVP/vote/BP providers can be attached here later without
- * changing schedule navigation or the detail UI contract.
+ * Lightweight schedule metadata opens instantly. Heavy terminal data is resolved on demand and
+ * cached per schedule match. Official MVP / vote / draft providers plug into this state later;
+ * missing official data remains missing rather than being guessed from stats.
  */
 object MatchDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val resolver = LplHistoricalPostMatchResolver()
+    private val resolverMutex = Mutex()
     private val cache = linkedMapOf<String, MatchDetailState>()
     private var loadJob: Job? = null
 
@@ -113,16 +127,19 @@ object MatchDetailRepository {
                 return@launch
             }
 
-            runCatching { resolver.refresh(match) }
-            val resolved = CompletedGameArchive.series.value?.takeIf { seriesMatches(it, match) }
+            val result = runCatching {
+                resolverMutex.withLock { resolver.resolve(match) }
+            }
+            val resolved = result.getOrNull()
             val finalState = base.copy(
                 loading = false,
                 series = resolved,
-                status = if (resolved != null) {
-                    "已加载 ${resolved.games.size} 局终局数据 · ${resolved.source}"
-                } else {
-                    resolver.status.value
+                status = when {
+                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${resolved.source}"
+                    result.isFailure -> "比赛详情同步失败"
+                    else -> resolver.status.value
                 },
+                errorMessage = result.exceptionOrNull()?.message,
                 updatedAtEpochMs = System.currentTimeMillis()
             )
             cache[key.stableId] = finalState
@@ -134,22 +151,15 @@ object MatchDetailRepository {
         _state.value.match?.let { open(it, forceRefresh = true) }
     }
 
+    fun close() {
+        loadJob?.cancel()
+        _state.value = MatchDetailState()
+    }
+
     private fun currentLiveFor(match: ScheduledEsportsMatch): LiveSnapshot? {
         val current = MatchSessionStore.scheduleCenter.value.currentMatch ?: return null
-        val same = current.matchId == match.matchId || current.eventId == match.eventId
+        val same = current.matchId == match.matchId ||
+            (current.eventId.isNotBlank() && current.eventId == match.eventId)
         return MatchSessionStore.live.value.takeIf { same && it.game > 0 }
     }
-
-    private fun seriesMatches(series: CompletedSeriesSnapshot, match: ScheduledEsportsMatch): Boolean {
-        val wanted = match.teams.take(2)
-            .map { teamKey(it.code.ifBlank { it.name }) }
-            .filter { it.isNotBlank() }
-            .toSet()
-        if (wanted.size < 2) return false
-        val actual = setOf(teamKey(series.teamA), teamKey(series.teamB))
-        return actual == wanted || wanted.all { target -> actual.any { actualKey -> actualKey.contains(target) || target.contains(actualKey) } }
-    }
-
-    private fun teamKey(value: String): String =
-        value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 }
