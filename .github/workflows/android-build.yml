@@ -23,6 +23,7 @@ jobs:
         run: |
           python - <<'PY'
           import collections
+          import datetime
           import json
           import pathlib
           import re
@@ -97,6 +98,83 @@ jobs:
               codes = " vs ".join(str(t.get("code") or t.get("name") or "?") for t in teams[:2])
               scores = ":".join(str((t.get("result") or {}).get("gameWins", 0)) for t in teams[:2])
               print(" match", event.get("startTime"), event.get("state"), codes, scores, event.get("blockName"))
+
+          tournaments_payload, tournaments_status = get(
+              f"/getTournamentsForLeague?hl=en-US&leagueId={league_id}"
+          )
+          leagues = tournaments_payload.get("data", {}).get("leagues", []) or []
+          tournaments = []
+          for league in leagues:
+              tournaments.extend(league.get("tournaments", []) or [])
+          tournaments = sorted(
+              tournaments,
+              key=lambda t: str(t.get("startDate") or t.get("endDate") or ""),
+          )
+          print("tournaments http:", tournaments_status, "count:", len(tournaments))
+          for tournament in tournaments[-10:]:
+              print(
+                  " tournament",
+                  tournament.get("id"),
+                  tournament.get("slug"),
+                  tournament.get("startDate"),
+                  tournament.get("endDate"),
+              )
+
+          today = datetime.date.today().isoformat()
+          current = [
+              t for t in tournaments
+              if str(t.get("startDate") or "")[:10] <= today <= str(t.get("endDate") or "9999-12-31")[:10]
+          ]
+          probe = current[-1:] or tournaments[-1:]
+          for tournament in probe:
+              tournament_id = str(tournament.get("id") or "")
+              if not tournament_id:
+                  continue
+              standings_payload, standings_status = get(
+                  "/getStandings?hl=en-US&tournamentId=" + urllib.parse.quote(tournament_id, safe="")
+              )
+              standings = standings_payload.get("data", {}).get("standings", []) or []
+              print("standings http:", standings_status, "tournament:", tournament.get("slug"), "blocks:", len(standings))
+              for standing in standings:
+                  print(" standing keys:", sorted(standing.keys()))
+                  for stage in standing.get("stages", []) or []:
+                      print(
+                          "  stage",
+                          stage.get("name"),
+                          "slug=", stage.get("slug"),
+                          "type=", stage.get("type"),
+                          "keys=", sorted(stage.keys()),
+                      )
+                      for section in stage.get("sections", []) or []:
+                          rankings = section.get("rankings", []) or []
+                          matches = section.get("matches", []) or []
+                          print(
+                              "   section",
+                              section.get("name"),
+                              "rankings=", len(rankings),
+                              "matches=", len(matches),
+                              "keys=", sorted(section.keys()),
+                          )
+                          if rankings:
+                              rank = rankings[0]
+                              team = (rank.get("teams", []) or [{}])[0]
+                              print(
+                                  "    ranking sample ordinal=", rank.get("ordinal"),
+                                  "ranking keys=", sorted(rank.keys()),
+                                  "team=", team.get("code"),
+                                  "record=", team.get("record"),
+                                  "team keys=", sorted(team.keys()),
+                              )
+                          if matches:
+                              match = matches[0]
+                              match_teams = match.get("teams", []) or []
+                              print(
+                                  "    bracket sample id=", match.get("id"),
+                                  "state=", match.get("state"),
+                                  "previous=", match.get("previousMatchIds"),
+                                  "match keys=", sorted(match.keys()),
+                                  "teams=", [t.get("code") for t in match_teams],
+                              )
 
           live, live_status = get("/getLive?hl=en-US")
           live_events = live.get("data", {}).get("schedule", {}).get("events", []) or []
