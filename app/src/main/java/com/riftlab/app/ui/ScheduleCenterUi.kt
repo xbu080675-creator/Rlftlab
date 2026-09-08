@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,10 +50,9 @@ import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.data.StandingBracketMatch
-import com.riftlab.app.data.StandingSection
-import com.riftlab.app.data.StandingStage
 import com.riftlab.app.data.StandingTeam
 import com.riftlab.app.data.StandingsCenterStore
+import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
 import java.time.LocalDate
@@ -112,10 +114,28 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
     }
     var selectedBucketKey by remember { mutableStateOf<String?>(null) }
     var selectedDetailMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
+    var selectedTeam by remember { mutableStateOf<EsportsTeamRef?>(null) }
     var tabIndex by remember { mutableIntStateOf(0) }
+    var initialPositionResolved by remember { mutableStateOf(false) }
     val selectedBucket = buckets.firstOrNull { it.key == selectedBucketKey }
     val selectedStandings = standingsCenter.standings
         ?.takeIf { it.tournamentId == selectedBucket?.tournamentId }
+
+    LaunchedEffect(buckets, center.currentMatch?.matchId, center.nextMatch?.matchId) {
+        if (initialPositionResolved || buckets.isEmpty()) return@LaunchedEffect
+        val initial = chooseInitialBucket(
+            buckets = buckets,
+            currentMatchId = center.currentMatch?.matchId,
+            nextMatchId = center.nextMatch?.matchId,
+            today = LocalDate.now()
+        )
+        if (initial != null) {
+            selectedBucketKey = initial.key
+            tabIndex = EventCenterTab.SCHEDULE.ordinal
+            initial.tournamentId?.let(StandingsCenterStore::selectTournament)
+        }
+        initialPositionResolved = true
+    }
 
     Dialog(
         onDismissRequest = onClose,
@@ -124,67 +144,93 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
         Surface(Modifier.fillMaxSize(), color = RiftBg, contentColor = RiftText) {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)) {
                 ScheduleCenterHeader(
-                    title = selectedDetailMatch?.let(::matchLabel) ?: selectedBucket?.title ?: "英雄联盟赛事",
+                    title = selectedDetailMatch?.let(::matchLabel)
+                        ?: selectedTeam?.let(::teamCode)
+                        ?: selectedBucket?.title
+                        ?: "英雄联盟赛事",
                     subtitle = selectedDetailMatch?.let { match ->
                         "${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateKey(match)}"
+                    } ?: selectedTeam?.let { team ->
+                        "战队资料 · ${team.name.ifBlank { teamCode(team) }}"
                     } ?: if (selectedBucket == null) {
                         "按官方 Tournament 整理"
                     } else {
                         competitionRange(selectedBucket.matches)
                     },
-                    canGoBack = selectedDetailMatch != null || selectedBucket != null,
+                    canGoBack = selectedDetailMatch != null || selectedTeam != null || selectedBucket != null,
                     onBack = {
-                        if (selectedDetailMatch != null) {
-                            selectedDetailMatch = null
-                        } else {
-                            selectedBucketKey = null
-                            tabIndex = 0
+                        when {
+                            selectedDetailMatch != null -> selectedDetailMatch = null
+                            selectedTeam != null -> {
+                                selectedTeam = null
+                                TeamDetailRepository.close()
+                            }
+                            else -> {
+                                selectedBucketKey = null
+                                tabIndex = 0
+                            }
                         }
                     },
                     onClose = onClose
                 )
 
                 Spacer(Modifier.height(12.dp))
-                if (selectedDetailMatch != null) {
-                    MatchDetailContent()
-                } else if (selectedBucket == null) {
-                    CompetitionDirectory(
+                when {
+                    selectedDetailMatch != null -> MatchDetailContent()
+                    selectedTeam != null -> TeamDetailContent(
+                        team = selectedTeam!!,
+                        matches = selectedBucket?.matches ?: center.matches,
+                        onMatchClick = { match ->
+                            MatchDetailRepository.open(match)
+                            selectedDetailMatch = match
+                        }
+                    )
+                    selectedBucket == null -> CompetitionDirectory(
                         buckets = buckets,
                         currentMatchId = center.currentMatch?.matchId,
                         nextMatchId = center.nextMatch?.matchId,
                         onSelect = { bucket ->
                             selectedDetailMatch = null
+                            selectedTeam = null
                             selectedBucketKey = bucket.key
                             tabIndex = 0
                             bucket.tournamentId?.let(StandingsCenterStore::selectTournament)
                         }
                     )
-                } else {
-                    EventSummaryCard(
-                        bucket = selectedBucket,
-                        current = center.currentMatch,
-                        next = center.nextMatch,
-                        standingsStatus = standingsCenter.statusMessage
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    EventTabs(tabIndex) { tabIndex = it }
-                    Spacer(Modifier.height(10.dp))
-
-                    when (EventCenterTab.entries[tabIndex]) {
-                        EventCenterTab.SCHEDULE -> CompetitionMatches(
+                    else -> {
+                        EventSummaryCard(
                             bucket = selectedBucket,
-                            selectedMatchId = center.selectedMatch?.matchId,
-                            onMatchClick = { match ->
-                                MatchDetailRepository.open(match)
-                                selectedDetailMatch = match
-                            }
+                            current = center.currentMatch,
+                            next = center.nextMatch,
+                            standingsStatus = standingsCenter.statusMessage
                         )
-                        EventCenterTab.STANDINGS -> StandingsView(selectedStandings)
-                        EventCenterTab.BRACKET -> BracketView(
-                            standings = selectedStandings,
-                            scheduleMatches = selectedBucket.matches
-                        )
-                        EventCenterTab.TEAMS -> TeamsView(selectedStandings)
+                        Spacer(Modifier.height(10.dp))
+                        EventTabs(tabIndex) { tabIndex = it }
+                        Spacer(Modifier.height(10.dp))
+
+                        when (EventCenterTab.entries[tabIndex]) {
+                            EventCenterTab.SCHEDULE -> CompetitionMatches(
+                                bucket = selectedBucket,
+                                selectedMatchId = center.selectedMatch?.matchId,
+                                onMatchClick = { match ->
+                                    MatchDetailRepository.open(match)
+                                    selectedDetailMatch = match
+                                }
+                            )
+                            EventCenterTab.STANDINGS -> StandingsView(selectedStandings)
+                            EventCenterTab.BRACKET -> BracketView(
+                                standings = selectedStandings,
+                                scheduleMatches = selectedBucket.matches
+                            )
+                            EventCenterTab.TEAMS -> TeamsView(
+                                standings = selectedStandings,
+                                scheduleMatches = selectedBucket.matches,
+                                onTeamClick = { team ->
+                                    TeamDetailRepository.open(team)
+                                    selectedTeam = team
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -341,11 +387,41 @@ private fun CompetitionMatches(
     selectedMatchId: String?,
     onMatchClick: (ScheduledEsportsMatch) -> Unit
 ) {
-    val groups = bucket.matches.groupBy(MatchSessionStore::scheduleDateKey).toSortedMap()
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val groups = remember(bucket.key, bucket.matches) {
+        bucket.matches.groupBy(MatchSessionStore::scheduleDateKey).toSortedMap()
+    }
+    val listState = rememberLazyListState()
+    val today = LocalDate.now().toString()
+
+    LaunchedEffect(bucket.key, groups.keys.toList(), today) {
+        if (groups.isEmpty()) return@LaunchedEffect
+        val dates = groups.keys.toList()
+        val targetDate = when {
+            groups.containsKey(today) -> today
+            else -> dates.firstOrNull { it > today } ?: dates.last()
+        }
+        var targetIndex = 0
+        for (date in dates) {
+            if (date == targetDate) break
+            targetIndex += 1 + groups[date].orEmpty().size
+        }
+        listState.scrollToItem(targetIndex)
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         groups.forEach { (date, matches) ->
             item(key = "date-${bucket.key}-$date") {
-                Text(date, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp, bottom = 2.dp))
+                Text(
+                    if (date == today) "今天 · $date" else date,
+                    color = if (date == today) RiftCyan else RiftMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                )
             }
             items(matches, key = { it.eventId.ifBlank { it.matchId } }) { match ->
                 ScheduleMatchCard(match, selectedMatchId == match.matchId) { onMatchClick(match) }
@@ -546,17 +622,24 @@ private fun BracketTeamLine(code: String, score: String) {
 }
 
 @Composable
-private fun TeamsView(standings: TournamentStandings?) {
-    val teams = remember(standings?.tournamentId, standings?.stages) {
+private fun TeamsView(
+    standings: TournamentStandings?,
+    scheduleMatches: List<ScheduledEsportsMatch>,
+    onTeamClick: (EsportsTeamRef) -> Unit
+) {
+    val teams = remember(standings?.tournamentId, standings?.stages, scheduleMatches) {
+        val fromSchedule = scheduleMatches.flatMap { it.teams }
         val fromRankings = standings?.stages.orEmpty().flatMap { stage ->
             stage.sections.flatMap { section -> section.rankings.map { it.team } }
         }
         val fromMatches = standings?.stages.orEmpty().flatMap { stage ->
             stage.sections.flatMap { section -> section.matches.flatMap { it.teams } }
         }
-        (fromRankings + fromMatches)
+        (fromSchedule + fromRankings + fromMatches)
             .filter { teamCode(it) != "TBD" && teamCode(it) != "—" }
-            .distinctBy { it.id.ifBlank { teamCode(it) } }
+            .groupBy { it.id.ifBlank { teamCode(it) } }
+            .values
+            .map { variants -> variants.maxByOrNull { if (it.imageUrl.isNotBlank()) 1 else 0 } ?: variants.first() }
             .sortedBy { teamCode(it) }
     }
     if (teams.isEmpty()) {
@@ -567,7 +650,7 @@ private fun TeamsView(standings: TournamentStandings?) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(teams.chunked(3), key = { row -> row.joinToString("-") { it.id.ifBlank { teamCode(it) } } }) { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                row.forEach { team -> TeamTile(team, Modifier.weight(1f)) }
+                row.forEach { team -> TeamTile(team, Modifier.weight(1f)) { onTeamClick(team) } }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
@@ -575,13 +658,20 @@ private fun TeamsView(standings: TournamentStandings?) {
 }
 
 @Composable
-private fun TeamTile(team: EsportsTeamRef, modifier: Modifier) {
+private fun TeamTile(team: EsportsTeamRef, modifier: Modifier, onClick: () -> Unit) {
     Column(
-        modifier.background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+        modifier.clickable(onClick = onClick)
+            .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .padding(horizontal = 8.dp, vertical = 14.dp),
+            .padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        TeamLogo(
+            imageUrl = team.imageUrl,
+            code = teamCode(team),
+            modifier = Modifier.size(38.dp)
+        )
+        Spacer(Modifier.height(7.dp))
         Text(teamCode(team), color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         if (team.name.isNotBlank() && team.name != teamCode(team)) {
             Spacer(Modifier.height(3.dp))
@@ -598,6 +688,31 @@ private fun EmptyData(message: String) {
     ) {
         Text(message, color = RiftMuted, fontSize = 11.sp)
     }
+}
+
+private fun chooseInitialBucket(
+    buckets: List<ScheduleCompetitionBucket>,
+    currentMatchId: String?,
+    nextMatchId: String?,
+    today: LocalDate
+): ScheduleCompetitionBucket? {
+    if (buckets.isEmpty()) return null
+    buckets.firstOrNull { bucket -> bucket.matches.any { it.matchId == currentMatchId } }?.let { return it }
+    buckets.firstOrNull { bucket -> bucket.matches.any { matchStartDate(it) == today } }?.let { return it }
+    buckets.firstOrNull { bucket -> bucket.matches.any { it.matchId == nextMatchId } }?.let { return it }
+
+    val dated = buckets.mapNotNull { bucket ->
+        val dates = bucket.matches.mapNotNull(::matchStartDate)
+        if (dates.isEmpty()) null else Triple(bucket, dates.minOrNull()!!, dates.maxOrNull()!!)
+    }
+    dated.firstOrNull { (_, first, last) -> !today.isBefore(first) && !today.isAfter(last) }
+        ?.first?.let { return it }
+    return dated
+        .filter { (_, first, _) -> !first.isAfter(today) }
+        .maxByOrNull { (_, _, last) -> last }
+        ?.first
+        ?: dated.minByOrNull { (_, first, _) -> kotlin.math.abs(ChronoUnit.DAYS.between(today, first)) }?.first
+        ?: buckets.last()
 }
 
 private fun buildCompetitionBuckets(
