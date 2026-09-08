@@ -22,8 +22,7 @@ internal class LolEsportsTeamDataSource(
 }
 
 internal class LolEsportsLiveDataSource(
-    private val client: LolEsportsApiClient = LolEsportsApiClient(),
-    private val preferredTeamCodes: Set<String> = emptySet()
+    private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : LiveMatchDataSource {
 
     private val _status = MutableStateFlow(
@@ -34,6 +33,10 @@ internal class LolEsportsLiveDataSource(
     )
     val status: StateFlow<LiveSourceStatus> = _status.asStateFlow()
 
+    /**
+     * matchId is an optional preference, not a clock gate. If blank, follow whichever LPL
+     * series Riot currently exposes through getLive. This keeps early starts discoverable.
+     */
     override fun observe(matchId: String): Flow<LiveSnapshot> = flow {
         var currentEvent: LiveEventRef? = null
         var currentGameId = ""
@@ -46,7 +49,7 @@ internal class LolEsportsLiveDataSource(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
                         message = "正在等待 LPL 实时比赛…"
                     )
-                    currentEvent = client.findLiveLplEvent(preferredTeamCodes)
+                    currentEvent = client.findLiveLplEvent(preferredMatchId = matchId)
                     if (currentEvent == null) {
                         delay(10_000)
                         continue
@@ -64,7 +67,7 @@ internal class LolEsportsLiveDataSource(
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     delay(5_000)
-                    currentEvent = client.findLiveLplEvent(preferredTeamCodes) ?: event
+                    currentEvent = client.findLiveLplEvent(preferredMatchId = matchId) ?: event
                     continue
                 }
 
