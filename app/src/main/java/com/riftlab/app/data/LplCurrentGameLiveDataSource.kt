@@ -101,6 +101,21 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                 val teamBName = data.optString("teamBName").ifBlank { active.teamBName.ifBlank { "TEAM B" } }
                 val games = parseGames(data.optJSONArray("matchInfos") ?: JSONArray())
 
+                // Post-match backfill is independent from the live frame cache. As soon as
+                // matchDetail contains finished games, rebuild their final snapshots and publish
+                // them to the post surface. This also works when RiftLab is opened after a game.
+                publishCompletedSeries(
+                    active = active,
+                    seriesStatus = seriesStatus,
+                    scoreA = scoreA,
+                    scoreB = scoreB,
+                    teamAId = teamAId,
+                    teamBId = teamBId,
+                    teamAName = teamAName,
+                    teamBName = teamBName,
+                    games = games
+                )
+
                 if (expectedBo != lastExpectedBo) {
                     if (previous != null && previous.game < expectedBo) {
                         CompletedGameArchive.publish(previous)
@@ -221,6 +236,100 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                 delay(3_000L)
             }
         }
+    }
+
+    private fun publishCompletedSeries(
+        active: MatchRef,
+        seriesStatus: Int,
+        scoreA: Int,
+        scoreB: Int,
+        teamAId: Int,
+        teamBId: Int,
+        teamAName: String,
+        teamBName: String,
+        games: List<ParsedGame>
+    ) {
+        val finalGames = games
+            .filter { game -> (game.status == 3 || seriesStatus == 3) && isMeaningful(game.teams) }
+            .mapNotNull { game ->
+                finalSnapshotFor(
+                    game = game,
+                    bmid = active.bmid,
+                    teamAId = teamAId,
+                    teamBId = teamBId,
+                    teamAName = teamAName,
+                    teamBName = teamBName
+                )
+            }
+            .sortedBy { it.game }
+
+        if (finalGames.isEmpty()) return
+
+        CompletedGameArchive.publishSeries(
+            CompletedSeriesSnapshot(
+                matchKey = "TJ:${active.bmid}",
+                teamA = teamAName,
+                teamB = teamBName,
+                scoreA = scoreA,
+                scoreB = scoreB,
+                games = finalGames,
+                seriesFinished = seriesStatus == 3,
+                source = "LPL Official · TJStats matchDetail FINAL"
+            )
+        )
+    }
+
+    private fun finalSnapshotFor(
+        game: ParsedGame,
+        bmid: String,
+        teamAId: Int,
+        teamBId: Int,
+        teamAName: String,
+        teamBName: String
+    ): LiveSnapshot? {
+        val blueId = game.blueTeamId.takeIf { it > 0 } ?: teamAId
+        val redId = when (blueId) {
+            teamAId -> teamBId
+            teamBId -> teamAId
+            else -> teamBId
+        }
+        val byId = game.teams.associateBy { it.teamId }
+        val blue = byId[blueId] ?: return null
+        val red = byId[redId] ?: game.teams.firstOrNull { it.teamId != blue.teamId } ?: return null
+        if (!isMeaningful(listOf(blue, red))) return null
+
+        val blueName = when (blueId) {
+            teamAId -> teamAName
+            teamBId -> teamBName
+            else -> "BLUE"
+        }
+        val redName = when (redId) {
+            teamAId -> teamAName
+            teamBId -> teamBName
+            else -> "RED"
+        }
+
+        return LiveSnapshot(
+            game = game.bo,
+            elapsedSeconds = game.gameTime.coerceAtLeast(0),
+            blue = blueName,
+            red = redName,
+            blueGold = blue.gold,
+            redGold = red.gold,
+            blueKills = blue.kills,
+            redKills = red.kills,
+            blueTowers = blue.towers,
+            redTowers = red.towers,
+            blueDragons = blue.dragons,
+            redDragons = red.dragons,
+            blueBarons = blue.barons,
+            redBarons = red.barons,
+            bluePlayers = blue.players,
+            redPlayers = red.players,
+            latestEvent = "FINAL · G${game.bo}",
+            source = "LPL Official · TJStats matchDetail FINAL",
+            gameId = "TJ:$bmid:G${game.bo}"
+        )
     }
 
     private fun parseGames(infos: JSONArray): List<ParsedGame> = buildList {

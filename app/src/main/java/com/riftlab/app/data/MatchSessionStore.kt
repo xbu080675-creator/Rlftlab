@@ -36,6 +36,7 @@ object MatchSessionStore {
     val preMatchFlow: StateFlow<PreMatchInfo> = _preMatch.asStateFlow()
 
     val completedGame: StateFlow<LiveSnapshot?> = CompletedGameArchive.latest
+    val completedSeries: StateFlow<CompletedSeriesSnapshot?> = CompletedGameArchive.series
 
     /**
      * Post tab is fed by the last completed small-game snapshot only.

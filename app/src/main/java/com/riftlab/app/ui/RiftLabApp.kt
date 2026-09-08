@@ -335,25 +335,113 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
 
 @Composable
 private fun PostScreen() {
-    val post = MatchSessionStore.postMatch
+    val series by MatchSessionStore.completedSeries.collectAsState()
+    val latest by MatchSessionStore.completedGame.collectAsState()
+
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Panel(accent = false) {
-                Text("POST MATCH · PENDING", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(8.dp))
-                Text(post.winner, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(post.positionRank, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        val resolved = series
+        if (resolved == null) {
+            item {
+                Panel(accent = false) {
+                    Text("POST MATCH · SYNCING", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("正在同步赛后数据", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "赛后数据会从 LPL/TJStats 终局记录重新构建，不要求比赛时一直打开 RiftLab。",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 17.sp
+                    )
+                }
             }
-        }
-        item { SectionTitle("REAL POST DATA / 赛后真实源") }
-        item {
-            Panel {
-                Text("当前不展示任何 Mock MVP / 排行榜", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                Spacer(Modifier.height(7.dp))
-                Text(post.keyPoint, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+            item { SectionTitle("REAL POST DATA / 赛后真实源") }
+            item {
+                Panel {
+                    Text("当前没有可用终局记录", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        latest?.latestEvent ?: "正在等待 LPL 官方赛后数据源返回；不使用 Mock MVP / 排行榜填空。",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 17.sp
+                    )
+                }
+            }
+        } else {
+            item {
+                Panel(accent = resolved.seriesFinished) {
+                    Text(
+                        if (resolved.seriesFinished) "POST MATCH · FINAL" else "POST MATCH · COMPLETED GAMES",
+                        color = if (resolved.seriesFinished) RiftCyan else RiftMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "${resolved.teamA}  ${resolved.scoreA} : ${resolved.scoreB}  ${resolved.teamB}",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        if (resolved.seriesFinished) "WINNER · ${resolved.winner}" else "系列赛仍在进行 · 已结束小局已归档",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            item { SectionTitle("GAME RESULTS / 小局终局数据") }
+            items(resolved.games) { game ->
+                Panel(accent = false) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("GAME ${game.game}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.weight(1f))
+                        Text(MatchSessionStore.formatTime(game.elapsedSeconds), color = RiftMuted, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(game.blue, modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("${game.blueKills} : ${game.redKills}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            game.red,
+                            modifier = Modifier.weight(1f),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        )
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        "GOLD ${if (game.blueGold > 0) "%.1fK".format(game.blueGold / 1000f) else "—"} : ${if (game.redGold > 0) "%.1fK".format(game.redGold / 1000f) else "—"} · DIFF ${formatGoldDiff(game.goldDiff)}",
+                        color = RiftMuted,
+                        fontSize = 10.sp
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    MetricRow(
+                        "K ${game.blueKills}:${game.redKills}",
+                        "T ${game.blueTowers}:${game.redTowers}",
+                        "D ${game.blueDragons}:${game.redDragons}",
+                        "B ${game.blueBarons}:${game.redBarons}"
+                    )
+                }
+            }
+
+            item { SectionTitle("REAL POST DATA / 赛后真实源") }
+            item {
+                Panel {
+                    Text(resolved.source, color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        "共恢复 ${resolved.games.size} 局终局数据。MVP / 赛后官方评选只有在上游提供可核实字段后才展示，不生成 Mock 结论。",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 17.sp
+                    )
+                }
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
