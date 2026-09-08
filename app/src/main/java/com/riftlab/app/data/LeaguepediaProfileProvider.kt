@@ -1,14 +1,5 @@
 package com.riftlab.app.data
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-
 internal data class TeamProfileSupplement(
     val teamLinks: List<EsportsSocialLink> = emptyList(),
     val playerLinks: Map<String, List<EsportsSocialLink>> = emptyMap(),
@@ -17,193 +8,136 @@ internal data class TeamProfileSupplement(
 )
 
 /**
- * Small-text profile supplement from Leaguepedia Cargo.
+ * Small text-only LPL organisation snapshot.
  *
- * Images still come from Riot/OP.GG and remain network-cached by Coil. This provider only fetches
- * text URLs and current organisation roles. Missing fields are omitted rather than fabricated.
+ * Leaguepedia/Fandom Cargo is currently unsuitable as a mobile runtime dependency: direct Android
+ * requests can fail to connect and GitHub Actions probes are also anonymously rate-limited even
+ * after long retry delays. Keep management data local and deterministic instead of making the
+ * user's network decide whether a team page has staff information.
+ *
+ * Snapshot date: 2026-09-09. Source: publicly indexed Leaguepedia organisation pages. Entries are
+ * intentionally conservative: only people/roles with a current public listing are included. No
+ * social handle is fabricated. The existing social-link model stays in place for a future
+ * China-friendly profile JSON mirror.
  */
 internal class LeaguepediaProfileProvider {
     companion object {
-        private const val BASE = "https://lol.fandom.com/api.php"
-        private const val SOURCE = "Leaguepedia"
-        private val managementTokens = listOf(
-            "MANAGER", "GENERALMANAGER", "TEAMMANAGER", "ASSISTANTMANAGER",
-            "LEADER", "SUPERVISOR", "DIRECTOR", "OWNER", "COOWNER",
-            "CEO", "CHIEFEXECUTIVEOFFICER", "COO", "CHIEFOPERATINGOFFICER",
-            "HEADOFESPORTS", "HEADOFLOL"
-        )
-    }
+        private const val SOURCE = "Leaguepedia · 2026-09-09 快照"
 
-    private val cache = linkedMapOf<String, TeamProfileSupplement>()
+        private fun person(name: String, role: String, realName: String = "") =
+            EsportsStaffRef(name = name, role = role, source = SOURCE, realName = realName)
+
+        private val managementByCode: Map<String, List<EsportsStaffRef>> = mapOf(
+            "AL" to emptyList(),
+            "BLG" to listOf(
+                person("You", "MANAGER", "You Chang-Xin (尤长鑫)"),
+                person("YUZZ", "LEADER", "Zhang Xin-Yu (张新宇)")
+            ),
+            "TES" to listOf(
+                person("Hao", "CEO", "Guo Hao (郭皓)"),
+                person("wly", "LEADER", "Wang Liang-Yi (王良毅)"),
+                person("Lazi", "MANAGER", "Deng Bao-Xing (邓宝兴)")
+            ),
+            "JDG" to listOf(
+                person("Choice", "CEO", "Shao Xiao-Hang (邵晓航)"),
+                person("LLH", "ESPORTS_DIRECTOR", "Lan Bai-Qing (蓝柏清)"),
+                person("Fei", "GENERAL_MANAGER", "Pan Fei (潘飞)"),
+                person("Seek", "LEADER", "Cui Hu (崔虎)"),
+                person("Vus5o", "MANAGER", "Wu Shuo (吴硕)")
+            ),
+            "LGD" to listOf(
+                person("Bigbiao", "VICE_PRESIDENT", "Hu Biao (胡彪)"),
+                person("Justin Kenna", "CO_OWNER", "Justin Kenna")
+            ),
+            "EDG" to listOf(
+                person("Ed Zhu", "FOUNDER", "Zhu Yi-Hang (朱一航)"),
+                person("Aaron", "MANAGING_DIRECTOR", "Ji Xing (姬星)"),
+                person("Jasper", "DEPUTY_MANAGER", "Wang Yi-Fan (王一帆)"),
+                person("Bruce", "LEADER", "You Sen-Yu (尤森煜)")
+            ),
+            "TT" to listOf(
+                person("Liu Yi-Fei", "CEO", "Liu Yi-Fei (刘一非)"),
+                person("Ben", "LEADER", "Lu Jiang-Cheng (吕江城)"),
+                person("Vlone", "MANAGER", "Xiao Chu-Yu (肖楚愚)")
+            ),
+            "IG" to listOf(
+                person("WXZ", "OWNER", "Wang Si-Cong (王思聪)"),
+                person("facewind", "MANAGER", "Zheng Hao-Nan (郑浩楠)"),
+                person("xiaochen", "LEADER", "Wang Min-Chen (王敏晨)"),
+                person("Kezman", "SUPERVISOR", "Son Dae-young (손대영)")
+            ),
+            "LNG" to listOf(
+                person("Li Qi-Lin", "OWNER", "Li Qi-Lin (李麒麟)"),
+                person("Shuang Quan", "FOUNDER_AND_CEO", "Shuang Quan (爽全)"),
+                person("kaka", "LEADER", "Lin Tao (林涛)"),
+                person("Jasper", "MANAGER", "Wan Lei (万磊)")
+            ),
+            "NIP" to listOf(
+                person("Aning", "MANAGER", "Chen Ai-Ning (陈爱宁)")
+            ),
+            "WBG" to listOf(
+                person("KIM", "SUPERVISOR", "Kim Jeong-soo (김정수)")
+            ),
+            "WE" to listOf(
+                person("Smallorc", "CEO", "Zhang Wei (张伟)"),
+                person("Sky", "GENERAL_MANAGER", "Li Xiao-Fen (李晓峰)"),
+                person("Bigsam", "LEADER", "Shi Xiao-Xi (石晓曦)"),
+                person("milk", "MANAGER", "Qiao Si-Yu (乔思昱)")
+            )
+        )
+
+        private val aliases = mapOf(
+            "ANYONESLEGEND" to "AL",
+            "BILIBILIGAMING" to "BLG",
+            "TOPESPORTS" to "TES",
+            "BEIJINGJDGESPORTS" to "JDG",
+            "JDGAMING" to "JDG",
+            "LGDGAMING" to "LGD",
+            "EDWARDGAMING" to "EDG",
+            "THUNDERTALKGAMING" to "TT",
+            "INVICTUSGAMING" to "IG",
+            "SUZHOULNGESPORTS" to "LNG",
+            "LNGESPORTS" to "LNG",
+            "NINJASINPYJAMASCN" to "NIP",
+            "SHENZHENNINJASINPYJAMAS" to "NIP",
+            "NINJASINPYJAMAS" to "NIP",
+            "WEIBOGAMING" to "WBG",
+            "XIATEKTEAMWE" to "WE",
+            "XIAN TEAM WE" to "WE",
+            "TEAMWE" to "WE"
+        ).mapKeys { token(it.key) }
+
+        private fun token(value: String): String =
+            value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
+    }
 
     suspend fun fetch(team: EsportsTeamRef, details: EsportsTeamDetails): TeamProfileSupplement {
-        val key = token(details.code.ifBlank { team.code }.ifBlank { details.name.ifBlank { team.name } })
-        cache[key]?.let { return it }
+        val candidates = listOf(
+            details.code, team.code,
+            details.name, team.name,
+            details.slug, team.slug
+        ).map(::token).filter { it.isNotBlank() }
 
-        val result = withContext(Dispatchers.IO) {
-            runCatching { fetchInternal(team, details) }
-                .getOrElse { TeamProfileSupplement(status = "Leaguepedia 社交资料暂不可用 · ${it.message?.take(80).orEmpty()}") }
-        }
-        if (result.teamLinks.isNotEmpty() || result.playerLinks.isNotEmpty() || result.management.isNotEmpty()) {
-            cache[key] = result
-        }
-        return result
-    }
-
-    private fun fetchInternal(team: EsportsTeamRef, details: EsportsTeamDetails): TeamProfileSupplement {
-        val code = details.code.ifBlank { team.code }
-        val requestedName = details.name.ifBlank { team.name }
-        val teamRows = cargoQuery(
-            tables = "Teams",
-            fields = "OverviewPage,Name,Short,Twitter,Youtube,Instagram,Facebook,Website",
-            where = buildString {
-                val clauses = mutableListOf<String>()
-                if (code.isNotBlank()) clauses += "Short=\"${escapeCargo(code)}\""
-                if (requestedName.isNotBlank()) clauses += "Name=\"${escapeCargo(requestedName)}\""
-                append(clauses.joinToString(" OR ").ifBlank { "Short=\"__RIFTLAB_NONE__\"" })
-            },
-            limit = 5
-        )
-        val teamTitle = if (teamRows.length() > 0) {
-            teamRows.optJSONObject(0)?.optJSONObject("title")
-        } else {
-            null
-        }
-        val overviewPage = teamTitle?.optString("OverviewPage").orEmpty()
-            .ifBlank { teamTitle?.optString("Name").orEmpty() }
-            .ifBlank { requestedName }
-
-        val teamLinks = buildLinks(teamTitle)
-        val peopleRows = if (overviewPage.isNotBlank()) {
-            cargoQuery(
-                tables = "Players",
-                fields = "ID,Name,Role,Twitter,Weibo,Youtube,Stream,Instagram,Tiktok,IsPersonality",
-                where = "Team=\"${escapeCargo(overviewPage)}\"",
-                limit = 50
-            )
-        } else JSONArray()
-
-        val playerLinks = linkedMapOf<String, List<EsportsSocialLink>>()
-        val management = mutableListOf<EsportsStaffRef>()
-        for (i in 0 until peopleRows.length()) {
-            val title = peopleRows.optJSONObject(i)?.optJSONObject("title") ?: continue
-            val id = title.optString("ID").trim()
-            val role = title.optString("Role").trim()
-            val socials = buildLinks(title)
-            if (id.isNotBlank() && socials.isNotEmpty()) {
-                playerLinks[token(id)] = socials
-            }
-            if (isManagementRole(role)) {
-                management += EsportsStaffRef(
-                    name = id.ifBlank { title.optString("Name").ifBlank { "—" } },
-                    role = role.ifBlank { "MANAGEMENT" },
-                    source = SOURCE,
-                    realName = title.optString("Name"),
-                    socialLinks = socials
-                )
+        val code = candidates.firstNotNullOfOrNull { candidate ->
+            when {
+                managementByCode.containsKey(candidate) -> candidate
+                aliases.containsKey(candidate) -> aliases[candidate]
+                else -> null
             }
         }
 
-        val totalLinks = teamLinks.size + playerLinks.values.sumOf { it.size }
+        val management = code?.let(managementByCode::get).orEmpty()
+        val status = when {
+            code == null -> "人员资料快照未识别该战队"
+            management.isNotEmpty() -> "$SOURCE · 管理层 ${management.size} 人 · 社交账号等待独立镜像"
+            else -> "$SOURCE · 暂无可靠公开管理层记录 · 社交账号等待独立镜像"
+        }
+
         return TeamProfileSupplement(
-            teamLinks = teamLinks.distinctBy { it.platform to it.url },
-            playerLinks = playerLinks,
-            management = management.distinctBy { token(it.name) to token(it.role) },
-            status = "$SOURCE · 管理层 ${management.size} · 社交账号 $totalLinks"
+            teamLinks = emptyList(),
+            playerLinks = emptyMap(),
+            management = management,
+            status = status
         )
     }
-
-    private fun cargoQuery(tables: String, fields: String, where: String, limit: Int): JSONArray {
-        val params = linkedMapOf(
-            "action" to "cargoquery",
-            "format" to "json",
-            "tables" to tables,
-            "fields" to fields,
-            "where" to where,
-            "limit" to limit.toString()
-        )
-        val query = params.entries.joinToString("&") { (k, v) ->
-            "${enc(k)}=${enc(v)}"
-        }
-        val connection = (URL("$BASE?$query").openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 6_000
-            readTimeout = 7_000
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "RiftLab/1.0 Android team-profile")
-        }
-        try {
-            val code = connection.responseCode
-            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) error("HTTP $code")
-            if (body.isBlank()) error("empty response")
-            return JSONObject(body).optJSONArray("cargoquery") ?: JSONArray()
-        } finally {
-            connection.disconnect()
-        }
-    }
-
-    private fun buildLinks(row: JSONObject?): List<EsportsSocialLink> {
-        if (row == null) return emptyList()
-        val links = mutableListOf<EsportsSocialLink>()
-        addLink(links, "X", normalizeHandleUrl(row.optString("Twitter"), "https://x.com/"))
-        addLink(links, "微博", normalizeDirectUrl(row.optString("Weibo")))
-        addLink(links, "YouTube", normalizeYoutube(row.optString("Youtube")))
-        addLink(links, "Instagram", normalizeHandleUrl(row.optString("Instagram"), "https://www.instagram.com/"))
-        addLink(links, "Facebook", normalizeDirectUrl(row.optString("Facebook")))
-        addLink(links, "官网", normalizeDirectUrl(row.optString("Website")))
-        addLink(links, "TikTok", normalizeHandleUrl(row.optString("Tiktok"), "https://www.tiktok.com/@"))
-
-        val stream = normalizeDirectUrl(row.optString("Stream"))
-        if (stream.isNotBlank()) {
-            val platform = when {
-                stream.contains("bilibili.com", ignoreCase = true) || stream.contains("b23.tv", ignoreCase = true) -> "B站"
-                stream.contains("youtube.com", ignoreCase = true) || stream.contains("youtu.be", ignoreCase = true) -> "YouTube"
-                stream.contains("twitch.tv", ignoreCase = true) -> "Twitch"
-                else -> "直播"
-            }
-            addLink(links, platform, stream)
-        }
-        return links.distinctBy { it.platform to it.url }
-    }
-
-    private fun addLink(target: MutableList<EsportsSocialLink>, platform: String, url: String) {
-        if (url.isNotBlank()) target += EsportsSocialLink(platform = platform, url = url, source = SOURCE)
-    }
-
-    private fun normalizeHandleUrl(raw: String, prefix: String): String {
-        val value = raw.trim().trimStart('@')
-        if (value.isBlank() || value.equals("null", true)) return ""
-        if (value.startsWith("http://") || value.startsWith("https://")) return value.replaceFirst("http://", "https://")
-        return prefix + value
-    }
-
-    private fun normalizeYoutube(raw: String): String {
-        val value = raw.trim()
-        if (value.isBlank() || value.equals("null", true)) return ""
-        if (value.startsWith("http://") || value.startsWith("https://")) return value.replaceFirst("http://", "https://")
-        return "https://www.youtube.com/$value"
-    }
-
-    private fun normalizeDirectUrl(raw: String): String {
-        val value = raw.trim()
-        if (value.isBlank() || value.equals("null", true) || value.equals("undefined", true)) return ""
-        return when {
-            value.startsWith("https://") -> value
-            value.startsWith("http://") -> value.replaceFirst("http://", "https://")
-            value.startsWith("//") -> "https:$value"
-            value.startsWith("www.") -> "https://$value"
-            else -> value.takeIf { it.contains('.') }?.let { "https://$it" }.orEmpty()
-        }
-    }
-
-    private fun isManagementRole(role: String): Boolean {
-        val value = token(role)
-        return managementTokens.any { value == it || value.contains(it) }
-    }
-
-    private fun escapeCargo(value: String): String = value.replace("\\", "\\\\").replace("\"", "\\\"")
-    private fun enc(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.toString())
-    private fun token(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 }
