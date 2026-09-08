@@ -66,7 +66,7 @@ private fun ScheduleCenterLauncher(modifier: Modifier = Modifier) {
     ) {
         Icon(Icons.Default.CalendarMonth, null, tint = RiftCyan)
         Spacer(Modifier.width(7.dp))
-        Text("赛程中心", color = RiftText, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        Text("赛程中心", color = RiftText, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
     }
 
     if (open) {
@@ -98,12 +98,13 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             "LPL 赛程数据中心",
                             color = RiftText,
                             fontSize = 22.sp,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             "Riot Schedule · 计划时间只作参考，Live 状态优先",
                             color = RiftMuted,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
                     Box(
@@ -124,7 +125,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                     Text(
                         center.statusMessage,
                         color = RiftText,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         fontSize = 11.sp
                     )
                     center.currentMatch?.let {
@@ -133,16 +134,22 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             "● NOW  ${matchLabel(it)}",
                             color = RiftCyan,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Text(MatchSessionStore.scheduleTimingNote(it), color = RiftMuted, fontSize = 9.sp)
+                        Text(
+                            MatchSessionStore.scheduleTimingNote(it),
+                            color = RiftMuted,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Normal
+                        )
                     }
                     center.nextMatch?.let {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "NEXT  ${matchLabel(it)} · ${MatchSessionStore.scheduleTimingNote(it)}",
                             color = RiftMuted,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
@@ -158,7 +165,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 date,
                                 color = RiftMuted,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
                             )
                         }
@@ -209,9 +216,19 @@ private fun ScheduleMatchCard(
             .padding(13.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(phaseText, color = phaseColor, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(
+                phaseText,
+                color = phaseColor,
+                fontSize = 10.sp,
+                fontWeight = if (phase == ScheduleMatchPhase.LIVE) FontWeight.Bold else FontWeight.SemiBold
+            )
             Spacer(Modifier.weight(1f))
-            Text("BO${match.bestOf}", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "BO${match.bestOf}",
+                color = RiftMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -219,7 +236,7 @@ private fun ScheduleMatchCard(
                 match.teams.getOrNull(0)?.code ?: "—",
                 color = RiftText,
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
             Text(
@@ -229,21 +246,31 @@ private fun ScheduleMatchCard(
                     "VS"
                 },
                 color = if (phase == ScheduleMatchPhase.LIVE) RiftCyan else RiftMuted,
-                fontWeight = FontWeight.Black
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 match.teams.getOrNull(1)?.code ?: "—",
                 color = RiftText,
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.End
             )
         }
         Spacer(Modifier.height(5.dp))
-        Text(MatchSessionStore.scheduleTimingNote(match), color = RiftMuted, fontSize = 9.sp)
+        Text(
+            MatchSessionStore.scheduleTimingNote(match),
+            color = RiftMuted,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Normal
+        )
         if (match.blockName.isNotBlank()) {
-            Text(match.blockName.uppercase(), color = RiftMuted, fontSize = 9.sp)
+            Text(
+                match.blockName.uppercase(),
+                color = RiftMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
