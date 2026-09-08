@@ -9,38 +9,53 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Resolves Riot numeric champion ids to localized display names for BP/history UI. */
+/** Resolves Riot champion ids/names to localized labels and Data Dragon artwork. */
 internal object ChampionCatalog {
     private const val VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json"
     private val mutex = Mutex()
-    @Volatile private var cachedNames: Map<String, String>? = null
+
+    private data class ChampionVisual(
+        val numericId: String,
+        val displayName: String,
+        val imageFile: String,
+        val version: String
+    )
+
+    @Volatile private var cachedVisuals: Map<String, ChampionVisual>? = null
 
     suspend fun decorateDrafts(drafts: List<DraftPickRecord>): List<DraftPickRecord> {
         if (drafts.isEmpty()) return drafts
-        val names = loadNames()
+        val visuals = loadVisuals()
         return drafts.map { draft ->
             draft.copy(
-                blueBans = draft.blueBans.map { displayName(it, names) },
-                redBans = draft.redBans.map { displayName(it, names) },
-                bluePicks = draft.bluePicks.map { displayName(it, names) },
-                redPicks = draft.redPicks.map { displayName(it, names) }
+                blueBans = draft.blueBans.map { displayName(it, visuals) },
+                redBans = draft.redBans.map { displayName(it, visuals) },
+                bluePicks = draft.bluePicks.map { displayName(it, visuals) },
+                redPicks = draft.redPicks.map { displayName(it, visuals) }
             )
         }
     }
 
-    suspend fun displayName(raw: String): String = displayName(raw, loadNames())
+    suspend fun displayName(raw: String): String = displayName(raw, loadVisuals())
 
-    private fun displayName(raw: String, names: Map<String, String>): String {
+    suspend fun iconUrl(raw: String): String {
         val token = raw.trim()
-        if (token.isBlank()) return token
-        if (!token.all(Char::isDigit)) return token
-        return names[token] ?: "英雄ID $token"
+        if (token.isBlank()) return ""
+        val visual = loadVisuals()[normalize(token)] ?: return ""
+        return "https://ddragon.leagueoflegends.com/cdn/${visual.version}/img/champion/${visual.imageFile}"
     }
 
-    private suspend fun loadNames(): Map<String, String> {
-        cachedNames?.let { return it }
+    private fun displayName(raw: String, visuals: Map<String, ChampionVisual>): String {
+        val token = raw.trim()
+        if (token.isBlank()) return token
+        val visual = visuals[normalize(token)]
+        return visual?.displayName ?: if (token.all(Char::isDigit)) "英雄ID $token" else token
+    }
+
+    private suspend fun loadVisuals(): Map<String, ChampionVisual> {
+        cachedVisuals?.let { return it }
         return mutex.withLock {
-            cachedNames?.let { return@withLock it }
+            cachedVisuals?.let { return@withLock it }
             val loaded = withContext(Dispatchers.IO) {
                 runCatching {
                     val versions = JSONArray(getText(VERSIONS_URL))
@@ -53,17 +68,32 @@ internal object ChampionCatalog {
                         val keys = data.keys()
                         while (keys.hasNext()) {
                             val champion = data.optJSONObject(keys.next()) ?: continue
-                            val id = champion.optString("key")
-                            val name = champion.optString("name")
-                            if (id.isNotBlank() && name.isNotBlank()) put(id, name)
+                            val numericId = champion.optString("key")
+                            val displayName = champion.optString("name")
+                            val internalId = champion.optString("id")
+                            val imageFile = champion.optJSONObject("image")?.optString("full")
+                                .orEmpty().ifBlank { "$internalId.png" }
+                            if (numericId.isBlank() || displayName.isBlank() || internalId.isBlank()) continue
+                            val visual = ChampionVisual(
+                                numericId = numericId,
+                                displayName = displayName,
+                                imageFile = imageFile,
+                                version = version
+                            )
+                            for (key in listOf(numericId, displayName, internalId, imageFile.removeSuffix(".png"))) {
+                                put(normalize(key), visual)
+                            }
                         }
                     }
                 }.getOrDefault(emptyMap())
             }
-            cachedNames = loaded
+            cachedVisuals = loaded
             loaded
         }
     }
+
+    private fun normalize(value: String): String =
+        value.trim().uppercase().replace(Regex("[^A-Z0-9\\u4E00-\\u9FFF]+"), "")
 
     private fun getText(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection
