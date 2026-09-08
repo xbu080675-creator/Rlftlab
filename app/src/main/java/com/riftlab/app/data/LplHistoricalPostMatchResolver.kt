@@ -67,8 +67,16 @@ internal class LplHistoricalPostMatchResolver {
     private var lastResolvedScheduleKey: String = ""
 
     suspend fun refresh(match: ScheduledEsportsMatch) {
+        try {
+            refreshInternal(match)
+        } catch (t: Throwable) {
+            _status.value = "POST · 历史赛后恢复失败 · ${t.message?.take(180) ?: t::class.java.simpleName}"
+        }
+    }
+
+    private suspend fun refreshInternal(match: ScheduledEsportsMatch) {
         val scheduleKey = match.eventId.ifBlank { match.matchId }.ifBlank {
-            match.teams.take(2).joinToString("|") { it.code.ifBlank { it.name } } + "|" + match.startTimeIso
+            match.teams.take(2).joinToString("|") { team -> team.code.ifBlank { team.name } } + "|" + match.startTimeIso
         }
 
         val already = CompletedGameArchive.series.value
@@ -94,8 +102,8 @@ internal class LplHistoricalPostMatchResolver {
 
         val teamAId = intAny(data, "teamAId", "teamAID")
         val teamBId = intAny(data, "teamBId", "teamBID")
-        val targetA = match.teams.getOrNull(0)?.let { it.code.ifBlank { it.name } }.orEmpty()
-        val targetB = match.teams.getOrNull(1)?.let { it.code.ifBlank { it.name } }.orEmpty()
+        val targetA = match.teams.getOrNull(0)?.let { team -> team.code.ifBlank { team.name } }.orEmpty()
+        val targetB = match.teams.getOrNull(1)?.let { team -> team.code.ifBlank { team.name } }.orEmpty()
         val teamAName = data.optString("teamAName").ifBlank { targetA.ifBlank { ref.matchName.substringBefore(" vs ").trim() } }
         val teamBName = data.optString("teamBName").ifBlank { targetB.ifBlank { ref.matchName.substringAfter(" vs ", "TEAM B").trim() } }
         val scoreA = intAny(data, "teamAScore", "scoreA").takeIf { it > 0 } ?: ref.scoreA
@@ -341,7 +349,7 @@ internal class LplHistoricalPostMatchResolver {
     }
 
     private fun teamsLabel(match: ScheduledEsportsMatch): String =
-        match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { team -> team.name } }
+        match.teams.take(2).joinToString(" vs ") { team -> team.code.ifBlank { team.name } }
 
     private fun teamMatches(upstreamName: String, team: EsportsTeamRef): Boolean {
         val upstream = teamKey(upstreamName)
