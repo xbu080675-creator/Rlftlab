@@ -10,6 +10,13 @@ interface ScheduleDataSource {
 }
 
 /**
+ * 队伍与当前 Riot roster 接入点。
+ */
+interface TeamDataSource {
+    suspend fun fetchTeam(slug: String): EsportsTeamDetails?
+}
+
+/**
  * 实时比赛数据接入点。UI 只依赖标准化 LiveSnapshot。
  */
 interface LiveMatchDataSource {
