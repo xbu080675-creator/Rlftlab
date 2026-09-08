@@ -145,7 +145,7 @@ private fun PhaseTabs(selected: Int, onSelect: (Int) -> Unit) {
 
 @Composable
 private fun PreScreen() {
-    val data = MatchSessionStore.preMatch
+    val data by MatchSessionStore.preMatchFlow.collectAsState()
     val scheduleStatus by MatchSessionStore.scheduleStatus.collectAsState()
     val target by MatchSessionStore.targetMatch.collectAsState()
 
