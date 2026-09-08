@@ -1,11 +1,7 @@
 package com.riftlab.app.ui
 
 import android.Manifest
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -30,8 +26,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
@@ -53,11 +49,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MockAiInsightEngine
 import com.riftlab.app.data.PlayerCard
-import com.riftlab.app.overlay.RiftOverlayService
+import com.riftlab.app.stream.StreamLauncher
+import com.riftlab.app.stream.StreamPlatform
 import kotlin.math.abs
 
 private enum class Phase(val label: String) { PRE("赛前"), LIVE("赛中"), POST("赛后") }
@@ -86,9 +82,9 @@ fun RiftLabApp() {
                     when (current) {
                         Phase.PRE -> PreScreen()
                         Phase.LIVE -> LiveScreen(
-                            startOverlay = { startOverlayOrRequest(context) },
-                            watchBili = { launchWatch(context, "https://live.bilibili.com/6") },
-                            watchHuya = { launchWatch(context, "https://www.huya.com/lpl") }
+                            startOverlay = { StreamLauncher.startOverlay(context) },
+                            watchBili = { StreamLauncher.watch(context, StreamPlatform.BILIBILI) },
+                            watchHuya = { StreamLauncher.watch(context, StreamPlatform.HUYA) }
                         )
                         Phase.POST -> PostScreen()
                     }
@@ -115,7 +111,7 @@ private fun Header() {
             Text("RIFTLAB", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.4.sp)
             Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 9.sp, letterSpacing = 1.1.sp)
         }
-        Text("1.0 DEV", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("1.0 DEV.2", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -149,19 +145,11 @@ private fun PreScreen() {
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            MatchHero(data.blue, data.red, data.startTime, "${data.league} · ${data.stage}")
-        }
+        item { MatchHero(data.blue, data.red, data.startTime, "${data.league} · ${data.stage}") }
         item { SectionTitle("RECENT FORM / 近期状态") }
-        item {
-            Panel {
-                MetricRow(data.blue, data.blueForm, data.redForm, data.red)
-            }
-        }
+        item { Panel { MetricRow(data.blue, data.blueForm, data.redForm, data.red) } }
         item { SectionTitle("STARTING ROSTER / 首发与 RANK") }
-        items(data.blueRoster.zip(data.redRoster)) { pair ->
-            RosterRow(pair.first, pair.second)
-        }
+        items(data.blueRoster.zip(data.redRoster)) { pair -> RosterRow(pair.first, pair.second) }
         item {
             Panel {
                 Text("ROSTER UPDATE", color = RiftCyan, fontWeight = FontWeight.Bold, fontSize = 11.sp)
@@ -227,12 +215,12 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ActionButton("开启副屏", Icons.Default.PictureInPictureAlt, Modifier.weight(1f), startOverlay)
-                ActionButton("B站观赛", Icons.Default.OpenInNew, Modifier.weight(1f), watchBili)
-                ActionButton("虎牙观赛", Icons.Default.OpenInNew, Modifier.weight(1f), watchHuya)
+                ActionButton("B站观赛", Icons.AutoMirrored.Filled.OpenInNew, Modifier.weight(1f), watchBili)
+                ActionButton("虎牙观赛", Icons.AutoMirrored.Filled.OpenInNew, Modifier.weight(1f), watchHuya)
             }
         }
         item {
-            Text("观赛按钮：先启动 RiftScreen，再跳转固定官方直播间。你随后切去二路、POV 或任何其他直播都不影响副屏。", color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+            Text("已安装对应直播 App 时优先直达 App；不可用时回退网页。二路、POV 或其他直播仍与 RiftScreen 完全解耦。", color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
         }
         item { Spacer(Modifier.height(20.dp)) }
     }
@@ -392,18 +380,4 @@ private fun formatGoldDiff(value: Int): String {
     val sign = if (value >= 0) "+" else "-"
     val n = abs(value)
     return if (n >= 1000) "$sign%.1fK".format(n / 1000f) else "$sign$n"
-}
-
-private fun startOverlayOrRequest(context: Context): Boolean {
-    if (!Settings.canDrawOverlays(context)) {
-        context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        return false
-    }
-    ContextCompat.startForegroundService(context, Intent(context, RiftOverlayService::class.java))
-    return true
-}
-
-private fun launchWatch(context: Context, url: String) {
-    if (!startOverlayOrRequest(context)) return
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
