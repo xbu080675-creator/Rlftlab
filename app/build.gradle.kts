@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.0.0-dev.11"
+        versionCode = 12
+        versionName = "1.0.0-dev.12"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -67,7 +67,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Riot/league team assets may be PNG, WebP, SVG or redirected CDN resources.
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-svg:2.7.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.11: today-focused event center, navigable team pages/logos and BP final-pick recovery.
+// dev.12: source-attributed match panels, team-logo rendering fixes, role normalization and named BP champions.
