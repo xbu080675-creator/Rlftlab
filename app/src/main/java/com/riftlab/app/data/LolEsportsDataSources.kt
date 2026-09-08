@@ -15,6 +15,12 @@ internal class LolEsportsScheduleDataSource(
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> = client.fetchLplSchedule()
 }
 
+internal class LolEsportsTeamDataSource(
+    private val client: LolEsportsApiClient = LolEsportsApiClient()
+) : TeamDataSource {
+    override suspend fun fetchTeam(slug: String): EsportsTeamDetails? = client.fetchTeamDetails(slug)
+}
+
 internal class LolEsportsLiveDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient(),
     private val preferredTeamCodes: Set<String> = emptySet()
