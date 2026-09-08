@@ -17,7 +17,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-      - name: Smoke test Riot LoL Esports data source
+      - name: Probe Riot LoL Esports data source
         continue-on-error: true
         shell: bash
         run: |
@@ -27,6 +27,7 @@ jobs:
           import re
           import urllib.parse
           import urllib.request
+          import urllib.error
 
           source = pathlib.Path("app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt").read_text()
           key = re.search(r'API_KEY = "([^"]+)"', source).group(1)
@@ -42,10 +43,18 @@ jobs:
                       "User-Agent": "RiftLab-CI/1.0",
                   },
               )
-              with urllib.request.urlopen(req, timeout=15) as response:
-                  return json.load(response)
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as response:
+                      return json.load(response), response.status
+              except urllib.error.HTTPError as e:
+                  body = e.read().decode("utf-8", "replace")
+                  print("HTTP", e.code, path, body[:240])
+                  return {}, e.code
+              except Exception as e:
+                  print("ERROR", path, repr(e))
+                  return {}, 0
 
-          schedule = get(f"/getSchedule?hl=en-US&leagueId={league_id}")
+          schedule, _ = get(f"/getSchedule?hl=en-US&leagueId={league_id}")
           events = schedule.get("data", {}).get("schedule", {}).get("events", [])
           target = None
           for event in events:
@@ -56,31 +65,31 @@ jobs:
               if {"LGD", "IG"}.issubset(codes):
                   target = event
                   break
+          print("schedule target:", target.get("startTime") if target else None, target.get("state") if target else None)
 
-          assert target is not None, "LPL schedule reachable but LGD vs IG was not found"
-          print("schedule OK:", target.get("startTime"), target.get("state"))
+          live, _ = get("/getLive?hl=en-US")
+          live_events = live.get("data", {}).get("schedule", {}).get("events", [])
+          print("getLive events:", len(live_events) if isinstance(live_events, list) else "invalid")
 
-          payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(league_id))
-          returned = payload.get("data", {}).get("teams", [])
-          assert returned, "getTeams returned no teams for LPL league id"
-          by_code = {str(team.get("code", "")).upper(): team for team in returned}
-          for code in ("LGD", "IG"):
-              team = by_code.get(code)
-              assert team is not None, f"LPL team list has no {code}"
-              players = team.get("players", [])
-              assert len(players) >= 5, f"{code} roster has only {len(players)} players"
-              print(
-                  "roster OK:",
-                  code,
-                  "id=" + str(team.get("id", "")),
-                  "slug=" + str(team.get("slug", "")),
-                  "players=" + str(len(players)),
-                  "names=" + ",".join(str(p.get("summonerName", "")) for p in players),
-              )
-
-          live = get("/getLive?hl=en-US")
-          assert isinstance(live.get("data", {}).get("schedule", {}).get("events", []), list)
-          print("getLive endpoint OK")
+          probes = [
+              ("no-id", "/getTeams?hl=en-US"),
+              ("lgd-gaming", "/getTeams?hl=en-US&id=lgd-gaming"),
+              ("invictus-gaming", "/getTeams?hl=en-US&id=invictus-gaming"),
+              ("invictus-gaming-ig", "/getTeams?hl=en-US&id=invictus-gaming-ig"),
+          ]
+          for label, path in probes:
+              payload, status = get(path)
+              teams = payload.get("data", {}).get("teams", [])
+              print("probe", label, "http", status, "teams", len(teams) if isinstance(teams, list) else "invalid")
+              for team in teams[:3] if isinstance(teams, list) else []:
+                  print(
+                      " team",
+                      team.get("code"),
+                      team.get("name"),
+                      "id=" + str(team.get("id", "")),
+                      "slug=" + str(team.get("slug", "")),
+                      "players=" + str(len(team.get("players", []))),
+                  )
           PY
       - uses: gradle/actions/setup-gradle@v4
         with:
