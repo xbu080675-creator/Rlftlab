@@ -1,5 +1,6 @@
 package com.riftlab.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,10 +17,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riftlab.app.data.EsportsTeamRef
 
 /**
  * Global visual standard for every team-vs-team score surface in RiftLab.
  * Team logos are the primary identity; team codes are secondary labels only.
+ * Every real team identity is also a global navigation entry to Team Detail.
  */
 @Composable
 internal fun TeamMatchupVisual(
@@ -83,7 +86,24 @@ private fun TeamIdentityVisual(
     modifier: Modifier
 ) {
     val label = code.ifBlank { "—" }
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    val navigable = label !in setOf("—", "TBD", "N/A", "NA")
+    Column(
+        modifier.then(
+            if (navigable) {
+                Modifier.clickable {
+                    AppEntityNavigator.openTeam(
+                        EsportsTeamRef(
+                            id = "",
+                            code = label,
+                            name = label,
+                            imageUrl = imageUrl
+                        )
+                    )
+                }
+            } else Modifier
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         TeamLogo(imageUrl = imageUrl, code = label, modifier = Modifier.size(logoSize))
         Spacer(Modifier.height(5.dp))
         Text(
