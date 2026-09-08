@@ -72,6 +72,49 @@ internal class LolEsportsApiClient {
         }
     }
 
+    suspend fun fetchTeamDetails(slug: String): EsportsTeamDetails? {
+        if (slug.isBlank()) return null
+        val encoded = java.net.URLEncoder.encode(slug, "UTF-8")
+        val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getTeams?hl=en-US&id=$encoded")
+        val teams = root.optJSONObject("data")?.optJSONArray("teams") ?: return null
+        if (teams.length() == 0) return null
+
+        var selected: JSONObject? = null
+        for (i in 0 until teams.length()) {
+            val item = teams.optJSONObject(i) ?: continue
+            if (item.optString("slug").equals(slug, ignoreCase = true)) {
+                selected = item
+                break
+            }
+            if (selected == null) selected = item
+        }
+        val team = selected ?: return null
+        val playersJson = team.optJSONArray("players") ?: JSONArray()
+        val players = buildList {
+            for (i in 0 until playersJson.length()) {
+                val player = playersJson.optJSONObject(i) ?: continue
+                val summoner = player.optString("summonerName")
+                if (summoner.isBlank()) continue
+                add(
+                    EsportsPlayerRef(
+                        id = player.optString("id"),
+                        summonerName = summoner,
+                        role = normalizeRole(player.optString("role")),
+                        imageUrl = player.optString("image")
+                    )
+                )
+            }
+        }.sortedBy { roleOrder(it.role) }
+
+        return EsportsTeamDetails(
+            id = team.optString("id"),
+            slug = team.optString("slug", slug),
+            code = team.optString("code").ifBlank { team.optString("name").take(4).uppercase() },
+            name = team.optString("name"),
+            players = players
+        )
+    }
+
     suspend fun findLiveLplEvent(preferredTeamCodes: Set<String> = emptySet()): LiveEventRef? {
         val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getLive?hl=en-US")
         val events = root.optJSONObject("data")
@@ -130,7 +173,6 @@ internal class LolEsportsApiClient {
             if (!normalized.contains("progress")) continue
             return parseGame(game, teams)
         }
-        // Between games, or before game 1, do not probe an unstarted gameId.
         return null
     }
 
@@ -235,7 +277,9 @@ internal class LolEsportsApiClient {
                     EsportsTeamRef(
                         id = team.optString("id"),
                         code = code,
-                        name = name.ifBlank { code }
+                        name = name.ifBlank { code },
+                        slug = team.optString("slug"),
+                        imageUrl = team.optString("image")
                     )
                 )
             }
@@ -310,6 +354,24 @@ internal class LolEsportsApiClient {
             current.redKills > previous.redKills -> "${current.red} 完成击杀"
             else -> "Riot Live · 实时数据已同步"
         }
+    }
+
+    private fun normalizeRole(value: String): String = when (value.lowercase()) {
+        "top" -> "TOP"
+        "jungle", "jun" -> "JUG"
+        "mid", "middle" -> "MID"
+        "bottom", "bot", "adc" -> "BOT"
+        "support", "sup" -> "SUP"
+        else -> value.uppercase().ifBlank { "—" }
+    }
+
+    private fun roleOrder(role: String): Int = when (role) {
+        "TOP" -> 0
+        "JUG" -> 1
+        "MID" -> 2
+        "BOT" -> 3
+        "SUP" -> 4
+        else -> 99
     }
 
     private fun parseInstant(value: String): Instant? = runCatching { Instant.parse(value) }.getOrNull()
