@@ -18,6 +18,8 @@ import java.time.format.DateTimeFormatter
 object MatchSessionStore {
     const val MATCH_ID = "2026-09-08-lgd-ig"
 
+    private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
+
     private val verifiedLgdRoster = listOf(
         PlayerCard("TOP", "Burdol", "RANK 待接", "赛前已验证缓存"),
         PlayerCard("JUG", "Heng", "RANK 待接", "赛前已验证缓存"),
@@ -152,7 +154,7 @@ object MatchSessionStore {
             }
 
             val teams = target.teams.joinToString(" vs ") { it.code }
-            _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()} · EVENT ${target.eventId}"
+            _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()}"
             val rosterResult = refreshPreMatchFromTarget(target)
             _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()} · ROSTER $rosterResult"
         } catch (t: Throwable) {
@@ -167,17 +169,24 @@ object MatchSessionStore {
         _rosterStatus.value = "ROSTER · 正在同步 Riot getTeams…"
 
         val leftDetails = runCatching {
-            left.slug.takeIf { it.isNotBlank() }?.let { teamSource.fetchTeam(it) }
+            teamLookupSlug(left)?.let { teamSource.fetchTeam(it) }
         }.getOrNull()
         val rightDetails = runCatching {
-            right.slug.takeIf { it.isNotBlank() }?.let { teamSource.fetchTeam(it) }
+            teamLookupSlug(right)?.let { teamSource.fetchTeam(it) }
         }.getOrNull()
 
-        val leftReal = leftDetails?.players.orEmpty().toPlayerCards()
-        val rightReal = rightDetails?.players.orEmpty().toPlayerCards()
-        val leftRoster = leftReal.takeIf { it.size >= 5 } ?: fallbackRoster(left.code)
-        val rightRoster = rightReal.takeIf { it.size >= 5 } ?: fallbackRoster(right.code)
-        val realCount = listOf(leftReal.size >= 5, rightReal.size >= 5).count { it }
+        val leftRiotRoster = leftDetails?.players.orEmpty().toPlayerCards()
+        val rightRiotRoster = rightDetails?.players.orEmpty().toPlayerCards()
+
+        // getTeams is a team roster endpoint, not a match-specific starting-lineup endpoint.
+        // Only auto-promote it to the five displayed starters when every core role is unique.
+        // If the roster contains substitutes/role ambiguity, keep the separately verified five.
+        val leftUniqueFive = leftRiotRoster.uniqueStartingFiveOrNull()
+        val rightUniqueFive = rightRiotRoster.uniqueStartingFiveOrNull()
+        val leftRoster = leftUniqueFive ?: fallbackRoster(left.code)
+        val rightRoster = rightUniqueFive ?: fallbackRoster(right.code)
+        val connectedCount = listOf(leftDetails != null, rightDetails != null).count { it }
+        val autoStarterCount = listOf(leftUniqueFive != null, rightUniqueFive != null).count { it }
 
         _preMatch.value = PreMatchInfo(
             league = target.league.ifBlank { "LPL" },
@@ -189,18 +198,39 @@ object MatchSessionStore {
             redForm = "RIOT SCHEDULE",
             blueRoster = leftRoster,
             redRoster = rightRoster,
-            rosterNote = when (realCount) {
-                2 -> "首发/队伍 roster 来自 Riot LoL Esports getTeams；Rank 将接独立 Riot ID / Ranked 数据源。"
-                1 -> "一侧 Riot roster 已命中，另一侧使用赛前已验证缓存；Rank 暂未接入。"
-                else -> "Riot Schedule 已命中，但 getTeams roster 未完整返回；当前使用赛前已验证缓存，Rank 暂未接入。"
+            rosterNote = when {
+                connectedCount == 2 && autoStarterCount == 2 ->
+                    "两队 Riot getTeams roster 已连接，五位置均唯一；当前显示 Riot roster 五人。Rank 将接独立 Ranked 数据源。"
+                connectedCount == 2 ->
+                    "两队 Riot getTeams roster 已连接；存在替补或位置歧义的一侧继续显示赛前已验证首发，避免把 team roster 误当本场首发。Rank 暂未接入。"
+                connectedCount == 1 ->
+                    "一侧 Riot roster 已连接，另一侧使用赛前已验证缓存；Rank 暂未接入。"
+                else ->
+                    "Riot Schedule 已命中，但 roster 暂不可用；当前使用赛前已验证首发缓存，Rank 暂未接入。"
             }
         )
-        _rosterStatus.value = when (realCount) {
-            2 -> "ROSTER · RIOT GETTEAMS · 2/2"
-            1 -> "ROSTER · RIOT GETTEAMS · 1/2 + VERIFIED CACHE"
-            else -> "ROSTER · VERIFIED CACHE · 0/2"
+        _rosterStatus.value = "ROSTER · RIOT GETTEAMS $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        return "$connectedCount/2"
+    }
+
+    private fun teamLookupSlug(team: EsportsTeamRef): String? {
+        if (team.slug.isNotBlank()) return team.slug
+
+        // Verified against the live persisted gateway in CI on 2026-09-08.
+        val verified = when (team.code.uppercase()) {
+            "LGD" -> "lgd-gaming"
+            "IG" -> "invictus-gaming"
+            else -> null
         }
-        return "$realCount/2"
+        if (verified != null) return verified
+
+        // Generic best-effort candidate for future teams. If Riot uses a non-obvious slug,
+        // getTeams will simply miss and the UI keeps its verified/cache fallback.
+        return team.name
+            .lowercase()
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .takeIf { it.isNotBlank() }
     }
 
     private fun List<EsportsPlayerRef>.toPlayerCards(): List<PlayerCard> =
@@ -213,7 +243,12 @@ object MatchSessionStore {
                     recent = "Riot roster"
                 )
             }
-            .take(7)
+
+    private fun List<PlayerCard>.uniqueStartingFiveOrNull(): List<PlayerCard>? {
+        val byRole = groupBy { it.role.uppercase() }
+        if (coreRoles.any { role -> byRole[role]?.size != 1 }) return null
+        return coreRoles.map { role -> byRole.getValue(role).single() }
+    }
 
     private fun fallbackRoster(code: String): List<PlayerCard> = when (code.uppercase()) {
         "LGD" -> verifiedLgdRoster
