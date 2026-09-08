@@ -1,0 +1,75 @@
+name: DEV OTA Release
+
+on:
+  workflow_run:
+    workflows: ["Android Build"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download signed APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: RiftLab-dev5-schedule-center
+          path: dist
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Prepare OTA metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          VERSION_CODE=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n1)
+          APK=$(find dist -type f -name '*.apk' | head -n1)
+          test -n "$VERSION_NAME"
+          test -n "$VERSION_CODE"
+          test -f "$APK"
+          OUT="dist/RiftLab-${VERSION_NAME}.apk"
+          if [ "$APK" != "$OUT" ]; then cp "$APK" "$OUT"; fi
+          SHA=$(sha256sum "$OUT" | awk '{print $1}')
+          CHANGELOG=$(git log -1 --pretty=%s | tr '\n' ' ')
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          echo "apk=$OUT" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "changelog=$CHANGELOG" >> "$GITHUB_OUTPUT"
+
+      - name: Publish dev-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          APK: ${{ steps.meta.outputs.apk }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          CHANGELOG: ${{ steps.meta.outputs.changelog }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete dev-latest --cleanup-tag -y >/dev/null 2>&1 || true
+          git push origin :refs/tags/dev-latest >/dev/null 2>&1 || true
+          cat > /tmp/riftlab-release.txt <<EOF
+          RIFTLAB_UPDATE
+          versionName=$VERSION_NAME
+          versionCode=$VERSION_CODE
+          sha256=$SHA
+          channel=dev
+          changelog=$CHANGELOG
+          EOF
+          gh release create dev-latest "$APK" \
+            --target "${{ github.event.workflow_run.head_sha }}" \
+            --title "RiftLab $VERSION_NAME · DEV" \
+            --notes-file /tmp/riftlab-release.txt \
+            --prerelease
