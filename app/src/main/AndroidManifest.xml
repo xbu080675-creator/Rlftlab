@@ -20,6 +20,7 @@
     </queries>
 
     <application
+        android:name=".RiftLabApplication"
         android:allowBackup="true"
         android:label="RiftLab"
         android:supportsRtl="true"
