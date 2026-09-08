@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riftlab.app.data.ChampionCatalog
 import com.riftlab.app.data.DraftPickRecord
 import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.LivePlayerSnapshot
@@ -184,7 +186,7 @@ internal fun MatchDetailContent() {
             item { CompactStatusPanel("G$selectedGame 数据尚未连接") }
         }
 
-        item { DetailSectionTitle("MVP / 官方评选") }
+        item { DetailSectionTitle("MVP / 评选数据") }
         item {
             MvpPanel(
                 selectedGame = selectedGame,
@@ -193,10 +195,10 @@ internal fun MatchDetailContent() {
             )
         }
 
-        item { DetailSectionTitle("POG VOTES / 官方数据面板") }
+        item { DetailSectionTitle("POG / MVP VOTES / 数据面板") }
         val scopedVotes = votesForGame(state.votes, selectedGame)
         if (scopedVotes.isEmpty()) {
-            item { CompactStatusPanel(if (selectedGame > 0) "G$selectedGame · 官方 POG / MVP 投票暂不可用" else "官方 POG / MVP 投票暂不可用") }
+            item { CompactStatusPanel(if (selectedGame > 0) "G$selectedGame · POG / MVP 投票数据暂不可用" else "POG / MVP 投票数据暂不可用") }
         } else {
             items(scopedVotes, key = { it.title + it.source }) { vote -> VotePanel(vote) }
         }
@@ -347,7 +349,7 @@ private fun CompactPlayerRow(
             )
             Text(playerStats(left), color = RiftMuted, fontSize = 8.sp)
             left?.championId?.takeIf { it.isNotBlank() }?.let {
-                Text("HERO $it · G ${left.gold}", color = RiftMuted, fontSize = 7.sp)
+                ChampionStatLabel(it, left.gold)
             }
         }
         Text(roleLabel(role), modifier = Modifier.width(34.dp), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
@@ -361,7 +363,7 @@ private fun CompactPlayerRow(
             )
             Text(playerStats(right), color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.End)
             right?.championId?.takeIf { it.isNotBlank() }?.let {
-                Text("HERO $it · G ${right.gold}", color = RiftMuted, fontSize = 7.sp, textAlign = TextAlign.End)
+                ChampionStatLabel(it, right.gold, TextAlign.End)
             }
         }
         Spacer(Modifier.width(6.dp))
@@ -374,14 +376,22 @@ private fun CompactPlayerRow(
 }
 
 @Composable
+private fun ChampionStatLabel(championId: String, gold: Int, textAlign: TextAlign = TextAlign.Start) {
+    val label by produceState(initialValue = championId, championId) {
+        value = ChampionCatalog.displayName(championId)
+    }
+    Text("HERO $label · G $gold", color = RiftMuted, fontSize = 7.sp, textAlign = textAlign)
+}
+
+@Composable
 private fun MvpPanel(selectedGame: Int, seriesMvp: OfficialMvpRecord?, gameMvps: List<OfficialMvpRecord>) {
     val scoped = if (selectedGame > 0) gameMvps.filter { it.game == selectedGame } else gameMvps
     if (selectedGame > 0 && scoped.isEmpty()) {
-        CompactStatusPanel("G$selectedGame · 暂无可核实官方 MVP 数据")
+        CompactStatusPanel("G$selectedGame · MVP 数据暂不可用")
         return
     }
     if (selectedGame == 0 && seriesMvp == null && scoped.isEmpty()) {
-        CompactStatusPanel("官方 MVP 数据暂不可用 · 不使用 KDA / 伤害规则自行推断")
+        CompactStatusPanel("MVP 数据暂不可用 · 允许赛事官方 / OP.GG 等来源，但不使用 KDA / 伤害规则自行推断")
         return
     }
 
@@ -390,13 +400,15 @@ private fun MvpPanel(selectedGame: Int, seriesMvp: OfficialMvpRecord?, gameMvps:
             seriesMvp?.let {
                 Text("SERIES MVP · ${it.playerName}", color = RiftCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Text("${it.team} · ${it.role.ifBlank { "ROLE —" }}", color = RiftMuted, fontSize = 8.sp)
+                Spacer(Modifier.height(3.dp))
+                Text("来源 · ${it.source}", color = RiftMuted, fontSize = 7.sp)
                 Spacer(Modifier.height(6.dp))
             }
         }
         scoped.forEachIndexed { index, mvp ->
             if (index > 0) Spacer(Modifier.height(5.dp))
             Text("G${mvp.game ?: 0} MVP · ${mvp.playerName} · ${mvp.team}", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-            Text(mvp.source, color = RiftMuted, fontSize = 7.sp)
+            Text("来源 · ${mvp.source}", color = RiftMuted, fontSize = 7.sp)
         }
     }
 }
@@ -423,7 +435,7 @@ private fun VotePanel(vote: OfficialVoteRecord) {
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(vote.source, color = RiftMuted, fontSize = 7.sp)
+        Text("来源 · ${vote.source}", color = RiftMuted, fontSize = 7.sp)
     }
 }
 
@@ -438,7 +450,7 @@ private fun DraftPanel(draft: DraftPickRecord) {
         DraftLine("BLUE PICK", draft.bluePicks)
         DraftLine("RED PICK", draft.redPicks)
         Spacer(Modifier.height(5.dp))
-        Text(draft.source, color = RiftMuted, fontSize = 7.sp)
+        Text("来源 · ${draft.source}", color = RiftMuted, fontSize = 7.sp)
     }
 }
 
@@ -446,7 +458,12 @@ private fun DraftPanel(draft: DraftPickRecord) {
 private fun DraftLine(label: String, values: List<String>) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Text(label, modifier = Modifier.width(68.dp), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
-        Text(values.joinToString(" · ").ifBlank { "—" }, modifier = Modifier.weight(1f), fontSize = 9.sp)
+        Text(
+            values.joinToString(" · ").ifBlank { "当前来源未提供" },
+            modifier = Modifier.weight(1f),
+            color = if (values.isEmpty()) RiftMuted else RiftText,
+            fontSize = 9.sp
+        )
     }
 }
 
@@ -484,13 +501,16 @@ private fun roleMap(players: List<LivePlayerSnapshot>): Map<String, LivePlayerSn
     return DETAIL_ROLES.mapIndexedNotNull { index, role -> players.getOrNull(index)?.let { role to it } }.toMap()
 }
 
-private fun canonicalRole(raw: String): String? = when (raw.trim().uppercase()) {
-    "TOP", "1" -> "TOP"
-    "JUG", "JUNGLE", "JGL", "2" -> "JUG"
-    "MID", "MIDDLE", "3" -> "MID"
-    "BOT", "BOTTOM", "ADC", "4" -> "BOT"
-    "SUP", "SUPPORT", "5" -> "SUP"
-    else -> null
+private fun canonicalRole(raw: String): String? {
+    val key = raw.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "")
+    return when (key) {
+        "TOP", "TOPLANE", "1" -> "TOP"
+        "JUN", "JUG", "JGL", "JUNG", "JUNGLE", "JUNGLER", "JUNGLEPOSITION", "2" -> "JUG"
+        "MID", "MIDDLE", "MIDLANE", "3" -> "MID"
+        "BOT", "BOTTOM", "ADC", "AD", "BOTTOMLANE", "4" -> "BOT"
+        "SUP", "SUPPORT", "SUPP", "5" -> "SUP"
+        else -> null
+    }
 }
 
 private fun roleLabel(role: String): String = when (role) {
