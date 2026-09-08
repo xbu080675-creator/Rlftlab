@@ -184,7 +184,7 @@ private fun MatchHeroPanel(
             rightCode = right?.code?.ifBlank { right.name } ?: "—",
             rightImageUrl = right?.imageUrl.orEmpty(),
             centerText = if (scoreA != null && scoreB != null) "$scoreA : $scoreB" else "VS",
-            logoSize = 68.dp,
+            logoSize = 58.dp,
             centerFontSize = 25.sp
         )
         Spacer(Modifier.height(8.dp))
@@ -239,7 +239,7 @@ private fun SeriesOverview(games: List<LiveSnapshot>) {
                 rightCode = game.red,
                 centerText = "${game.blueKills} : ${game.redKills}",
                 centerSubtext = MatchSessionStore.formatTime(game.elapsedSeconds),
-                logoSize = 34.dp,
+                logoSize = 30.dp,
                 centerFontSize = 15.sp,
                 teamNameFontSize = 9.sp
             )
@@ -262,7 +262,7 @@ private fun GameSummaryCard(game: LiveSnapshot) {
             centerText = "${game.blueKills} : ${game.redKills}",
             leftSubtext = "GOLD ${gold(game.blueGold)}",
             rightSubtext = "GOLD ${gold(game.redGold)}",
-            logoSize = 48.dp,
+            logoSize = 42.dp,
             centerFontSize = 20.sp
         )
     }
@@ -285,7 +285,7 @@ private fun GameDetailCard(game: LiveSnapshot, blueTeam: EsportsTeamRef?, redTea
             centerText = "${game.blueKills} : ${game.redKills}",
             leftSubtext = gold(game.blueGold),
             rightSubtext = gold(game.redGold),
-            logoSize = 50.dp,
+            logoSize = 44.dp,
             centerFontSize = 20.sp
         )
         Spacer(Modifier.height(8.dp))
@@ -409,7 +409,7 @@ private fun MvpHeroCard(
 
     Row(
         modifier
-            .height(142.dp)
+            .height(132.dp)
             .background(RiftPanel, CutCornerShape(topEnd = 18.dp, bottomStart = 10.dp))
             .border(1.dp, RiftCyan.copy(alpha = 0.58f), CutCornerShape(topEnd = 18.dp, bottomStart = 10.dp))
     ) {
@@ -417,7 +417,7 @@ private fun MvpHeroCard(
             imageUrl = portrait,
             fallbackTeam = team,
             fallbackCode = mvp.team,
-            modifier = Modifier.width(92.dp).height(142.dp)
+            modifier = Modifier.width(82.dp).height(132.dp)
         )
         Column(
             Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 12.dp),
@@ -459,7 +459,7 @@ private fun VoteVisualCard(match: ScheduledEsportsMatch, vote: OfficialVoteRecor
                 imageUrl = portrait,
                 fallbackTeam = team,
                 fallbackCode = leaderTeam,
-                modifier = Modifier.size(86.dp)
+                modifier = Modifier.size(72.dp)
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -522,7 +522,7 @@ private fun DraftTeamBlock(side: String, picks: List<String>, bans: List<String>
     if (picks.isEmpty()) {
         Text("PICK 暂无数据", color = RiftMuted, fontSize = 8.sp)
     } else {
-        ChampionIconRow(picks, iconSize = 46)
+        ChampionIconRow(picks, iconSize = 40)
     }
     Spacer(Modifier.height(7.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -530,7 +530,7 @@ private fun DraftTeamBlock(side: String, picks: List<String>, bans: List<String>
         if (bans.isEmpty()) {
             Text("当前来源未提供", color = RiftMuted, fontSize = 8.sp)
         } else {
-            ChampionIconRow(bans, iconSize = 34)
+            ChampionIconRow(bans, iconSize = 28)
         }
     }
 }
@@ -578,14 +578,14 @@ private fun ChampionTile(champion: String, iconSize: Int) {
 @Composable
 private fun ChampionMiniIcon(championId: String) {
     if (championId.isBlank()) {
-        Box(Modifier.size(30.dp).background(RiftPanelAlt, CutCornerShape(6.dp)))
+        Box(Modifier.size(26.dp).background(RiftPanelAlt, CutCornerShape(6.dp)))
         return
     }
     val icon by produceState(initialValue = "", championId) {
         value = ChampionCatalog.iconUrl(championId)
     }
     Box(
-        Modifier.size(30.dp)
+        Modifier.size(26.dp)
             .clip(CutCornerShape(6.dp))
             .background(RiftPanelAlt)
     ) {

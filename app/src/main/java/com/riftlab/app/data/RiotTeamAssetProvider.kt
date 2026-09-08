@@ -14,7 +14,7 @@ internal class RiotTeamAssetProvider {
 
     suspend fun resolve(team: EsportsTeamRef): String = withContext(Dispatchers.IO) {
         validAssetUrl(team.imageUrl)?.let { return@withContext it }
-        val keys = listOf(team.slug, slugify(team.name), team.code, team.id)
+        val keys = listOf(team.id, team.slug, team.code, slugify(team.name), team.name)
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()

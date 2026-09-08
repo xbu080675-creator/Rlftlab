@@ -53,6 +53,7 @@ import com.riftlab.app.data.StandingBracketMatch
 import com.riftlab.app.data.StandingTeam
 import com.riftlab.app.data.StandingsCenterStore
 import com.riftlab.app.data.TeamDetailRepository
+import com.riftlab.app.data.TeamAssetCatalog
 import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
 import java.time.LocalDate
@@ -464,7 +465,7 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
             rightImageUrl = right?.imageUrl.orEmpty(),
             centerText = if (phase == ScheduleMatchPhase.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
             centerSubtext = MatchSessionStore.scheduleTimingNote(match),
-            logoSize = 48.dp,
+            logoSize = 44.dp,
             centerFontSize = 18.sp
         )
         if (match.blockName.isNotBlank()) {
@@ -624,7 +625,7 @@ private fun BracketMatchCard(
             rightCode = rightCode,
             rightImageUrl = rightAsset?.imageUrl.orEmpty(),
             centerText = if (leftScore != "—" || rightScore != "—") "$leftScore : $rightScore" else "VS",
-            logoSize = 34.dp,
+            logoSize = 30.dp,
             centerFontSize = 14.sp,
             teamNameFontSize = 8.sp
         )
@@ -659,7 +660,7 @@ private fun TeamsView(
         }
         (fromSchedule + fromRankings + fromMatches)
             .filter { teamCode(it) != "TBD" && teamCode(it) != "—" }
-            .groupBy { it.id.ifBlank { teamCode(it) } }
+            .groupBy(TeamAssetCatalog::canonicalKey)
             .values
             .map { variants -> variants.maxByOrNull { if (it.imageUrl.isNotBlank()) 1 else 0 } ?: variants.first() }
             .sortedBy { teamCode(it) }
@@ -670,7 +671,7 @@ private fun TeamsView(
     }
 
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(teams.chunked(3), key = { row -> row.joinToString("-") { it.id.ifBlank { teamCode(it) } } }) { row ->
+        items(teams.chunked(3), key = { row -> row.joinToString("-") { TeamAssetCatalog.canonicalKey(it) } }) { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { team -> TeamTile(team, Modifier.weight(1f)) { onTeamClick(team) } }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -691,7 +692,7 @@ private fun TeamTile(team: EsportsTeamRef, modifier: Modifier, onClick: () -> Un
         TeamLogo(
             imageUrl = team.imageUrl,
             code = teamCode(team),
-            modifier = Modifier.size(38.dp)
+            modifier = Modifier.size(34.dp)
         )
         Spacer(Modifier.height(7.dp))
         Text(teamCode(team), color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

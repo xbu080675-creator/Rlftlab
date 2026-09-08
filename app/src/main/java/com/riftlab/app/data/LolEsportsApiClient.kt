@@ -174,22 +174,37 @@ internal class LolEsportsApiClient {
                 val player = playersJson.optJSONObject(i) ?: continue
                 val summoner = player.optString("summonerName")
                 if (summoner.isBlank()) continue
+                val playerImage = EsportsAssetCache.normalize(player.optString("image"))
+                    .ifBlank { EsportsAssetCache.normalize(player.optString("imageUrl")) }
+                    .ifBlank { EsportsAssetCache.normalize(player.optString("portraitUrl")) }
+                if (playerImage.isNotBlank()) {
+                    EsportsAssetCache.putPlayer(summoner, team.optString("code"), playerImage)
+                }
                 add(
                     EsportsPlayerRef(
                         id = player.optString("id"),
                         summonerName = summoner,
                         role = normalizeRole(player.optString("role")),
-                        imageUrl = player.optString("image")
+                        imageUrl = playerImage
                     )
                 )
             }
         }.sortedBy { roleOrder(it.role) }
 
+        val teamCode = team.optString("code").ifBlank { team.optString("name").take(4).uppercase() }
+        val teamImage = EsportsAssetCache.normalize(team.optString("image"))
+            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrl")) }
+            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrlDarkMode")) }
+            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrlLightMode")) }
+        if (teamImage.isNotBlank()) {
+            EsportsAssetCache.putTeam(teamImage, team.optString("id"), team.optString("slug"), teamCode, team.optString("name"))
+        }
         return EsportsTeamDetails(
             id = team.optString("id"),
             slug = team.optString("slug", slug),
-            code = team.optString("code").ifBlank { team.optString("name").take(4).uppercase() },
+            code = teamCode,
             name = team.optString("name"),
+            imageUrl = teamImage,
             players = players
         )
     }

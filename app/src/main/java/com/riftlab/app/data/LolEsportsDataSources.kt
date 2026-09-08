@@ -21,7 +21,7 @@ internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
-        val matches = client.fetchLplSchedule().map(::verifySeriesCompletion)
+        val matches = TeamAssetCatalog.enrichMatches(client.fetchLplSchedule().map(::verifySeriesCompletion))
         LiveMatchTargetRegistry.update(chooseLiveWatchTarget(matches))
         return matches
     }

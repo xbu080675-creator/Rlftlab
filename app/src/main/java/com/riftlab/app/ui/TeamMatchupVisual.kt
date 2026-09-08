@@ -32,7 +32,7 @@ internal fun TeamMatchupVisual(
     leftSubtext: String? = null,
     rightSubtext: String? = null,
     centerSubtext: String? = null,
-    logoSize: Dp = 62.dp,
+    logoSize: Dp = 54.dp,
     centerFontSize: TextUnit = 24.sp,
     teamNameFontSize: TextUnit = 10.sp,
     centerAccent: Boolean = true
