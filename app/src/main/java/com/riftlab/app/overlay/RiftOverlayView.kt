@@ -7,8 +7,13 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import coil.ImageLoader
+import coil.request.ImageRequest
+import com.riftlab.app.data.EsportsAssetCache
+import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.LiveSnapshot
 import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.LiveSourceStatus
@@ -24,6 +29,7 @@ class RiftOverlayView(
     enum class Mode { MINI, COMPACT, EXPANDED }
 
     private var mode = Mode.COMPACT
+    private val imageLoader = ImageLoader.Builder(context).build()
 
     private val root = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -33,20 +39,33 @@ class RiftOverlayView(
     private val title = text("等待数据", 11f, 0xFF94A0B2.toInt(), bold = true)
     private val timer = text("--:--", 11f, 0xFF94A0B2.toInt())
     private val modeChip = text("COMPACT ›", 9f, 0xFF6CEBFF.toInt(), bold = true)
-    private val blue = text("—", 18f, Color.WHITE, bold = true).apply {
-        gravity = Gravity.START or Gravity.CENTER_VERTICAL
-    }
-    private val red = text("—", 18f, Color.WHITE, bold = true).apply {
-        gravity = Gravity.END or Gravity.CENTER_VERTICAL
-    }
+
+    private val blueLogo = logoView(38)
+    private val redLogo = logoView(38)
+    private val blue = text("—", 9f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
+    private val red = text("—", 9f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
+    private val blueTeam = teamIdentity(blueLogo, blue)
+    private val redTeam = teamIdentity(redLogo, red)
+
     private val goldDiff = text("—", 22f, 0xFF94A0B2.toInt(), bold = true).apply {
         gravity = Gravity.CENTER
         minWidth = dp(84)
         setPadding(dp(10), 0, dp(10), 0)
     }
-    private val miniLine = text("等待赛事数据", 17f, Color.WHITE, bold = true).apply {
+
+    private val miniBlueLogo = logoView(25)
+    private val miniRedLogo = logoView(25)
+    private val miniCenter = text("VS", 16f, Color.WHITE, bold = true).apply {
         gravity = Gravity.CENTER
     }
+    private val miniTeams = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        addView(miniBlueLogo, LinearLayout.LayoutParams(dp(25), dp(25)))
+        addView(miniCenter, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        addView(miniRedLogo, LinearLayout.LayoutParams(dp(25), dp(25)))
+    }
+
     private val metrics = text("K —   T —   D —", 12f, 0xFFD1D7E2.toInt())
     private val goldLine = text("GOLD — : —   LEAD —", 11f, 0xFFD1D7E2.toInt())
     private val event = text("STATUS · 等待 Riot 数据源", 10f, 0xFF8C98AA.toInt())
@@ -89,11 +108,11 @@ class RiftOverlayView(
             bottomMargin = dp(9)
         })
 
-        root.addView(miniLine)
+        root.addView(miniTeams)
 
-        teams.addView(blue, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        teams.addView(blueTeam, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         teams.addView(goldDiff, LinearLayout.LayoutParams(dp(96), LayoutParams.WRAP_CONTENT))
-        teams.addView(red, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        teams.addView(redTeam, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         root.addView(teams)
 
         metrics.gravity = Gravity.CENTER_HORIZONTAL
@@ -128,6 +147,8 @@ class RiftOverlayView(
         val scheduledRight = target?.teams?.getOrNull(1)?.displayCode().orEmpty()
         val left = if (isLive) snapshot.blue else scheduledLeft.ifBlank { "—" }
         val right = if (isLive) snapshot.red else scheduledRight.ifBlank { "—" }
+        val leftTeam = target?.teams?.firstOrNull { sameLabel(left, it) } ?: target?.teams?.getOrNull(0)
+        val rightTeam = target?.teams?.firstOrNull { sameLabel(right, it) } ?: target?.teams?.getOrNull(1)
 
         title.text = when (status.phase) {
             LiveSourcePhase.LIVE -> "LIVE · G${snapshot.game}"
@@ -146,22 +167,26 @@ class RiftOverlayView(
         timer.text = if (isLive) MatchSessionStore.formatTime(snapshot.elapsedSeconds) else "--:--"
         blue.text = left
         red.text = right
+        loadLogo(blueLogo, left, leftTeam?.imageUrl.orEmpty())
+        loadLogo(redLogo, right, rightTeam?.imageUrl.orEmpty())
+        loadLogo(miniBlueLogo, left, leftTeam?.imageUrl.orEmpty())
+        loadLogo(miniRedLogo, right, rightTeam?.imageUrl.orEmpty())
 
         if (isLive) {
             val diff = formatDiff(snapshot.goldDiff)
             val leadColor = if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt()
             goldDiff.text = diff
             goldDiff.setTextColor(leadColor)
-            miniLine.text = "$left     $diff     $right"
-            miniLine.setTextColor(leadColor)
+            miniCenter.text = diff
+            miniCenter.setTextColor(leadColor)
             metrics.text = "K ${snapshot.blueKills}:${snapshot.redKills}   T ${snapshot.blueTowers}:${snapshot.redTowers}   D ${snapshot.blueDragons}:${snapshot.redDragons}"
             goldLine.text = "GOLD %.1fK : %.1fK   LEAD $diff".format(snapshot.blueGold / 1000f, snapshot.redGold / 1000f)
             event.text = "EVENT · ${snapshot.latestEvent}"
         } else {
-            goldDiff.text = "—"
+            goldDiff.text = "VS"
             goldDiff.setTextColor(0xFF94A0B2.toInt())
-            miniLine.text = if (left != "—" || right != "—") "$left     VS     $right" else "等待赛事数据"
-            miniLine.setTextColor(Color.WHITE)
+            miniCenter.text = "VS"
+            miniCenter.setTextColor(Color.WHITE)
             metrics.text = "K —   T —   D —"
             goldLine.text = "GOLD — : —   LEAD —"
             event.text = "STATUS · ${status.message}"
@@ -170,15 +195,53 @@ class RiftOverlayView(
         flashAccent()
     }
 
-    private fun com.riftlab.app.data.EsportsTeamRef.displayCode(): String =
-        code.ifBlank { name }.ifBlank { "—" }
+    private fun EsportsTeamRef.displayCode(): String = code.ifBlank { name }.ifBlank { "—" }
+
+    private fun sameLabel(label: String, team: EsportsTeamRef): Boolean {
+        val a = token(label)
+        if (a.isBlank()) return false
+        return listOf(team.code, team.name, team.slug, team.id).any { raw ->
+            val b = token(raw)
+            b.isNotBlank() && (a == b || a.contains(b) || b.contains(a))
+        }
+    }
+
+    private fun token(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
+
+    private fun loadLogo(view: ImageView, code: String, directUrl: String) {
+        val resolved = EsportsAssetCache.normalize(directUrl).ifBlank { EsportsAssetCache.team(code) }
+        if (resolved.isBlank()) {
+            view.setImageDrawable(null)
+            return
+        }
+        imageLoader.enqueue(
+            ImageRequest.Builder(context)
+                .data(resolved)
+                .target(view)
+                .build()
+        )
+    }
+
+    private fun logoView(sizeDp: Int): ImageView = ImageView(context).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        adjustViewBounds = true
+    }
+
+    private fun teamIdentity(logo: ImageView, label: TextView): LinearLayout = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        addView(logo, LinearLayout.LayoutParams(dp(38), dp(38)))
+        label.setPadding(0, dp(3), 0, 0)
+        addView(label, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+    }
 
     private fun applyMode() {
         when (mode) {
             Mode.MINI -> {
                 modeChip.text = "MINI ›"
                 timer.visibility = View.GONE
-                miniLine.visibility = View.VISIBLE
+                miniTeams.visibility = View.VISIBLE
                 teams.visibility = View.GONE
                 metrics.visibility = View.GONE
                 goldLine.visibility = View.GONE
@@ -189,7 +252,7 @@ class RiftOverlayView(
             Mode.COMPACT -> {
                 modeChip.text = "COMPACT ›"
                 timer.visibility = View.VISIBLE
-                miniLine.visibility = View.GONE
+                miniTeams.visibility = View.GONE
                 teams.visibility = View.VISIBLE
                 metrics.visibility = View.VISIBLE
                 goldLine.visibility = View.GONE
@@ -200,7 +263,7 @@ class RiftOverlayView(
             Mode.EXPANDED -> {
                 modeChip.text = "EXPANDED ›"
                 timer.visibility = View.VISIBLE
-                miniLine.visibility = View.GONE
+                miniTeams.visibility = View.GONE
                 teams.visibility = View.VISIBLE
                 metrics.visibility = View.VISIBLE
                 goldLine.visibility = View.VISIBLE
