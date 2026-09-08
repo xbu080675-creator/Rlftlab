@@ -7,6 +7,17 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Android 11+ package visibility: query only the streaming apps RiftLab can launch. -->
+    <queries>
+        <package android:name="tv.danmaku.bili" />
+        <package android:name="com.huya.kiwi" />
+        <package android:name="com.duowan.kiwi" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bilibili" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:label="RiftLab"
