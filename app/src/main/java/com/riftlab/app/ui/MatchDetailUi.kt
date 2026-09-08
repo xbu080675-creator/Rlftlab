@@ -177,37 +177,23 @@ private fun MatchHeroPanel(
             Spacer(Modifier.weight(1f))
             Text("BO${match.bestOf}", color = RiftMuted, fontSize = 9.sp)
         }
-        Spacer(Modifier.height(9.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            left?.let { TeamLogo(it.imageUrl, it.code.ifBlank { it.name }, Modifier.size(44.dp)) }
-            Spacer(Modifier.width(8.dp))
-            Text(
-                left?.code?.ifBlank { left.name } ?: "—",
-                modifier = Modifier.weight(1f),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                if (scoreA != null && scoreB != null) "$scoreA : $scoreB" else "VS",
-                color = RiftCyan,
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Black
-            )
-            Text(
-                right?.code?.ifBlank { right.name } ?: "—",
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.End,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black
-            )
-            Spacer(Modifier.width(8.dp))
-            right?.let { TeamLogo(it.imageUrl, it.code.ifBlank { it.name }, Modifier.size(44.dp)) }
-        }
-        Spacer(Modifier.height(7.dp))
+        Spacer(Modifier.height(10.dp))
+        TeamMatchupVisual(
+            leftCode = left?.code?.ifBlank { left.name } ?: "—",
+            leftImageUrl = left?.imageUrl.orEmpty(),
+            rightCode = right?.code?.ifBlank { right.name } ?: "—",
+            rightImageUrl = right?.imageUrl.orEmpty(),
+            centerText = if (scoreA != null && scoreB != null) "$scoreA : $scoreB" else "VS",
+            logoSize = 68.dp,
+            centerFontSize = 25.sp
+        )
+        Spacer(Modifier.height(8.dp))
         Text(
             "${match.blockName.ifBlank { match.league }} · ${MatchSessionStore.scheduleTimingNote(match)}",
             color = RiftMuted,
-            fontSize = 9.sp
+            fontSize = 9.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -245,15 +231,18 @@ private fun DetailGameTabs(gameNumbers: List<Int>, selectedGame: Int, onSelect: 
 private fun SeriesOverview(games: List<LiveSnapshot>) {
     DetailPanel(accent = true) {
         games.sortedBy { it.game }.forEachIndexed { index, game ->
-            if (index > 0) Spacer(Modifier.height(9.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("G${game.game}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(34.dp))
-                Text(game.blue, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("${game.blueKills} : ${game.redKills}", fontSize = 14.sp, fontWeight = FontWeight.Black)
-                Text(game.red, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                Spacer(Modifier.width(8.dp))
-                Text(MatchSessionStore.formatTime(game.elapsedSeconds), color = RiftMuted, fontSize = 8.sp)
-            }
+            if (index > 0) Spacer(Modifier.height(12.dp))
+            Text("G${game.game}", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(5.dp))
+            TeamMatchupVisual(
+                leftCode = game.blue,
+                rightCode = game.red,
+                centerText = "${game.blueKills} : ${game.redKills}",
+                centerSubtext = MatchSessionStore.formatTime(game.elapsedSeconds),
+                logoSize = 34.dp,
+                centerFontSize = 15.sp,
+                teamNameFontSize = 9.sp
+            )
         }
     }
 }
@@ -266,9 +255,16 @@ private fun GameSummaryCard(game: LiveSnapshot) {
             Spacer(Modifier.weight(1f))
             Text(MatchSessionStore.formatTime(game.elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
         }
-        Spacer(Modifier.height(8.dp))
-        Text("${game.blue}  ${game.blueKills} : ${game.redKills}  ${game.red}", fontSize = 18.sp, fontWeight = FontWeight.Black)
-        Text("GOLD ${gold(game.blueGold)} : ${gold(game.redGold)}", color = RiftMuted, fontSize = 9.sp)
+        Spacer(Modifier.height(10.dp))
+        TeamMatchupVisual(
+            leftCode = game.blue,
+            rightCode = game.red,
+            centerText = "${game.blueKills} : ${game.redKills}",
+            leftSubtext = "GOLD ${gold(game.blueGold)}",
+            rightSubtext = "GOLD ${gold(game.redGold)}",
+            logoSize = 48.dp,
+            centerFontSize = 20.sp
+        )
     }
 }
 
@@ -280,13 +276,19 @@ private fun GameDetailCard(game: LiveSnapshot, blueTeam: EsportsTeamRef?, redTea
             Spacer(Modifier.weight(1f))
             Text(MatchSessionStore.formatTime(game.elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
         }
+        Spacer(Modifier.height(10.dp))
+        TeamMatchupVisual(
+            leftCode = game.blue,
+            leftImageUrl = blueTeam?.imageUrl.orEmpty(),
+            rightCode = game.red,
+            rightImageUrl = redTeam?.imageUrl.orEmpty(),
+            centerText = "${game.blueKills} : ${game.redKills}",
+            leftSubtext = gold(game.blueGold),
+            rightSubtext = gold(game.redGold),
+            logoSize = 50.dp,
+            centerFontSize = 20.sp
+        )
         Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(game.blue, modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text("${game.blueKills} : ${game.redKills}", fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text(game.red, modifier = Modifier.weight(1f), textAlign = TextAlign.End, fontSize = 18.sp, fontWeight = FontWeight.Black)
-        }
-        Spacer(Modifier.height(7.dp))
         StatStrip(
             "${gold(game.blueGold)} : ${gold(game.redGold)}",
             "T ${game.blueTowers}:${game.redTowers}",

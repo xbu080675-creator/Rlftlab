@@ -143,39 +143,37 @@ private fun TeamPlayerRow(role: String, player: EsportsPlayerRef?, team: Esports
 
 @Composable
 private fun TeamMatchRow(team: EsportsTeamRef, match: ScheduledEsportsMatch, onClick: () -> Unit) {
-    val opponent = match.teams.firstOrNull { !sameTeam(it, team) }
     val phase = MatchSessionStore.schedulePhase(match)
-    Row(
+    val left = match.teams.getOrNull(0)
+    val right = match.teams.getOrNull(1)
+    Column(
         Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
             .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .border(1.dp, if (phase.name == "LIVE") RiftCyan.copy(alpha = 0.5f) else RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .padding(11.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(11.dp)
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                "${team.code.ifBlank { team.name }} vs ${opponent?.code?.ifBlank { opponent.name } ?: "TBD"}",
-                color = RiftText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                "${MatchSessionStore.scheduleDateKey(match)} · ${match.blockName.ifBlank { match.league }} · BO${match.bestOf}",
-                color = RiftMuted,
-                fontSize = 8.sp
-            )
-        }
         Text(
-            when (phase.name) {
+            "${MatchSessionStore.scheduleDateKey(match)} · ${match.blockName.ifBlank { match.league }} · BO${match.bestOf}",
+            color = RiftMuted,
+            fontSize = 8.sp,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(7.dp))
+        TeamMatchupVisual(
+            leftCode = left?.code?.ifBlank { left.name } ?: "TBD",
+            leftImageUrl = left?.imageUrl.orEmpty(),
+            rightCode = right?.code?.ifBlank { right.name } ?: "TBD",
+            rightImageUrl = right?.imageUrl.orEmpty(),
+            centerText = when (phase.name) {
                 "LIVE" -> "LIVE"
                 "COMPLETED" -> MatchSessionStore.scheduleScore(match)
-                else -> "待开"
+                else -> "VS"
             },
-            color = if (phase.name == "LIVE") RiftCyan else RiftMuted,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.End
+            logoSize = 40.dp,
+            centerFontSize = 15.sp,
+            teamNameFontSize = 9.sp
         )
     }
 }

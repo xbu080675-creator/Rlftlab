@@ -55,6 +55,7 @@ import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MockAiInsightEngine
 import com.riftlab.app.data.PlayerCard
+import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.stream.StreamLauncher
 import com.riftlab.app.stream.StreamPlatform
 import com.riftlab.app.update.AppUpdateManager
@@ -164,7 +165,7 @@ private fun PreScreen() {
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item { MatchHero(data.blue, data.red, data.startTime, "${data.league} · ${data.stage}") }
+        item { MatchHero(data.blue, data.red, data.startTime, "${data.league} · ${data.stage}", target) }
 
         item { SectionTitle("REAL DATA SOURCE / 赛程源") }
         item {
@@ -208,6 +209,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
     val snapshot by MatchSessionStore.live.collectAsState()
     val status by MatchSessionStore.liveSourceStatus.collectAsState()
     val scheduled by MatchSessionStore.preMatchFlow.collectAsState()
+    val target by MatchSessionStore.targetMatch.collectAsState()
     val isLive = status.phase == LiveSourcePhase.LIVE
     val displayBlue = if (isLive) snapshot.blue else scheduled.blue.takeUnless { it.isBlank() || it == "—" } ?: "—"
     val displayRed = if (isLive) snapshot.red else scheduled.red.takeUnless { it.isBlank() || it == "—" } ?: "—"
@@ -247,18 +249,20 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                     )
                 }
                 Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TeamGold(displayBlue, if (isLive) snapshot.blueGold else 0, Alignment.Start)
-                    AnimatedContent(snapshot.goldDiff, label = "goldDiff") { diff ->
-                        Text(
-                            if (isLive) formatGoldDiff(diff) else "—",
-                            color = if (diff >= 0) RiftCyan else RiftRed,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    TeamGold(displayRed, if (isLive) snapshot.redGold else 0, Alignment.End)
-                }
+                val leftAsset = target?.teams?.firstOrNull { teamLabelMatches(displayBlue, it) } ?: target?.teams?.getOrNull(0)
+                val rightAsset = target?.teams?.firstOrNull { teamLabelMatches(displayRed, it) } ?: target?.teams?.getOrNull(1)
+                TeamMatchupVisual(
+                    leftCode = displayBlue,
+                    leftImageUrl = leftAsset?.imageUrl.orEmpty(),
+                    rightCode = displayRed,
+                    rightImageUrl = rightAsset?.imageUrl.orEmpty(),
+                    centerText = if (isLive) formatGoldDiff(snapshot.goldDiff) else "VS",
+                    leftSubtext = if (isLive && snapshot.blueGold > 0) "%.1fK".format(snapshot.blueGold / 1000f) else "—",
+                    rightSubtext = if (isLive && snapshot.redGold > 0) "%.1fK".format(snapshot.redGold / 1000f) else "—",
+                    centerSubtext = if (isLive) "GOLD DIFF" else null,
+                    logoSize = 54.dp,
+                    centerFontSize = 24.sp
+                )
                 Spacer(Modifier.height(14.dp))
                 MetricRow(
                     if (isLive) "K ${snapshot.blueKills}:${snapshot.redKills}" else "K —",
@@ -388,16 +392,13 @@ private fun PostScreen() {
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        "${resolved.teamA}  ${resolved.scoreA} : ${resolved.scoreB}  ${resolved.teamB}",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        if (resolved.seriesFinished) "WINNER · ${resolved.winner}" else "系列赛仍在进行 · 已结束小局已归档",
-                        color = RiftMuted,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                    TeamMatchupVisual(
+                        leftCode = resolved.teamA,
+                        rightCode = resolved.teamB,
+                        centerText = "${resolved.scoreA} : ${resolved.scoreB}",
+                        centerSubtext = if (resolved.seriesFinished) "WINNER · ${resolved.winner}" else "系列赛进行中",
+                        logoSize = 62.dp,
+                        centerFontSize = 24.sp
                     )
                 }
             }
@@ -411,22 +412,15 @@ private fun PostScreen() {
                         Text(MatchSessionStore.formatTime(game.elapsedSeconds), color = RiftMuted, fontSize = 11.sp)
                     }
                     Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(game.blue, modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("${game.blueKills} : ${game.redKills}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            game.red,
-                            modifier = Modifier.weight(1f),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.End
-                        )
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Text(
-                        "GOLD ${if (game.blueGold > 0) "%.1fK".format(game.blueGold / 1000f) else "—"} : ${if (game.redGold > 0) "%.1fK".format(game.redGold / 1000f) else "—"} · DIFF ${formatGoldDiff(game.goldDiff)}",
-                        color = RiftMuted,
-                        fontSize = 10.sp
+                    TeamMatchupVisual(
+                        leftCode = game.blue,
+                        rightCode = game.red,
+                        centerText = "${game.blueKills} : ${game.redKills}",
+                        leftSubtext = if (game.blueGold > 0) "%.1fK".format(game.blueGold / 1000f) else "—",
+                        rightSubtext = if (game.redGold > 0) "%.1fK".format(game.redGold / 1000f) else "—",
+                        centerSubtext = "DIFF ${formatGoldDiff(game.goldDiff)}",
+                        logoSize = 42.dp,
+                        centerFontSize = 18.sp
                     )
                     Spacer(Modifier.height(5.dp))
                     MetricRow(
@@ -457,24 +451,22 @@ private fun PostScreen() {
 }
 
 @Composable
-private fun MatchHero(blue: String, red: String, time: String, label: String) {
+private fun MatchHero(blue: String, red: String, time: String, label: String, match: ScheduledEsportsMatch?) {
+    val left = match?.teams?.getOrNull(0)
+    val right = match?.teams?.getOrNull(1)
     Panel(accent = true) {
         Text(label, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(blue, fontSize = 34.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("VS", color = RiftCyan, fontWeight = FontWeight.SemiBold)
-                Text(time, color = RiftMuted, fontSize = 11.sp)
-            }
-            Text(
-                red,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End
-            )
-        }
+        TeamMatchupVisual(
+            leftCode = left?.code?.ifBlank { left.name } ?: blue,
+            leftImageUrl = left?.imageUrl.orEmpty(),
+            rightCode = right?.code?.ifBlank { right.name } ?: red,
+            rightImageUrl = right?.imageUrl.orEmpty(),
+            centerText = "VS",
+            centerSubtext = time,
+            logoSize = 64.dp,
+            centerFontSize = 20.sp
+        )
     }
 }
 
@@ -583,6 +575,16 @@ private fun ActionButton(
             Spacer(Modifier.height(3.dp))
             Text(label, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
+    }
+}
+
+
+private fun teamLabelMatches(label: String, team: com.riftlab.app.data.EsportsTeamRef): Boolean {
+    val normalized = label.trim().replace(Regex("[^A-Za-z0-9]+"), "").uppercase()
+    if (normalized.isBlank()) return false
+    return listOf(team.code, team.name, team.slug, team.id).any { raw ->
+        val candidate = raw.trim().replace(Regex("[^A-Za-z0-9]+"), "").uppercase()
+        candidate.isNotBlank() && (candidate == normalized || candidate.contains(normalized) || normalized.contains(candidate))
     }
 }
 

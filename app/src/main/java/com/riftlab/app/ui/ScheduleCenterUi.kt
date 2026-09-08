@@ -433,6 +433,8 @@ private fun CompetitionMatches(
 @Composable
 private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, onClick: () -> Unit) {
     val phase = MatchSessionStore.schedulePhase(match)
+    val left = match.teams.getOrNull(0)
+    val right = match.teams.getOrNull(1)
     Column(
         Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
@@ -454,19 +456,28 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
             Spacer(Modifier.weight(1f))
             Text("BO${match.bestOf}", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
         }
-        Spacer(Modifier.height(7.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(teamCode(match.teams.getOrNull(0)), color = RiftText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Spacer(Modifier.height(8.dp))
+        TeamMatchupVisual(
+            leftCode = teamCode(left),
+            leftImageUrl = left?.imageUrl.orEmpty(),
+            rightCode = teamCode(right),
+            rightImageUrl = right?.imageUrl.orEmpty(),
+            centerText = if (phase == ScheduleMatchPhase.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
+            centerSubtext = MatchSessionStore.scheduleTimingNote(match),
+            logoSize = 48.dp,
+            centerFontSize = 18.sp
+        )
+        if (match.blockName.isNotBlank()) {
+            Spacer(Modifier.height(6.dp))
             Text(
-                if (phase == ScheduleMatchPhase.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
-                color = if (phase == ScheduleMatchPhase.LIVE) RiftCyan else RiftMuted,
-                fontWeight = FontWeight.SemiBold
+                translateStageName(match.blockName),
+                color = RiftMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            Text(teamCode(match.teams.getOrNull(1)), color = RiftText, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
-        Spacer(Modifier.height(5.dp))
-        Text(MatchSessionStore.scheduleTimingNote(match), color = RiftMuted, fontSize = 9.sp)
-        if (match.blockName.isNotBlank()) Text(translateStageName(match.blockName), color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -594,18 +605,29 @@ private fun BracketMatchCard(
     val schedule = scheduleMatches.firstOrNull { it.matchId == bracketMatch.id || it.eventId == bracketMatch.id }
     val left = bracketMatch.teams.getOrNull(0)
     val right = bracketMatch.teams.getOrNull(1)
+    val leftCode = teamCode(left)
+    val rightCode = teamCode(right)
     val leftScore = scoreFor(left, schedule)
     val rightScore = scoreFor(right, schedule)
+    val leftAsset = schedule?.teams?.firstOrNull { teamCode(it).equals(leftCode, true) }
+    val rightAsset = schedule?.teams?.firstOrNull { teamCode(it).equals(rightCode, true) }
     Column(
         modifier.background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .padding(10.dp)
     ) {
         Text(bracketState(bracketMatch.state), color = RiftMuted, fontSize = 9.sp)
-        Spacer(Modifier.height(6.dp))
-        BracketTeamLine(teamCode(left), leftScore)
-        Spacer(Modifier.height(5.dp))
-        BracketTeamLine(teamCode(right), rightScore)
+        Spacer(Modifier.height(7.dp))
+        TeamMatchupVisual(
+            leftCode = leftCode,
+            leftImageUrl = leftAsset?.imageUrl.orEmpty(),
+            rightCode = rightCode,
+            rightImageUrl = rightAsset?.imageUrl.orEmpty(),
+            centerText = if (leftScore != "—" || rightScore != "—") "$leftScore : $rightScore" else "VS",
+            logoSize = 34.dp,
+            centerFontSize = 14.sp,
+            teamNameFontSize = 8.sp
+        )
         if (bracketMatch.previousMatchIds.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text("承接上一轮", color = RiftMuted, fontSize = 8.sp)
