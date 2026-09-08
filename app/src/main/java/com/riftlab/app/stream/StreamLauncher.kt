@@ -28,8 +28,13 @@ enum class StreamPlatform(
     HUYA(
         id = "huya",
         webUrl = "https://www.huya.com/lpl",
-        // Google Play / overseas package + common mainland package.
-        packages = listOf("com.huya.kiwi", "com.duowan.kiwi")
+        // Mainland package first; Google Play / overseas package second.
+        packages = listOf("com.duowan.kiwi", "com.huya.kiwi"),
+        // Huya's Android share links use hyaction=live. The LPL official room is 660000
+        // and its current live uid/pid is 1346609715.
+        deepLinks = listOf(
+            "https://www.huya.com/660000?source=android&pid=1346609715&hyaction=live&uid=1346609715&platform=7"
+        )
     )
 }
 
@@ -68,7 +73,6 @@ object StreamLauncher {
         RiftOverlayService.start(context)
         if (pending == PENDING_OVERLAY_ONLY) return
         StreamPlatform.entries.firstOrNull { it.id == pending }?.let { platform ->
-            // The Activity has just resumed from Settings. Posting avoids racing its lifecycle.
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 openPlatform(context, platform)
             }, 180)
@@ -81,7 +85,7 @@ object StreamLauncher {
     private fun openPlatform(context: Context, platform: StreamPlatform) {
         val installedPackages = platform.packages.filter { isPackageInstalled(context, it) }
 
-        // Prefer an app-specific deep link when one is known.
+        // Prefer a platform-specific deep/share link while explicitly targeting the installed app.
         for (pkg in installedPackages) {
             for (uri in platform.deepLinks) {
                 if (tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(pkg))) return
@@ -93,8 +97,7 @@ object StreamLauncher {
             if (tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)).setPackage(pkg))) return
         }
 
-        // If an installed client cannot consume the room URL, opening the correct web room is
-        // more useful than dumping the user on the app home page.
+        // Final fallback: browser/web association.
         tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)))
     }
 
