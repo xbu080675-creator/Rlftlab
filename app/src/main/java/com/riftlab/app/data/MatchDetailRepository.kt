@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Stable identity shared by schedule, post-match and future MVP/vote/BP providers. */
+/** Stable identity shared by schedule, post-match and MVP/vote/BP providers. */
 data class MatchDetailKey(
     val riotEventId: String,
     val riotMatchId: String,
@@ -81,15 +81,13 @@ data class MatchDetailState(
 )
 
 /**
- * Match detail is keyed by the schedule entry, never by "the latest match".
- *
- * Lightweight schedule metadata opens instantly. Heavy terminal data is resolved on demand and
- * cached per schedule match. Official MVP / vote / draft providers plug into this state later;
- * missing official data remains missing rather than being guessed from stats.
+ * Match detail has its own selection state. Opening a historical match must never mutate the main
+ * viewing target, which keeps following the current/next series independently.
  */
 object MatchDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val resolver = LplHistoricalPostMatchResolver()
+    private val awardsProvider = LplOfficialAwardsProvider()
     private val resolverMutex = Mutex()
     private val cache = linkedMapOf<String, MatchDetailState>()
     private var loadJob: Job? = null
@@ -116,7 +114,7 @@ object MatchDetailRepository {
                 status = when (phase) {
                     ScheduleMatchPhase.UPCOMING -> "比赛尚未开始 · 当前展示赛程与赛前元数据"
                     ScheduleMatchPhase.LIVE -> "比赛进行中 · 当前局实时数据由赛中 Provider Router 提供"
-                    ScheduleMatchPhase.COMPLETED -> "正在加载该场历史终局数据…"
+                    ScheduleMatchPhase.COMPLETED -> "正在加载该场历史终局数据与官方 MVP / 投票…"
                 },
                 updatedAtEpochMs = System.currentTimeMillis()
             )
@@ -131,11 +129,26 @@ object MatchDetailRepository {
                 resolverMutex.withLock { resolver.resolve(match) }
             }
             val resolved = result.getOrNull()
+            val bmid = resolved?.matchKey
+                ?.takeIf { it.startsWith("TJ:") }
+                ?.removePrefix("TJ:")
+                .orEmpty()
+            val awards = if (bmid.isNotBlank()) {
+                runCatching { awardsProvider.fetch(bmid) }.getOrElse {
+                    OfficialAwardsResult(status = "MVP / 投票同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+                }
+            } else {
+                OfficialAwardsResult(status = "MVP / 投票等待历史 bMatchId")
+            }
+
             val finalState = base.copy(
                 loading = false,
                 series = resolved,
+                seriesMvp = awards.seriesMvp,
+                gameMvps = awards.gameMvps,
+                votes = awards.votes,
                 status = when {
-                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${resolved.source}"
+                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status}"
                     result.isFailure -> "比赛详情同步失败"
                     else -> resolver.status.value
                 },
