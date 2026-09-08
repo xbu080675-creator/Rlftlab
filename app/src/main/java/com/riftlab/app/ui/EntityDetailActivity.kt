@@ -35,14 +35,16 @@ import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduledEsportsMatch
-import com.riftlab.app.data.TeamAssetCatalog
+import com.riftlab.app.data.StandingsCenterStore
 import com.riftlab.app.data.TeamDetailRepository
+import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
 
 class EntityDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MatchSessionStore.ensureDataRunning()
+        StandingsCenterStore.ensureRunning()
         setContent {
             RiftTheme {
                 Surface(Modifier.fillMaxSize(), color = RiftBg, contentColor = RiftText) {
@@ -55,6 +57,7 @@ class EntityDetailActivity : ComponentActivity() {
     @Composable
     private fun EntityDetailRoute(onClose: () -> Unit) {
         val center by MatchSessionStore.scheduleCenter.collectAsState()
+        val standingsState by StandingsCenterStore.state.collectAsState()
         val initialMode = intent.getStringExtra(EntityDetailLauncher.EXTRA_MODE).orEmpty()
         val initialTeam = remember {
             EsportsTeamRef(
@@ -72,10 +75,22 @@ class EntityDetailActivity : ComponentActivity() {
         var activeTeam by remember { mutableStateOf<EsportsTeamRef?>(null) }
         var activeMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
 
-        LaunchedEffect(initialMode, center.matches, initialTeam, requestedMatchId, requestedTeamA, requestedTeamB) {
+        LaunchedEffect(
+            initialMode,
+            center.matches,
+            standingsState.standings,
+            initialTeam,
+            requestedMatchId,
+            requestedTeamA,
+            requestedTeamB
+        ) {
             when (initialMode) {
                 EntityDetailLauncher.MODE_TEAM -> {
-                    val resolved = resolveBestTeam(initialTeam, center.matches)
+                    val resolved = resolveBestTeam(
+                        candidate = initialTeam,
+                        matches = center.matches,
+                        standings = standingsState.standings
+                    )
                     activeTeam = resolved
                     if (resolved.code.isNotBlank() || resolved.name.isNotBlank()) {
                         TeamDetailRepository.open(resolved, center.matches)
@@ -168,8 +183,20 @@ private fun EntityDetailHeader(
     }
 }
 
-private fun resolveBestTeam(candidate: EsportsTeamRef, matches: List<ScheduledEsportsMatch>): EsportsTeamRef {
-    val variants = matches.flatMap { it.teams }.filter { sameTeam(it, candidate) }
+private fun resolveBestTeam(
+    candidate: EsportsTeamRef,
+    matches: List<ScheduledEsportsMatch>,
+    standings: TournamentStandings?
+): EsportsTeamRef {
+    val fromSchedule = matches.flatMap { it.teams }
+    val fromRankings = standings?.stages.orEmpty().flatMap { stage ->
+        stage.sections.flatMap { section -> section.rankings.map { it.team } }
+    }
+    val fromBrackets = standings?.stages.orEmpty().flatMap { stage ->
+        stage.sections.flatMap { section -> section.matches.flatMap { it.teams } }
+    }
+    val variants = (fromSchedule + fromRankings + fromBrackets)
+        .filter { sameTeam(it, candidate) }
     return (variants + candidate).maxByOrNull(::teamQuality) ?: candidate
 }
 
@@ -200,10 +227,11 @@ private fun sameTeam(a: EsportsTeamRef, b: EsportsTeamRef): Boolean {
     return keysA.intersect(keysB).isNotEmpty()
 }
 
+/** Riot identity fields must beat a cosmetic-only Schedule record with a logo. */
 private fun teamQuality(team: EsportsTeamRef): Int =
-    (if (team.imageUrl.isNotBlank()) 8 else 0) +
-        (if (team.id.isNotBlank()) 4 else 0) +
-        (if (team.slug.isNotBlank()) 3 else 0) +
+    (if (team.id.isNotBlank()) 16 else 0) +
+        (if (team.slug.isNotBlank()) 8 else 0) +
+        (if (team.imageUrl.isNotBlank()) 4 else 0) +
         (if (team.code.isNotBlank()) 2 else 0) +
         (if (team.name.isNotBlank()) 1 else 0)
 
