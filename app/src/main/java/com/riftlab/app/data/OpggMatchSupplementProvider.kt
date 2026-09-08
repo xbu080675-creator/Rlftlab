@@ -121,11 +121,22 @@ internal class OpggMatchSupplementProvider {
                 }
                 collectTeamImage(team, images)
 
+                val playerName = player.optString("nickName")
+                    .ifBlank { row.optString("nickName") }
+                    .ifBlank { "P${i + 1}" }
+                val teamCode = team.optString("acronym")
+                    .ifBlank { team.optString("name") }
+                    .ifBlank { teamCodeById[teamId].orEmpty() }
+                val playerImage = normalizeAssetUrl(player.optString("imageUrl"))
+                if (playerImage.isNotBlank()) {
+                    EsportsAssetCache.putPlayer(playerName, teamCode, playerImage)
+                }
+
                 val point = number(row.opt("mvpPoint"))
                 if (point > 0.0) {
                     ratings += Rating(
-                        name = player.optString("nickName").ifBlank { row.optString("nickName") }.ifBlank { "P${i + 1}" },
-                        team = team.optString("acronym").ifBlank { team.optString("name") }.ifBlank { teamCodeById[teamId].orEmpty() },
+                        name = playerName,
+                        team = teamCode,
                         role = row.optString("position").ifBlank { player.optString("position") },
                         point = point
                     )
@@ -273,15 +284,21 @@ internal class OpggMatchSupplementProvider {
 
     private fun collectTeamImage(team: JSONObject?, out: MutableMap<String, String>) {
         if (team == null) return
-        val image = team.optString("imageUrlDarkMode")
-            .ifBlank { team.optString("imageUrl") }
-            .ifBlank { team.optString("imageUrlLightMode") }
+        val image = normalizeAssetUrl(
+            team.optString("imageUrlDarkMode")
+                .ifBlank { team.optString("imageUrl") }
+                .ifBlank { team.optString("imageUrlLightMode") }
+        )
         if (image.isBlank()) return
-        for (value in listOf(team.optString("id"), team.optString("acronym"), team.optString("name"))) {
+        val aliases = listOf(team.optString("id"), team.optString("acronym"), team.optString("name"))
+        EsportsAssetCache.putTeam(image, *aliases.toTypedArray())
+        for (value in aliases) {
             val key = token(value)
             if (key.isNotBlank()) out[key] = image
         }
     }
+
+    private fun normalizeAssetUrl(raw: String): String = EsportsAssetCache.normalize(raw)
 
     private fun jsonScalarList(array: JSONArray?): List<String> {
         if (array == null) return emptyList()
