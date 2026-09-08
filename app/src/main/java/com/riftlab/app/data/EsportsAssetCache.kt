@@ -52,8 +52,18 @@ internal object EsportsAssetCache {
     fun normalize(raw: String): String {
         val value = raw.trim()
         if (value.isBlank() || value.equals("null", true) || value.equals("undefined", true)) return ""
+
+        // Riot getSchedule currently returns real LPL team artwork on static.lolesports.com using
+        // clear-text HTTP. Android 9+ blocks that traffic for targetSdk 36 apps. The same CDN asset
+        // is available over HTTPS, so upgrade this known host instead of enabling clear-text traffic
+        // globally for the app.
+        if (value.startsWith("http://static.lolesports.com/", ignoreCase = true)) {
+            return "https://${value.substringAfter("http://")}" 
+        }
+
         return when {
-            value.startsWith("https://", true) || value.startsWith("http://", true) -> value
+            value.startsWith("https://", true) -> value
+            value.startsWith("http://", true) -> value
             value.startsWith("//") -> "https:$value"
             else -> ""
         }
