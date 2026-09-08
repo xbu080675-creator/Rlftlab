@@ -6,13 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import com.riftlab.app.overlay.RiftOverlayService
 import com.riftlab.app.stream.StreamLauncher
-import com.riftlab.app.ui.RiftLabApp
+import com.riftlab.app.ui.RiftLabRoot
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, true)
-        setContent { RiftLabApp() }
+        setContent { RiftLabRoot() }
     }
 
     override fun onStart() {
