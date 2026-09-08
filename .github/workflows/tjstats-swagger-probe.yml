@@ -1,0 +1,45 @@
+name: TJStats Swagger Probe
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect TJStats realtime schemas
+        shell: python
+        run: |
+          import json, urllib.request
+          urls = [
+              'https://open.tjstats.com/match-auth-app/swagger/v1/doc.json',
+              'https://open.tjstats.com/comm-match-app/swagger/v1/doc.json',
+          ]
+          wanted = {
+              '/realtime/team','/realtime/teamGold','/realtime/player','/realtime/singleBp',
+              '/pro/realtime/game','/realtime/topData','/realtime/playerInfo','/realtime/battleData'
+          }
+          for url in urls:
+              print('DOC', url)
+              try:
+                  req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':'https://lpl.qq.com/'})
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      raw=r.read().decode('utf-8','replace')
+                      print('HTTP',r.status,'LEN',len(raw))
+                  doc=json.loads(raw)
+              except Exception as e:
+                  print('ERROR',repr(e)); continue
+              for path, methods in (doc.get('paths') or {}).items():
+                  if path not in wanted: continue
+                  for method, spec in methods.items():
+                      if not isinstance(spec,dict): continue
+                      print('ENDPOINT',method.upper(),path)
+                      print('SUMMARY',spec.get('summary'))
+                      for p in spec.get('parameters') or []:
+                          if isinstance(p,dict):
+                              print('PARAM',p.get('name'),'in='+str(p.get('in')),'required='+str(p.get('required')),'type='+str(p.get('type')),'schema='+str(p.get('schema')))
+                      for code,resp in (spec.get('responses') or {}).items():
+                          if isinstance(resp,dict): print('RESP',code,resp.get('schema'))
