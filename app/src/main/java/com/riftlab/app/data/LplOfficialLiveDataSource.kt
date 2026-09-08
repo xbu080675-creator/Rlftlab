@@ -15,9 +15,12 @@ import kotlinx.coroutines.launch
 /**
  * Match-agnostic live provider router.
  *
- * Provider order is a policy, not a match special-case. The LPL/Tencent path is preferred for
- * LPL numeric data; Riot remains a generic fallback. More community/self-hosted providers can be
- * inserted without changing MatchSessionStore or any UI surface.
+ * Provider order is a policy, not a match special-case:
+ * 1) Tencent/LPL comm-match-app realtime data plane
+ * 2) TJStats matchDetail current-game fallback
+ * 3) Riot LiveStats generic fallback
+ *
+ * More community/self-hosted providers can be inserted without changing MatchSessionStore or UI.
  */
 internal class LplOfficialLiveDataSource : LiveMatchDataSource {
 
@@ -28,11 +31,13 @@ internal class LplOfficialLiveDataSource : LiveMatchDataSource {
         val status: StateFlow<LiveSourceStatus>
     )
 
-    private val lplOfficial = LplCurrentGameLiveDataSource()
+    private val commRealtime = LplCommRealtimeDataSource()
+    private val lplMatchDetail = LplCurrentGameLiveDataSource()
     private val riotFallback = LolEsportsLiveDataSource()
 
     private val providers = listOf(
-        Provider("LPL Official", 0, lplOfficial, lplOfficial.status),
+        Provider("LPL Comm Realtime", 0, commRealtime, commRealtime.status),
+        Provider("LPL MatchDetail", 20, lplMatchDetail, lplMatchDetail.status),
         Provider("Riot fallback", 100, riotFallback, riotFallback.status)
     )
 
