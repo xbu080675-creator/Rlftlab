@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riftlab.app.BuildConfig
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
@@ -113,10 +114,15 @@ private fun Header() {
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
-            Text("RIFTLAB", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.4.sp)
+            Text("RIFTLAB", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = 1.4.sp)
             Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 9.sp, letterSpacing = 1.1.sp)
         }
-        Text("1.0 DEV.5", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(
+            BuildConfig.VERSION_NAME.replace("1.0.0-", "1.0 ").uppercase(),
+            color = RiftCyan,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -131,7 +137,7 @@ private fun PhaseTabs(selected: Int, onSelect: (Int) -> Unit) {
                 Text(
                     phase.label,
                     color = if (index == selected) RiftText else RiftMuted,
-                    fontWeight = if (index == selected) FontWeight.Black else FontWeight.Medium
+                    fontWeight = if (index == selected) FontWeight.SemiBold else FontWeight.Medium
                 )
                 Spacer(Modifier.height(8.dp))
                 Box(
@@ -158,22 +164,22 @@ private fun PreScreen() {
         item { SectionTitle("REAL DATA SOURCE / 赛程源") }
         item {
             Panel(accent = target != null) {
-                Text("RIOT LOL ESPORTS · SCHEDULE", color = if (target != null) RiftCyan else RiftMuted, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                Text("RIOT LOL ESPORTS · SCHEDULE", color = if (target != null) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
-                Text(scheduleStatus, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(scheduleStatus, fontWeight = FontWeight.Medium, fontSize = 12.sp)
                 target?.let { match ->
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "${match.teams.joinToString(" VS ") { it.code }} · BO${match.bestOf} · ${match.state.uppercase()}",
                         color = RiftText,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 11.sp
                     )
                     Text("EVENT ${match.eventId}", color = RiftMuted, fontSize = 10.sp)
                     Text(match.startTimeIso, color = RiftMuted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -181,7 +187,7 @@ private fun PreScreen() {
         items(data.blueRoster.zip(data.redRoster)) { pair -> RosterRow(pair.first, pair.second) }
         item {
             Panel {
-                Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
                 Text(data.rosterNote, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
             }
@@ -220,7 +226,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                             LiveSourcePhase.ERROR -> RiftRed
                             else -> RiftMuted
                         },
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.weight(1f))
@@ -238,7 +244,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                             if (isLive) formatGoldDiff(diff) else "—",
                             color = if (diff >= 0) RiftCyan else RiftRed,
                             fontSize = 28.sp,
-                            fontWeight = FontWeight.Black
+                            fontWeight = FontWeight.Bold
                         )
                     }
                     TeamGold(snapshot.red, snapshot.redGold, Alignment.End)
@@ -264,19 +270,19 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                             LiveSourcePhase.ERROR -> RiftRed
                             else -> RiftMuted
                         },
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.weight(1f))
-                    Text("POLL 3s", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("POLL 3s", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(Modifier.height(7.dp))
-                Text(status.message, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 18.sp)
+                Text(status.message, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 18.sp)
                 Spacer(Modifier.height(7.dp))
                 Text("SOURCE  ${snapshot.source}", color = RiftMuted, fontSize = 10.sp)
                 Text("EVENT   ${status.eventId.ifBlank { "—" }}", color = RiftMuted, fontSize = 10.sp)
                 Text("GAME    ${status.gameId.ifBlank { snapshot.gameId.ifBlank { "—" } }}", color = RiftMuted, fontSize = 10.sp)
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -285,7 +291,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Analytics, null, tint = if (isLive) RiftCyan else RiftMuted)
                     Spacer(Modifier.width(8.dp))
-                    Text("LOCAL LIVE READ", color = if (isLive) RiftCyan else RiftMuted, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Text("LOCAL LIVE READ", color = if (isLive) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(insight, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
@@ -333,16 +339,16 @@ private fun PostScreen() {
     ) {
         item {
             Panel(accent = false) {
-                Text("POST MATCH · PENDING", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text("POST MATCH · PENDING", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(8.dp))
-                Text(post.winner, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                Text(post.positionRank, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(post.winner, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Text(post.positionRank, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
         }
         item { SectionTitle("REAL POST DATA / 赛后真实源") }
         item {
             Panel {
-                Text("当前不展示任何 Mock MVP / 排行榜", color = RiftCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text("当前不展示任何 Mock MVP / 排行榜", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                 Spacer(Modifier.height(7.dp))
                 Text(post.keyPoint, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
             }
@@ -354,18 +360,18 @@ private fun PostScreen() {
 @Composable
 private fun MatchHero(blue: String, red: String, time: String, label: String) {
     Panel(accent = true) {
-        Text(label, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(blue, fontSize = 34.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            Text(blue, fontSize = 34.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("VS", color = RiftCyan, fontWeight = FontWeight.Black)
+                Text("VS", color = RiftCyan, fontWeight = FontWeight.SemiBold)
                 Text(time, color = RiftMuted, fontSize = 11.sp)
             }
             Text(
                 red,
                 fontSize = 34.sp,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.End
             )
@@ -378,15 +384,15 @@ private fun RosterRow(left: PlayerCard, right: PlayerCard) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left.role, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(left.id, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text(left.role, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(left.id, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text(left.rank, color = RiftMuted, fontSize = 10.sp)
                 Text(left.recent, color = RiftMuted, fontSize = 9.sp)
             }
             Text("↔", color = RiftLine, fontSize = 18.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right.role, color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(right.id, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text(right.role, color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(right.id, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 Text(right.rank, color = RiftMuted, fontSize = 10.sp)
                 Text(right.recent, color = RiftMuted, fontSize = 9.sp)
             }
@@ -399,8 +405,8 @@ private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?)
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(left?.summonerName ?: "—", fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     left?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
@@ -409,8 +415,8 @@ private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?)
             }
             Text("↔", color = RiftLine, fontSize = 16.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(right?.summonerName ?: "—", fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     right?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
@@ -424,7 +430,7 @@ private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?)
 @Composable
 private fun TeamGold(name: String, gold: Int, alignment: Alignment.Horizontal) {
     Column(Modifier.width(90.dp), horizontalAlignment = alignment) {
-        Text(name, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(name, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(if (gold > 0) "%.1fK".format(gold / 1000f) else "—", color = RiftMuted, fontSize = 11.sp)
     }
 }
@@ -446,16 +452,16 @@ private fun Panel(accent: Boolean = false, content: @Composable ColumnScope.() -
 
 @Composable
 private fun SectionTitle(value: String) {
-    Text(value, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+    Text(value, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
 }
 
 @Composable
 private fun MetricRow(left: String, centerLeft: String, centerRight: String, right: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(left, fontWeight = FontWeight.Black, fontSize = 11.sp)
-        Text(centerLeft, color = RiftCyan, fontWeight = FontWeight.Black, fontSize = 11.sp)
-        Text(centerRight, color = RiftRed, fontWeight = FontWeight.Black, fontSize = 11.sp)
-        Text(right, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        Text(left, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text(centerLeft, color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text(centerRight, color = RiftRed, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text(right, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
     }
 }
 
@@ -469,14 +475,14 @@ private fun ActionButton(
     Button(
         onClick = onClick,
         modifier = modifier.height(58.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt),
+        colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftText),
         shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = RiftCyan, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(3.dp))
-            Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
