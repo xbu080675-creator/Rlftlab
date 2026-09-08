@@ -20,9 +20,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Build debug APK
+      - name: Build fixed-signed debug APK
         run: gradle :app:assembleDebug
+      - name: Verify fixed dev signature
+        shell: bash
+        run: |
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" verify --print-certs "$APK"
+          DIGEST=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          EXPECTED="769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
+          echo "RiftLab dev signing SHA-256: $DIGEST"
+          test "$DIGEST" = "$EXPECTED"
       - uses: actions/upload-artifact@v4
         with:
-          name: RiftLab-debug
+          name: RiftLab-dev2-fixed-sign
           path: app/build/outputs/apk/debug/app-debug.apk
