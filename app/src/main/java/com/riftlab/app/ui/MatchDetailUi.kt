@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.DraftPickRecord
+import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSnapshot
 import com.riftlab.app.data.MatchDetailRepository
@@ -93,6 +95,10 @@ internal fun MatchDetailContent() {
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    left?.let {
+                        TeamLogo(it.imageUrl, it.code.ifBlank { it.name }, Modifier.size(34.dp))
+                        Spacer(Modifier.width(7.dp))
+                    }
                     Text(left?.code?.ifBlank { left.name } ?: "—", modifier = Modifier.weight(1f), fontSize = 27.sp, fontWeight = FontWeight.Bold)
                     Text(
                         series?.let { "${it.scoreA} : ${it.scoreB}" }
@@ -108,6 +114,10 @@ internal fun MatchDetailContent() {
                         fontSize = 27.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    right?.let {
+                        Spacer(Modifier.width(7.dp))
+                        TeamLogo(it.imageUrl, it.code.ifBlank { it.name }, Modifier.size(34.dp))
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(match.blockName.ifBlank { match.league }, color = RiftMuted, fontSize = 10.sp)
@@ -166,8 +176,10 @@ internal fun MatchDetailContent() {
                 item { GameSummaryCard(live) }
             }
         } else if (selectedSnapshot != null) {
+            val blueTeam = findTeamForSide(match.teams, selectedSnapshot.blue)
+            val redTeam = findTeamForSide(match.teams, selectedSnapshot.red)
             item { DetailSectionTitle("GAME $selectedGame / 小局数据") }
-            item { GameDetailCard(selectedSnapshot) }
+            item { GameDetailCard(selectedSnapshot, blueTeam, redTeam) }
         } else {
             item { CompactStatusPanel("G$selectedGame 数据尚未连接") }
         }
@@ -192,7 +204,7 @@ internal fun MatchDetailContent() {
         item { DetailSectionTitle("BP / DRAFT") }
         val scopedDrafts = draftsForGame(state.drafts, selectedGame)
         if (scopedDrafts.isEmpty()) {
-            item { CompactStatusPanel(if (selectedGame > 0) "G$selectedGame · BP 数据源待接入" else "BP 数据源待接入") }
+            item { CompactStatusPanel(if (selectedGame > 0) "G$selectedGame · BP 数据暂不可用" else "BP 数据暂不可用") }
         } else {
             items(scopedDrafts, key = { "draft-${it.game}-${it.source}" }) { draft -> DraftPanel(draft) }
         }
@@ -262,7 +274,7 @@ private fun GameSummaryCard(game: LiveSnapshot) {
 }
 
 @Composable
-private fun GameDetailCard(game: LiveSnapshot) {
+private fun GameDetailCard(game: LiveSnapshot, blueTeam: EsportsTeamRef?, redTeam: EsportsTeamRef?) {
     DetailPanel(accent = false) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("GAME ${game.game}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -298,8 +310,10 @@ private fun GameDetailCard(game: LiveSnapshot) {
                 role = role,
                 left = leftMapped[role],
                 right = rightMapped[role],
-                leftTeam = game.blue,
-                rightTeam = game.red
+                leftTeamName = game.blue,
+                rightTeamName = game.red,
+                leftTeam = blueTeam,
+                rightTeam = redTeam
             )
         }
         Spacer(Modifier.height(5.dp))
@@ -312,13 +326,21 @@ private fun CompactPlayerRow(
     role: String,
     left: LivePlayerSnapshot?,
     right: LivePlayerSnapshot?,
-    leftTeam: String,
-    rightTeam: String
+    leftTeamName: String,
+    rightTeamName: String,
+    leftTeam: EsportsTeamRef?,
+    rightTeam: EsportsTeamRef?
 ) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        TeamLogo(
+            imageUrl = leftTeam?.imageUrl.orEmpty(),
+            code = leftTeam?.code?.ifBlank { leftTeam.name } ?: leftTeamName,
+            modifier = Modifier.size(25.dp)
+        )
+        Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                left?.let { cleanPlayerName(it.summonerName, leftTeam) } ?: "数据缺失",
+                left?.let { cleanPlayerName(it.summonerName, leftTeamName) } ?: "数据缺失",
                 color = if (left == null) RiftMuted else RiftText,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.SemiBold
@@ -328,10 +350,10 @@ private fun CompactPlayerRow(
                 Text("HERO $it · G ${left.gold}", color = RiftMuted, fontSize = 7.sp)
             }
         }
-        Text(roleLabel(role), modifier = Modifier.width(38.dp), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Text(roleLabel(role), modifier = Modifier.width(34.dp), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
             Text(
-                right?.let { cleanPlayerName(it.summonerName, rightTeam) } ?: "数据缺失",
+                right?.let { cleanPlayerName(it.summonerName, rightTeamName) } ?: "数据缺失",
                 color = if (right == null) RiftMuted else RiftText,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -342,6 +364,12 @@ private fun CompactPlayerRow(
                 Text("HERO $it · G ${right.gold}", color = RiftMuted, fontSize = 7.sp, textAlign = TextAlign.End)
             }
         }
+        Spacer(Modifier.width(6.dp))
+        TeamLogo(
+            imageUrl = rightTeam?.imageUrl.orEmpty(),
+            code = rightTeam?.code?.ifBlank { rightTeam.name } ?: rightTeamName,
+            modifier = Modifier.size(25.dp)
+        )
     }
 }
 
@@ -485,6 +513,17 @@ private fun cleanPlayerName(name: String, team: String): String {
         trimmed.drop(teamToken.length).trimStart('-', '_', ' ')
     } else trimmed
 }
+
+private fun findTeamForSide(teams: List<EsportsTeamRef>, label: String): EsportsTeamRef? {
+    val target = teamToken(label)
+    return teams.firstOrNull { team ->
+        listOf(team.code, team.name, team.slug)
+            .map(::teamToken)
+            .any { it.isNotBlank() && (it == target || it.contains(target) || target.contains(it)) }
+    }
+}
+
+private fun teamToken(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
 private fun votesForGame(votes: List<OfficialVoteRecord>, selectedGame: Int): List<OfficialVoteRecord> {
     if (selectedGame <= 0) return votes
