@@ -33,6 +33,7 @@ internal object TeamDetailRepository {
     private val imageCache = linkedMapOf<String, String>()
     private val starterCache = linkedMapOf<String, Set<String>>()
     private var loadJob: Job? = null
+    private var lastMatches: List<ScheduledEsportsMatch> = emptyList()
 
     private val _state = MutableStateFlow(TeamDetailState())
     val state: StateFlow<TeamDetailState> = _state.asStateFlow()
@@ -42,6 +43,8 @@ internal object TeamDetailRepository {
         matches: List<ScheduledEsportsMatch> = emptyList(),
         forceRefresh: Boolean = false
     ) {
+        if (matches.isNotEmpty()) lastMatches = matches
+        val lineupMatches = if (matches.isNotEmpty()) matches else lastMatches
         val key = TeamAssetCatalog.canonicalKey(team)
         val aliases = arrayOf(team.id, team.code, team.name, team.slug)
         val cached = cache[key]
@@ -51,7 +54,11 @@ internal object TeamDetailRepository {
             .ifBlank { EsportsAssetCache.team(*aliases) }
             .ifBlank { EsportsAssetCache.normalize(cached?.imageUrl.orEmpty()) }
 
-        if (!forceRefresh && cached != null && cachedImage.isNotBlank()) {
+        val hasCompletedContext = lineupMatches.any { match ->
+            match.teams.any { sameTeam(it, team) } && isCompletedMatch(match) && matchEpoch(match) <= System.currentTimeMillis()
+        }
+        val cachedLineupReady = !hasCompletedContext || cachedStarters.size >= 5
+        if (!forceRefresh && cached != null && cachedImage.isNotBlank() && cachedLineupReady) {
             val substitutes = substituteCount(cached.players, cachedStarters)
             _state.value = TeamDetailState(
                 team = team,
@@ -59,8 +66,8 @@ internal object TeamDetailRepository {
                 imageUrl = cachedImage,
                 starters = cachedStarters,
                 status = rosterSummary(cached.players.size, cachedStarters.size, substitutes, cached.staff.size),
-                lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "首发阵容尚未识别",
-                staffStatus = if (cached.staff.isNotEmpty()) "Liquipedia · Coaching Staff" else "教练组尚未同步"
+                lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
+                staffStatus = if (cached.staff.isNotEmpty()) "教练组数据已缓存" else "教练组尚未同步"
             )
             return
         }
@@ -108,25 +115,30 @@ internal object TeamDetailRepository {
                         .let(EsportsAssetCache::normalize)
                 }
 
-            val latestMatch = matches
+            val now = System.currentTimeMillis()
+            val latestMatch = lineupMatches
                 .asSequence()
                 .filter { match -> match.teams.any { sameTeam(it, effectiveTeam) } }
                 .filter(::isCompletedMatch)
+                .filter { matchEpoch(it) in 1..now }
                 .maxByOrNull(::matchEpoch)
 
             val starters = if (latestMatch != null && baseDetails != null) {
                 runCatching { lineupProvider.fetchLatestLineup(latestMatch, effectiveTeam) }
                     .getOrDefault(emptySet())
-            } else emptySet()
+                    .takeIf { it.size >= 5 }
+                    ?: cachedStarters
+            } else cachedStarters
 
             val staffSupplement = if (baseDetails != null) {
                 runCatching { staffProvider.fetch(effectiveTeam, baseDetails) }
-                    .getOrElse { TeamStaffSupplement(status = "Liquipedia · 教练组同步失败") }
+                    .getOrElse { TeamStaffSupplement(status = "教练组数据源暂不可用") }
             } else TeamStaffSupplement(status = "教练组等待 Riot roster")
 
-            val details = baseDetails?.copy(staff = staffSupplement.staff)
+            val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
+            val details = baseDetails?.copy(staff = staff)
             if (details != null) cache[key] = details
-            if (starters.isNotEmpty()) starterCache[key] = starters
+            if (starters.size >= 5) starterCache[key] = starters
             if (image.isNotBlank()) {
                 imageCache[key] = image
                 EsportsAssetCache.putTeam(image, *aliases)
@@ -146,10 +158,11 @@ internal object TeamDetailRepository {
                 },
                 lineupStatus = when {
                     starters.size >= 5 && latestMatch != null -> "OP.GG · ${latestMatch.blockName.ifBlank { "最近正式比赛" }} · 实际出场五人"
+                    starters.size >= 5 -> "OP.GG · 已缓存最近正式比赛实际出场阵容"
                     latestMatch == null -> "暂无已结束比赛用于判定当前首发"
                     else -> "最近比赛阵容暂未匹配；不猜首发/替补"
                 },
-                staffStatus = staffSupplement.status,
+                staffStatus = if (staff.isNotEmpty() && staffSupplement.staff.isEmpty()) "教练组 · 本地缓存" else staffSupplement.status,
                 errorMessage = detailResult.exceptionOrNull()?.message
             )
         }
@@ -157,7 +170,7 @@ internal object TeamDetailRepository {
 
     fun refresh() {
         val snapshot = _state.value
-        snapshot.team?.let { open(it, forceRefresh = true) }
+        snapshot.team?.let { open(it, matches = lastMatches, forceRefresh = true) }
     }
 
     fun close() {
