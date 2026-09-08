@@ -106,6 +106,8 @@ internal class LolEsportsApiClient {
                 val match = event.optJSONObject("match") ?: continue
                 val teams = parseTeams(match.optJSONArray("teams"))
                 if (teams.size < 2) continue
+                val bestOf = match.optJSONObject("strategy")?.optInt("count", 0) ?: 0
+                val rawState = event.optString("state")
 
                 add(
                     ScheduledEsportsMatch(
@@ -114,13 +116,39 @@ internal class LolEsportsApiClient {
                         league = league?.optString("name", "LPL") ?: "LPL",
                         blockName = event.optString("blockName", ""),
                         startTimeIso = event.optString("startTime"),
-                        state = event.optString("state"),
-                        bestOf = match.optJSONObject("strategy")?.optInt("count", 0) ?: 0,
+                        state = verifiedScheduleState(rawState, bestOf, teams),
+                        bestOf = bestOf,
                         teams = teams
                     )
                 )
             }
         }
+    }
+
+    /**
+     * getSchedule can transiently report a series as completed before it has actually started.
+     * Never promote that raw flag to a finished match unless the series result proves it.
+     */
+    private fun verifiedScheduleState(
+        rawState: String,
+        bestOf: Int,
+        teams: List<EsportsTeamRef>
+    ): String {
+        val normalized = rawState.lowercase()
+            .replace("_", "")
+            .replace("-", "")
+            .replace(" ", "")
+        val claimsCompleted = normalized.contains("complete") || normalized == "finished"
+        if (!claimsCompleted) return rawState
+
+        val requiredWins = if (bestOf > 0) bestOf / 2 + 1 else 1
+        val maxGameWins = teams.maxOfOrNull { it.gameWins } ?: 0
+        val winnerByOutcome = teams.any {
+            it.outcome.equals("win", ignoreCase = true) ||
+                it.outcome.equals("winner", ignoreCase = true)
+        }
+
+        return if (maxGameWins >= requiredWins || winnerByOutcome) rawState else "unstarted"
     }
 
     suspend fun fetchTeamDetails(slug: String): EsportsTeamDetails? {
