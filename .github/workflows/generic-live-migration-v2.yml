@@ -1,0 +1,30 @@
+name: Generic Live Migration V2
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ github.event.head_commit.message == 'ci: run generic live migration v2' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply migration
+        run: python3 tools/generic_live_migration.py
+
+      - name: Commit migration
+        run: |
+          git config user.name "RiftLab CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor: generalize live engine for all LPL matches"
+          git push origin HEAD:main
