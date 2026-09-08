@@ -9,40 +9,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract official realtime call parameters
+      - name: Inspect TJStats realtime swagger parameters
         shell: bash
         run: |
           python - <<'PY'
-          import re, urllib.request
-          UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'
-          BASE='https://lpl.qq.com'
-          PATHS=[
-            '/web202301/js/index.js',
-            '/web202301/js/common.js',
-            '/web201612/js/showdata2.js',
-            '/web201612/js/after-data-1.js',
-            '/web201612/js/LPL_Live.js',
-            '/web201612/js/lplMatchConfig.js',
+          import json, urllib.request
+
+          URLS = [
+            'https://open.tjstats.com/match-auth-app/swagger/v1/doc.json',
+            'https://open.tjstats.com/match-auth-app/swagger/v1/swagger.json',
+            'https://open.tjstats.com/match-auth-app/swagger/doc.json',
           ]
-          def get(path):
+          targets = [
+            '/realtime/team',
+            '/realtime/teamGold',
+            '/realtime/player',
+            '/realtime/singleBp',
+            '/pro/realtime/game',
+          ]
+          headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Referer': 'https://open.tjstats.com/match-auth-app/swagger/v1/index.html',
+          }
+
+          doc = None
+          for url in URLS:
             try:
-              req=urllib.request.Request(BASE+path,headers={'User-Agent':UA,'Referer':BASE+'/'})
-              with urllib.request.urlopen(req,timeout=15) as r:
-                return r.read().decode('utf-8','replace')
-            except Exception:
-              return ''
-          found=0
-          for path in PATHS:
-            text=get(path)
-            for m in re.finditer(r'(?:getTJStats\s*\([^\)]{0,120}|["\']/(?:pro/)?realtime/[^"\']+)',text,re.I):
-              p=m.start()
-              chunk=text[max(0,p-520):min(len(text),p+1200)]
-              if 'realtime/' not in chunk.lower() and 'schedule/starting' not in chunk.lower():
-                continue
-              # One compact single-line context per actual call.
-              print('CALL src='+path.split('/')[-1]+' ctx='+re.sub(r'\s+',' ',chunk)[:1650])
-              found+=1
-              if found>=30: break
-            if found>=30: break
-          print('CALL_COUNT='+str(found))
+              req = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(req, timeout=20) as r:
+                body = r.read().decode('utf-8', 'replace')
+                print('DOC', url, 'HTTP', r.status, 'LEN', len(body))
+                doc = json.loads(body)
+                break
+            except Exception as e:
+              print('DOC_ERR', url, repr(e))
+
+          if not doc:
+            raise SystemExit('no swagger doc')
+
+          paths = doc.get('paths', {})
+          for path in targets:
+            item = paths.get(path)
+            print('\nPATH', path)
+            if not item:
+              print('MISSING')
+              continue
+            op = item.get('get') or item.get('post') or {}
+            print('SUMMARY', op.get('summary'))
+            for p in op.get('parameters', []):
+              if '$ref' in p:
+                print('PARAM_REF', p['$ref'])
+              else:
+                print('PARAM', json.dumps({
+                  'name': p.get('name'),
+                  'in': p.get('in'),
+                  'required': p.get('required'),
+                  'type': p.get('type'),
+                  'format': p.get('format'),
+                  'schema': p.get('schema'),
+                  'description': p.get('description'),
+                }, ensure_ascii=False))
+            print('RESPONSES', ','.join((op.get('responses') or {}).keys()))
           PY
