@@ -196,13 +196,16 @@ private fun TeamStatus(value: String) {
     }
 }
 
-private fun canonicalTeamRole(raw: String): String? = when (raw.trim().uppercase()) {
-    "TOP", "1" -> "TOP"
-    "JUG", "JUNGLE", "JGL", "2" -> "JUG"
-    "MID", "MIDDLE", "3" -> "MID"
-    "BOT", "BOTTOM", "ADC", "4" -> "BOT"
-    "SUP", "SUPPORT", "5" -> "SUP"
-    else -> null
+private fun canonicalTeamRole(raw: String): String? {
+    val key = raw.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "")
+    return when (key) {
+        "TOP", "TOPLANE", "1" -> "TOP"
+        "JUN", "JUG", "JGL", "JUNG", "JUNGLE", "JUNGLER", "JUNGLEPOSITION", "2" -> "JUG"
+        "MID", "MIDDLE", "MIDLANE", "3" -> "MID"
+        "BOT", "BOTTOM", "ADC", "AD", "BOTTOMLANE", "4" -> "BOT"
+        "SUP", "SUPPORT", "SUPP", "5" -> "SUP"
+        else -> null
+    }
 }
 
 private fun teamRoleLabel(role: String): String = when (canonicalTeamRole(role) ?: role.uppercase()) {
