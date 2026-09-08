@@ -70,6 +70,7 @@ object MatchSessionStore {
     private val scheduleSource = LolEsportsScheduleDataSource()
     private val teamSource = LolEsportsTeamDataSource()
     private val liveDataSource = LplOfficialLiveDataSource()
+    private val postMatchResolver = LplHistoricalPostMatchResolver()
 
     private var liveJob: Job? = null
     private var scheduleJob: Job? = null
@@ -91,6 +92,7 @@ object MatchSessionStore {
     val scheduleCenter: StateFlow<ScheduleCenterState> = _scheduleCenter.asStateFlow()
 
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
+    val postSourceStatus: StateFlow<String> = postMatchResolver.status
 
     private fun emptyLiveSnapshot(message: String): LiveSnapshot = LiveSnapshot(
         game = 0,
@@ -187,6 +189,18 @@ object MatchSessionStore {
             _targetMatch.value = selected
             LiveMatchTargetRegistry.update(selected)
             _scheduleStatus.value = center.statusMessage
+
+            // Post-match recovery is independent from the live target. Always resolve the most
+            // recent completed LPL series from the schedule, so opening RiftLab after the match
+            // can still rebuild the complete final archive.
+            val latestCompleted = matches
+                .filter(::isCompletedState)
+                .maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
+            if (latestCompleted != null) {
+                scope.launch {
+                    runCatching { postMatchResolver.refresh(latestCompleted) }
+                }
+            }
 
             if (selected != null) {
                 refreshPreMatchFromTarget(selected)

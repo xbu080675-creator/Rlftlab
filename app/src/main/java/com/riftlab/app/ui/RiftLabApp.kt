@@ -337,6 +337,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
 private fun PostScreen() {
     val series by MatchSessionStore.completedSeries.collectAsState()
     val latest by MatchSessionStore.completedGame.collectAsState()
+    val postStatus by MatchSessionStore.postSourceStatus.collectAsState()
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
@@ -363,7 +364,7 @@ private fun PostScreen() {
                     Text("当前没有可用终局记录", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                     Spacer(Modifier.height(7.dp))
                     Text(
-                        latest?.latestEvent ?: "正在等待 LPL 官方赛后数据源返回；不使用 Mock MVP / 排行榜填空。",
+                        latest?.latestEvent ?: postStatus,
                         color = RiftMuted,
                         fontSize = 11.sp,
                         lineHeight = 17.sp
