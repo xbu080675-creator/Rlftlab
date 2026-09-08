@@ -200,7 +200,10 @@ private fun PreScreen() {
 private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuya: () -> Unit) {
     val snapshot by MatchSessionStore.live.collectAsState()
     val status by MatchSessionStore.liveSourceStatus.collectAsState()
+    val scheduled by MatchSessionStore.preMatchFlow.collectAsState()
     val isLive = status.phase == LiveSourcePhase.LIVE
+    val displayBlue = if (isLive) snapshot.blue else scheduled.blue.takeUnless { it.isBlank() || it == "—" } ?: "—"
+    val displayRed = if (isLive) snapshot.red else scheduled.red.takeUnless { it.isBlank() || it == "—" } ?: "—"
     val ai = remember { MockAiInsightEngine() }
     var insight by remember { androidx.compose.runtime.mutableStateOf("等待 Riot 实时帧；暂不生成局势判断。") }
 
@@ -220,7 +223,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
             Panel(accent = isLive) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (isLive) "LIVE · GAME ${snapshot.game}" else "${status.phase.name} · GAME ${snapshot.game}",
+                        if (isLive) "LIVE · GAME ${snapshot.game}" else status.phase.name,
                         color = when (status.phase) {
                             LiveSourcePhase.LIVE -> RiftCyan
                             LiveSourcePhase.ERROR -> RiftRed
@@ -238,7 +241,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TeamGold(snapshot.blue, snapshot.blueGold, Alignment.Start)
+                    TeamGold(displayBlue, if (isLive) snapshot.blueGold else 0, Alignment.Start)
                     AnimatedContent(snapshot.goldDiff, label = "goldDiff") { diff ->
                         Text(
                             if (isLive) formatGoldDiff(diff) else "—",
@@ -247,14 +250,14 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    TeamGold(snapshot.red, snapshot.redGold, Alignment.End)
+                    TeamGold(displayRed, if (isLive) snapshot.redGold else 0, Alignment.End)
                 }
                 Spacer(Modifier.height(14.dp))
                 MetricRow(
-                    "K ${snapshot.blueKills}:${snapshot.redKills}",
-                    "T ${snapshot.blueTowers}:${snapshot.redTowers}",
-                    "D ${snapshot.blueDragons}:${snapshot.redDragons}",
-                    "B ${snapshot.blueBarons}:${snapshot.redBarons}"
+                    if (isLive) "K ${snapshot.blueKills}:${snapshot.redKills}" else "K —",
+                    if (isLive) "T ${snapshot.blueTowers}:${snapshot.redTowers}" else "T —",
+                    if (isLive) "D ${snapshot.blueDragons}:${snapshot.redDragons}" else "D —",
+                    if (isLive) "B ${snapshot.blueBarons}:${snapshot.redBarons}" else "B —"
                 )
             }
         }
