@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.0.0-dev.20"
+        versionCode = 21
+        versionName = "1.0.0-dev.21"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.20: restore complete team identity/data resolution for every global team-detail entry point.
+// dev.21: offline management snapshot; remove runtime Fandom profile dependency.
