@@ -4,14 +4,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Compatibility facade retained for the existing MatchSessionStore/UI call sites.
+ * Compatibility facade retained for existing MatchSessionStore/UI call sites.
  *
- * The actual LPL live implementation is now MatchDetail-first: Tencent's public matchDetail
- * payload is consumed before any stricter realtime endpoint. This keeps the rest of RiftLab
- * decoupled from provider experiments.
+ * Live data now comes from a current-game-only provider: finished small games are archived for
+ * the post-match surface and can never be reused as the active live snapshot.
  */
 internal class LplOfficialLiveDataSource : LiveMatchDataSource {
-    private val delegate = LplMatchDetailLiveDataSource()
+    private val delegate = LplCurrentGameLiveDataSource()
 
     val status: StateFlow<LiveSourceStatus>
         get() = delegate.status
