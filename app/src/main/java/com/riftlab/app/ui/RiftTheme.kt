@@ -19,9 +19,11 @@ private val RiftScheme = darkColorScheme(
     secondary = Color(0xFF8AF3C9),
     background = RiftBg,
     surface = RiftPanel,
-    onPrimary = RiftBg,
+    onPrimary = RiftText,
+    onSecondary = RiftBg,
     onBackground = RiftText,
-    onSurface = RiftText
+    onSurface = RiftText,
+    onSurfaceVariant = RiftMuted
 )
 
 @Composable
