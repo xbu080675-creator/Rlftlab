@@ -37,19 +37,40 @@ for path in TARGETS:
         continue
     print("  summary:", op.get("summary") or op.get("description"))
     for p in op.get("parameters", []):
-        print("  PARAM", json.dumps({k: p.get(k) for k in ("name","in","required","type","format","description","schema") if p.get(k) is not None}, ensure_ascii=False, sort_keys=True))
+        print("  PARAM", json.dumps({k: p.get(k) for k in ("name", "in", "required", "type", "format", "description", "schema") if p.get(k) is not None}, ensure_ascii=False, sort_keys=True))
     for code, resp in (op.get("responses") or {}).items():
         schema = (resp or {}).get("schema")
         if schema:
             print("  RESP", code, json.dumps(schema, ensure_ascii=False, sort_keys=True))
 
 definitions = doc.get("definitions", {})
-for name in MODELS:
+interesting = sorted(
+    name for name in definitions
+    if any(token in name.lower() for token in ("bp", "draft", "mvp", "pog", "vote"))
+)
+print("\nINTERESTING MODELS", json.dumps(interesting, ensure_ascii=False))
+
+seen = set()
+def dump_model(name, depth=0):
+    if name in seen or depth > 4:
+        return
+    seen.add(name)
     model = definitions.get(name)
     print("\nMODEL", name)
     if not model:
         print("  MISSING")
-        continue
+        return
     props = model.get("properties", {})
+    refs = []
     for key, val in props.items():
         print(" ", key, json.dumps(val, ensure_ascii=False, sort_keys=True))
+        ref = val.get("$ref") if isinstance(val, dict) else None
+        item_ref = ((val.get("items") or {}).get("$ref") if isinstance(val, dict) else None)
+        for raw in (ref, item_ref):
+            if raw and raw.startswith("#/definitions/"):
+                refs.append(raw.rsplit("/", 1)[-1])
+    for child in refs:
+        dump_model(child, depth + 1)
+
+for name in MODELS + interesting:
+    dump_model(name)
