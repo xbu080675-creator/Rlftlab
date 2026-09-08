@@ -10,7 +10,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-/** Resolves a player portrait from Riot getTeams and caches it for visual match-detail cards. */
+/** Resolves a player portrait from provider-discovered assets first, then Riot getTeams. */
 internal object PlayerPortraitResolver {
     private val mutex = Mutex()
     private val portraitCache = linkedMapOf<String, String>()
@@ -23,8 +23,14 @@ internal object PlayerPortraitResolver {
     ): String {
         val targetName = playerToken(playerName)
         if (targetName.isBlank()) return ""
+
+        // OP.GG and future providers may already have the exact portrait in the match payload.
+        EsportsAssetCache.player(playerName, teamHint).takeIf { it.isNotBlank() }?.let { return it }
+
         val cacheKey = "${teamToken(teamHint)}|$targetName"
-        mutex.withLock { portraitCache[cacheKey]?.let { return it } }
+        mutex.withLock {
+            portraitCache[cacheKey]?.takeIf { it.isNotBlank() }?.let { return it }
+        }
 
         val orderedTeams = match.teams.sortedByDescending { team ->
             if (teamHint.isNotBlank() && teamMatchesHint(team, teamHint)) 1 else 0
@@ -51,12 +57,14 @@ internal object PlayerPortraitResolver {
                 )
                 if (image.isNotBlank()) {
                     mutex.withLock { portraitCache[cacheKey] = image }
+                    EsportsAssetCache.putPlayer(nick.ifBlank { playerName }, teamHint, image)
                     return image
                 }
             }
         }
-        mutex.withLock { portraitCache[cacheKey] = "" }
-        return ""
+
+        // Do not cache an empty miss: another provider may populate the shared cache later.
+        return EsportsAssetCache.player(playerName, teamHint)
     }
 
     private suspend fun loadTeamPayload(team: EsportsTeamRef): JSONObject? {
@@ -124,13 +132,7 @@ internal object PlayerPortraitResolver {
 
     private fun validAssetUrl(raw: Any?): String? {
         if (raw == null || raw == JSONObject.NULL) return null
-        val value = raw.toString().trim()
-        if (value.isBlank() || value.equals("null", true) || value.equals("undefined", true)) return null
-        return when {
-            value.startsWith("https://", true) || value.startsWith("http://", true) -> value
-            value.startsWith("//") -> "https:$value"
-            else -> null
-        }
+        return EsportsAssetCache.normalize(raw.toString()).takeIf { it.isNotBlank() }
     }
 
     private fun playerToken(value: String): String =
