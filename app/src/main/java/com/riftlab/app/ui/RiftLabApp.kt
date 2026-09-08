@@ -346,6 +346,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
 
 @Composable
 private fun PostScreen() {
+    val context = LocalContext.current
     val series by MatchSessionStore.completedSeries.collectAsState()
     val latest by MatchSessionStore.completedGame.collectAsState()
     val postStatus by MatchSessionStore.postSourceStatus.collectAsState()
@@ -384,7 +385,17 @@ private fun PostScreen() {
             }
         } else {
             item {
-                Panel(accent = resolved.seriesFinished) {
+                Panel(
+                    accent = resolved.seriesFinished,
+                    onClick = {
+                        EntityDetailLauncher.openMatch(
+                            context,
+                            resolved.matchKey,
+                            resolved.teamA,
+                            resolved.teamB
+                        )
+                    }
+                ) {
                     Text(
                         if (resolved.seriesFinished) "POST MATCH · FINAL" else "POST MATCH · COMPLETED GAMES",
                         color = if (resolved.seriesFinished) RiftCyan else RiftMuted,
@@ -405,7 +416,17 @@ private fun PostScreen() {
 
             item { SectionTitle("GAME RESULTS / 小局终局数据") }
             items(resolved.games) { game ->
-                Panel(accent = false) {
+                Panel(
+                    accent = false,
+                    onClick = {
+                        EntityDetailLauncher.openMatch(
+                            context,
+                            resolved.matchKey,
+                            resolved.teamA,
+                            resolved.teamB
+                        )
+                    }
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("GAME ${game.game}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.weight(1f))
@@ -527,9 +548,15 @@ private fun TeamGold(name: String, gold: Int, alignment: Alignment.Horizontal) {
 }
 
 @Composable
-private fun Panel(accent: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+private fun Panel(
+    accent: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val base = Modifier.fillMaxWidth()
+    val interactive = if (onClick != null) base.clickable(onClick = onClick) else base
     Column(
-        Modifier.fillMaxWidth()
+        interactive
             .background(RiftPanel, CutCornerShape(topEnd = 18.dp, bottomStart = 10.dp))
             .border(
                 1.dp,
