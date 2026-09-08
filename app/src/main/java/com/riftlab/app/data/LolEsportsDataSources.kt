@@ -8,12 +8,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
+import java.time.Instant
+
+/**
+ * Keeps the schedule-selected live-watch target inside the data layer.
+ * The live feed must not depend on getLive exposing LPL in time: when Schedule already knows
+ * an eventId, EventDetails becomes the primary game-start detector and getLive is only fallback.
+ */
+private object LiveScheduleTargetRegistry {
+    @Volatile
+    var target: ScheduledEsportsMatch? = null
+}
 
 internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
-    override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> =
-        client.fetchLplSchedule().map(::verifySeriesCompletion)
+    override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
+        val matches = client.fetchLplSchedule().map(::verifySeriesCompletion)
+        LiveScheduleTargetRegistry.target = chooseLiveWatchTarget(matches)
+        return matches
+    }
 
     /**
      * Riot's schedule endpoint can transiently mark a not-yet-played series completed.
@@ -21,10 +35,7 @@ internal class LolEsportsScheduleDataSource(
      * Outcome flags are intentionally ignored because they can appear before play begins.
      */
     private fun verifySeriesCompletion(match: ScheduledEsportsMatch): ScheduledEsportsMatch {
-        val normalized = match.state.lowercase()
-            .replace("_", "")
-            .replace("-", "")
-            .replace(" ", "")
+        val normalized = normalizeState(match.state)
         val claimsCompleted = normalized.contains("complete") || normalized == "finished"
         if (!claimsCompleted) return match
 
@@ -37,6 +48,36 @@ internal class LolEsportsScheduleDataSource(
             match.copy(state = "unstarted")
         }
     }
+
+    private fun chooseLiveWatchTarget(matches: List<ScheduledEsportsMatch>): ScheduledEsportsMatch? {
+        matches.firstOrNull { isLiveState(it.state) }?.let { return it }
+
+        // Keep following a delayed/started series for up to 12 hours after its planned start.
+        // This prevents a later TBD match from replacing today's event just because Schedule
+        // has not advanced its state correctly.
+        val staleCutoff = System.currentTimeMillis() - 12 * 60 * 60 * 1000L
+        return matches.firstOrNull { match ->
+            !isCompletedState(match.state) &&
+                parseStart(match.startTimeIso)?.toEpochMilli()?.let { it >= staleCutoff } != false
+        }
+    }
+
+    private fun normalizeState(value: String): String =
+        value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
+
+    private fun isLiveState(value: String): Boolean {
+        val state = normalizeState(value)
+        return state.contains("progress") || state == "live"
+    }
+
+    private fun isCompletedState(match: ScheduledEsportsMatch): Boolean = isCompletedState(match.state)
+
+    private fun isCompletedState(value: String): Boolean {
+        val state = normalizeState(value)
+        return state.contains("complete") || state == "finished"
+    }
+
+    private fun parseStart(value: String): Instant? = runCatching { Instant.parse(value) }.getOrNull()
 }
 
 internal class LolEsportsStandingsDataSource(
@@ -66,24 +107,44 @@ internal class LolEsportsLiveDataSource(
     val status: StateFlow<LiveSourceStatus> = _status.asStateFlow()
 
     /**
-     * matchId is an optional preference, not a clock gate. If blank, follow whichever LPL
-     * series Riot currently exposes through getLive. This keeps early starts discoverable.
+     * Schedule eventId is the primary discovery path. getLive is fallback only.
+     * Once an event is known, poll getEventDetails directly for games[].state=inProgress.
      */
     override fun observe(matchId: String): Flow<LiveSnapshot> = flow {
         var currentEvent: LiveEventRef? = null
         var currentGameId = ""
         var previous: LiveSnapshot? = null
+        var lockedFromSchedule = false
 
         while (currentCoroutineContext().isActive) {
             try {
                 if (currentEvent == null) {
-                    _status.value = LiveSourceStatus(
-                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                        message = "正在等待 LPL 实时比赛…"
-                    )
-                    currentEvent = client.findLiveLplEvent(preferredMatchId = matchId)
+                    val scheduled = LiveScheduleTargetRegistry.target
+                    if (scheduled != null && scheduled.eventId.isNotBlank()) {
+                        currentEvent = LiveEventRef(
+                            eventId = scheduled.eventId,
+                            matchId = scheduled.matchId,
+                            startTimeIso = scheduled.startTimeIso,
+                            teams = scheduled.teams
+                        )
+                        lockedFromSchedule = true
+                        _status.value = LiveSourceStatus(
+                            phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                            message = "已锁定 ${teamLabel(scheduled)}，直连 Riot EventDetails 等待 G1",
+                            eventId = scheduled.eventId,
+                            lastUpdateEpochMs = System.currentTimeMillis()
+                        )
+                    } else {
+                        lockedFromSchedule = false
+                        _status.value = LiveSourceStatus(
+                            phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                            message = "正在等待 LPL 实时比赛…"
+                        )
+                        currentEvent = client.findLiveLplEvent(preferredMatchId = matchId)
+                    }
+
                     if (currentEvent == null) {
-                        delay(10_000)
+                        delay(5_000)
                         continue
                     }
                 }
@@ -91,15 +152,23 @@ internal class LolEsportsLiveDataSource(
                 val event = currentEvent ?: continue
                 val game = client.fetchLiveGame(event)
                 if (game == null) {
+                    val beforeFirstGame = currentGameId.isBlank()
                     _status.value = LiveSourceStatus(
-                        phase = LiveSourcePhase.BETWEEN_GAMES,
-                        message = "系列赛已识别，等待下一局 Live Feed",
+                        phase = if (beforeFirstGame) LiveSourcePhase.WAITING_FOR_MATCH else LiveSourcePhase.BETWEEN_GAMES,
+                        message = if (beforeFirstGame) {
+                            "赛事已锁定，正在直连 Riot EventDetails 等待 G1"
+                        } else {
+                            "上一局已结束，等待下一局 Live Feed"
+                        },
                         eventId = event.eventId,
                         gameId = currentGameId,
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
-                    delay(5_000)
-                    currentEvent = client.findLiveLplEvent(preferredMatchId = matchId) ?: event
+                    // Known event: game-start detection should be fast and must not wait for getLive.
+                    delay(2_000)
+                    if (!lockedFromSchedule) {
+                        currentEvent = client.findLiveLplEvent(preferredMatchId = matchId) ?: event
+                    }
                     continue
                 }
 
@@ -127,9 +196,13 @@ internal class LolEsportsLiveDataSource(
                     gameId = currentGameId,
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
-                delay(5_000)
+                delay(3_000)
                 currentEvent = null
+                lockedFromSchedule = false
             }
         }
     }
+
+    private fun teamLabel(match: ScheduledEsportsMatch): String =
+        match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }
 }
