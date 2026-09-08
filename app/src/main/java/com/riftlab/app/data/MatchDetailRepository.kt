@@ -88,6 +88,7 @@ object MatchDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val resolver = LplHistoricalPostMatchResolver()
     private val awardsProvider = LplOfficialAwardsProvider()
+    private val draftProvider = LplOfficialDraftProvider()
     private val resolverMutex = Mutex()
     private val cache = linkedMapOf<String, MatchDetailState>()
     private var loadJob: Job? = null
@@ -114,7 +115,7 @@ object MatchDetailRepository {
                 status = when (phase) {
                     ScheduleMatchPhase.UPCOMING -> "比赛尚未开始 · 当前展示赛程与赛前元数据"
                     ScheduleMatchPhase.LIVE -> "比赛进行中 · 当前局实时数据由赛中 Provider Router 提供"
-                    ScheduleMatchPhase.COMPLETED -> "正在加载该场历史终局数据与官方 MVP / 投票…"
+                    ScheduleMatchPhase.COMPLETED -> "正在加载历史终局、官方 MVP / POG 与 BP…"
                 },
                 updatedAtEpochMs = System.currentTimeMillis()
             )
@@ -133,12 +134,16 @@ object MatchDetailRepository {
                 ?.takeIf { it.startsWith("TJ:") }
                 ?.removePrefix("TJ:")
                 .orEmpty()
+
             val awards = if (bmid.isNotBlank()) {
                 runCatching { awardsProvider.fetch(bmid) }.getOrElse {
                     OfficialAwardsResult(status = "MVP / 投票同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
                 }
             } else {
                 OfficialAwardsResult(status = "MVP / 投票等待历史 bMatchId")
+            }
+            val drafts = runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
+                OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
             }
 
             val finalState = base.copy(
@@ -147,8 +152,9 @@ object MatchDetailRepository {
                 seriesMvp = awards.seriesMvp,
                 gameMvps = awards.gameMvps,
                 votes = awards.votes,
+                drafts = drafts.drafts,
                 status = when {
-                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status}"
+                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${drafts.status}"
                     result.isFailure -> "比赛详情同步失败"
                     else -> resolver.status.value
                 },
