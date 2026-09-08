@@ -8,98 +8,118 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 object MatchSessionStore {
-    const val MATCH_ID = "demo-blg-al"
+    const val MATCH_ID = "2026-09-08-lgd-ig"
 
+    // Tonight's test target. Schedule/live values are fetched from Riot LoL Esports at runtime.
+    // The lineup is a verified pre-match cache; Rank is deliberately not fabricated.
     val preMatch = PreMatchInfo(
         league = "LPL",
-        stage = "PLAYOFFS",
-        blue = "BLG",
-        red = "AL",
-        startTime = "19:00",
-        blueForm = "4W 1L",
-        redForm = "2W 3L",
+        stage = "PLAYOFFS · LOWER BRACKET",
+        blue = "LGD",
+        red = "IG",
+        startTime = "17:00",
+        blueForm = "REAL DATA",
+        redForm = "REAL DATA",
         blueRoster = listOf(
-            PlayerCard("TOP", "Bin", "KR 1420 LP", "Jax · Rumble · K'Sante"),
-            PlayerCard("JUG", "Xun", "KR 1288 LP", "Vi · Sejuani · Xin Zhao"),
-            PlayerCard("MID", "knight", "KR 1516 LP", "Aurora · Azir · Neeko"),
-            PlayerCard("BOT", "Viper", "KR 1472 LP", "Kai'Sa · Ezreal · Varus"),
-            PlayerCard("SUP", "ON", "KR 1034 LP", "Rakan · Nautilus · Camille")
+            PlayerCard("TOP", "Burdol", "RANK 待接", "首发"),
+            PlayerCard("JUG", "Heng", "RANK 待接", "首发"),
+            PlayerCard("MID", "Tangyuan", "RANK 待接", "首发"),
+            PlayerCard("BOT", "Shaoye", "RANK 待接", "首发"),
+            PlayerCard("SUP", "Crisp", "RANK 待接", "首发")
         ),
         redRoster = listOf(
-            PlayerCard("TOP", "Flandre", "KR 1088 LP", "Renekton · Gnar · Rumble"),
-            PlayerCard("JUG", "Tarzan", "KR 1394 LP", "Wukong · Vi · Nocturne"),
-            PlayerCard("MID", "Shanks", "KR 1242 LP", "Azir · Taliyah · Orianna"),
-            PlayerCard("BOT", "Hope", "KR 1110 LP", "Varus · Jinx · Ezreal"),
-            PlayerCard("SUP", "Kael", "KR 1187 LP", "Rell · Alistar · Nautilus")
+            PlayerCard("TOP", "TheShy", "RANK 待接", "首发"),
+            PlayerCard("JUG", "Wei", "RANK 待接", "首发"),
+            PlayerCard("MID", "Rookie", "RANK 待接", "首发"),
+            PlayerCard("BOT", "JiaQi", "RANK 待接", "首发"),
+            PlayerCard("SUP", "Meiko", "RANK 待接", "首发")
         ),
-        rosterNote = "首发与 Rank 当前为演示数据；真实源接入后自动替换。"
+        rosterNote = "9月8日 LGD vs iG 实战测试场。赛程与实时比赛数据走 Riot LoL Esports；Rank 独立数据源下一步接入。"
     )
 
     val postMatch = PostMatchInfo(
-        score = "2 : 1",
-        winner = "BLG",
-        mvp = "Viper",
-        mvpRole = "BOT",
-        mvpDpm = 842,
-        mvpGoldDiff15 = 721,
-        positionRank = "ADC DATA RANK  #1",
-        keyPoint = "22:14 小龙团 0 换 3，随后拿下第一条男爵。"
+        score = "—",
+        winner = "等待赛果",
+        mvp = "—",
+        mvpRole = "—",
+        mvpDpm = 0,
+        mvpGoldDiff15 = 0,
+        positionRank = "POST MATCH DATA PENDING",
+        keyPoint = "比赛结束后再由真实赛后源生成，当前不显示 Mock 结论。"
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var mockJob: Job? = null
+    private val scheduleSource = LolEsportsScheduleDataSource()
+    private val liveDataSource = LolEsportsLiveDataSource(
+        preferredTeamCodes = setOf("LGD", "IG")
+    )
+
+    private var liveJob: Job? = null
+    private var scheduleJob: Job? = null
+    private var statusJob: Job? = null
+
+    private val _schedule = MutableStateFlow<List<ScheduledEsportsMatch>>(emptyList())
+    val schedule: StateFlow<List<ScheduledEsportsMatch>> = _schedule.asStateFlow()
+    val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
 
     private val _live = MutableStateFlow(
         LiveSnapshot(
-            game = 2,
-            elapsedSeconds = 18 * 60 + 42,
-            blue = "BLG",
-            red = "AL",
-            blueGold = 34700,
-            redGold = 33100,
-            blueKills = 8,
-            redKills = 6,
-            blueTowers = 4,
-            redTowers = 3,
-            blueDragons = 2,
-            redDragons = 1,
-            latestEvent = "18:37 · BLG 获得小龙"
+            game = 1,
+            elapsedSeconds = 0,
+            blue = "LGD",
+            red = "IG",
+            blueGold = 0,
+            redGold = 0,
+            blueKills = 0,
+            redKills = 0,
+            blueTowers = 0,
+            redTowers = 0,
+            blueDragons = 0,
+            redDragons = 0,
+            latestEvent = "Riot Live · 等待 17:00 LGD vs iG",
+            source = "Riot LoL Esports Live"
         )
     )
     val live: StateFlow<LiveSnapshot> = _live.asStateFlow()
 
-    fun ensureMockRunning() {
-        if (mockJob?.isActive == true) return
-        mockJob = scope.launch {
-            var tick = 0
-            while (isActive) {
-                delay(2000)
-                tick++
-                val old = _live.value
-                val blueGain = 115 + (tick % 4) * 17
-                val redGain = 92 + (tick % 3) * 13
-                val event = when {
-                    tick % 15 == 0 -> "${formatTime(old.elapsedSeconds + 2)} · BLG 摧毁防御塔"
-                    tick % 10 == 0 -> "${formatTime(old.elapsedSeconds + 2)} · AL 击杀一名选手"
-                    tick % 6 == 0 -> "${formatTime(old.elapsedSeconds + 2)} · 经济差继续扩大"
-                    else -> old.latestEvent
+    fun ensureDataRunning() {
+        if (scheduleJob?.isActive != true) {
+            scheduleJob = scope.launch {
+                while (isActive) {
+                    runCatching { scheduleSource.fetchLeagueSchedule() }
+                        .onSuccess { _schedule.value = it }
+                    delay(5 * 60 * 1000L)
                 }
-                _live.value = old.copy(
-                    elapsedSeconds = old.elapsedSeconds + 2,
-                    blueGold = old.blueGold + blueGain,
-                    redGold = old.redGold + redGain,
-                    blueKills = old.blueKills + if (tick % 13 == 0) 1 else 0,
-                    redKills = old.redKills + if (tick % 10 == 0) 1 else 0,
-                    blueTowers = old.blueTowers + if (tick % 15 == 0) 1 else 0,
-                    latestEvent = event
-                )
+            }
+        }
+
+        if (liveJob?.isActive != true) {
+            liveJob = scope.launch {
+                liveDataSource.observe(MATCH_ID).collect { snapshot ->
+                    _live.value = snapshot
+                }
+            }
+        }
+
+        if (statusJob?.isActive != true) {
+            statusJob = scope.launch {
+                liveDataSource.status.collect { status ->
+                    if (status.phase != LiveSourcePhase.LIVE) {
+                        val current = _live.value
+                        _live.value = current.copy(latestEvent = status.message)
+                    }
+                }
             }
         }
     }
+
+    /** Kept temporarily so the current Compose shell does not need a broad rewrite. It no longer starts Mock data. */
+    fun ensureMockRunning() = ensureDataRunning()
 
     fun formatTime(seconds: Int): String = "%02d:%02d".format(seconds / 60, seconds % 60)
 }
