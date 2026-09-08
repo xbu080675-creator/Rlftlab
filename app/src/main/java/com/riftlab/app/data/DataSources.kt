@@ -3,8 +3,14 @@ package com.riftlab.app.data
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 真实数据源接入点。
- * 后续可以实现 GridLiveDataSource / LolEsportsLiveDataSource，UI 不需要改。
+ * 联赛赛程/赛前数据接入点。
+ */
+interface ScheduleDataSource {
+    suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch>
+}
+
+/**
+ * 实时比赛数据接入点。UI 只依赖标准化 LiveSnapshot。
  */
 interface LiveMatchDataSource {
     fun observe(matchId: String): Flow<LiveSnapshot>
