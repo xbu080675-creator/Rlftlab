@@ -43,6 +43,55 @@ data class EsportsTeamRef(
     val recordLosses: Int = 0
 )
 
+data class EsportsTournamentRef(
+    val id: String,
+    val slug: String,
+    val startDate: String,
+    val endDate: String
+)
+
+data class StandingTeam(
+    val ordinal: Int,
+    val team: EsportsTeamRef,
+    val wins: Int,
+    val losses: Int,
+    val points: Int? = null
+)
+
+data class StandingBracketMatch(
+    val id: String,
+    val state: String,
+    val previousMatchIds: List<String>,
+    val teams: List<EsportsTeamRef>
+)
+
+data class StandingSection(
+    val name: String,
+    val rankings: List<StandingTeam>,
+    val matches: List<StandingBracketMatch>
+)
+
+data class StandingStage(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val type: String,
+    val sections: List<StandingSection>
+)
+
+data class TournamentStandings(
+    val tournamentId: String,
+    val stages: List<StandingStage>
+)
+
+data class StandingsCenterState(
+    val tournaments: List<EsportsTournamentRef> = emptyList(),
+    val selectedTournament: EsportsTournamentRef? = null,
+    val standings: TournamentStandings? = null,
+    val lastRefreshEpochMs: Long = 0L,
+    val statusMessage: String = "排名数据尚未同步"
+)
+
 enum class ScheduleMatchPhase {
     LIVE,
     UPCOMING,
