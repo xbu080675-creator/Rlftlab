@@ -19,8 +19,9 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import coil.decode.SvgDecoder
 import coil.request.ImageRequest
+import com.riftlab.app.data.EsportsAssetCache
 
-/** Team logo loader that supports Riot CDN PNG/WebP/SVG assets and redirects. */
+/** Team logo loader that supports Riot/OP.GG CDN PNG/WebP/SVG assets and redirects. */
 @Composable
 internal fun TeamLogo(
     imageUrl: String,
@@ -33,15 +34,12 @@ internal fun TeamLogo(
             .components { add(SvgDecoder.Factory()) }
             .build()
     }
-    val resolvedUrl = remember(imageUrl) {
-        val raw = imageUrl.trim()
-        when {
-            raw.isBlank() || raw.equals("null", true) || raw.equals("undefined", true) -> ""
-            raw.startsWith("//") -> "https:$raw"
-            raw.startsWith("https://", true) || raw.startsWith("http://", true) -> raw
-            else -> ""
-        }
-    }
+
+    // Do not remember a blank URL: a provider may populate the shared asset cache later in the same
+    // MatchDetail load and the subsequent state update should immediately pick it up.
+    val resolvedUrl = EsportsAssetCache.normalize(imageUrl)
+        .ifBlank { EsportsAssetCache.team(code) }
+
     val fallback: @Composable () -> Unit = {
         Text(
             text = code.take(4).ifBlank { "—" },
