@@ -213,13 +213,31 @@ object MatchDetailRepository {
         extraImages: Map<String, String> = emptyMap()
     ): ScheduledEsportsMatch {
         val teams = match.teams.map { team ->
-            if (team.imageUrl.isNotBlank()) return@map team
-            val extra = listOf(team.id, team.code, team.name, team.slug)
-                .asSequence()
+            val aliases = listOf(team.id, team.code, team.name, team.slug)
+            val existing = EsportsAssetCache.normalize(team.imageUrl)
+            if (existing.isNotBlank()) {
+                EsportsAssetCache.putTeam(existing, *aliases.toTypedArray())
+                return@map if (existing == team.imageUrl) team else team.copy(imageUrl = existing)
+            }
+
+            val cached = EsportsAssetCache.team(*aliases.toTypedArray())
+            val extra = aliases.asSequence()
                 .map(::teamToken)
-                .firstNotNullOfOrNull { key -> extraImages[key]?.takeIf { it.isNotBlank() } }
-            val image = extra ?: runCatching { teamAssetProvider.resolve(team) }.getOrDefault("")
-            if (image.isBlank()) team else team.copy(imageUrl = image)
+                .firstNotNullOfOrNull { key ->
+                    EsportsAssetCache.normalize(extraImages[key].orEmpty()).takeIf { it.isNotBlank() }
+                }
+            val riot = runCatching { teamAssetProvider.resolve(team.copy(imageUrl = "")) }.getOrDefault("")
+            val image = listOf(cached, extra, EsportsAssetCache.normalize(riot))
+                .firstOrNull { it.isNotBlank() }
+                .orEmpty()
+
+            if (image.isNotBlank()) {
+                EsportsAssetCache.putTeam(image, *aliases.toTypedArray())
+                team.copy(imageUrl = image)
+            } else {
+                // Clear invalid placeholders such as "null" so UI does not treat them as artwork.
+                team.copy(imageUrl = "")
+            }
         }
         return match.copy(teams = teams)
     }
