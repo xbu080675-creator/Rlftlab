@@ -48,7 +48,8 @@ object MatchSessionStore {
     )
 
     private val _preMatch = MutableStateFlow(fallbackPreMatch)
-    val preMatch: StateFlow<PreMatchInfo> = _preMatch.asStateFlow()
+    val preMatch: PreMatchInfo get() = _preMatch.value
+    val preMatchFlow: StateFlow<PreMatchInfo> = _preMatch.asStateFlow()
 
     val postMatch = PostMatchInfo(
         score = "—",
@@ -152,16 +153,17 @@ object MatchSessionStore {
 
             val teams = target.teams.joinToString(" vs ") { it.code }
             _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()} · EVENT ${target.eventId}"
-            refreshPreMatchFromTarget(target)
+            val rosterResult = refreshPreMatchFromTarget(target)
+            _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()} · ROSTER $rosterResult"
         } catch (t: Throwable) {
             _scheduleStatus.value = "赛程源 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"
             _rosterStatus.value = "ROSTER · 网络源不可用，使用赛前已验证缓存"
         }
     }
 
-    private suspend fun refreshPreMatchFromTarget(target: ScheduledEsportsMatch) {
-        val left = target.teams.getOrNull(0) ?: return
-        val right = target.teams.getOrNull(1) ?: return
+    private suspend fun refreshPreMatchFromTarget(target: ScheduledEsportsMatch): String {
+        val left = target.teams.getOrNull(0) ?: return "0/2"
+        val right = target.teams.getOrNull(1) ?: return "0/2"
         _rosterStatus.value = "ROSTER · 正在同步 Riot getTeams…"
 
         val leftDetails = runCatching {
@@ -198,6 +200,7 @@ object MatchSessionStore {
             1 -> "ROSTER · RIOT GETTEAMS · 1/2 + VERIFIED CACHE"
             else -> "ROSTER · VERIFIED CACHE · 0/2"
         }
+        return "$realCount/2"
     }
 
     private fun List<EsportsPlayerRef>.toPlayerCards(): List<PlayerCard> =
