@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -8,12 +9,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 import java.time.Instant
 
 /**
  * Keeps the schedule-selected live-watch target inside the data layer.
  * The live feed must not depend on getLive exposing LPL in time: when Schedule already knows
- * an eventId, EventDetails becomes the primary game-start detector and getLive is only fallback.
+ * an eventId, EventDetails becomes the primary game-id source and LiveStats frames are the
+ * authoritative proof that a game has actually started.
  */
 private object LiveScheduleTargetRegistry {
     @Volatile
@@ -107,11 +115,14 @@ internal class LolEsportsLiveDataSource(
     val status: StateFlow<LiveSourceStatus> = _status.asStateFlow()
 
     /**
-     * Schedule eventId is the primary discovery path. getLive is fallback only.
-     * Once an event is known, poll getEventDetails directly for games[].state=inProgress.
+     * Riot's LPL EventDetails can keep every game as "unstarted" even while G1 is already live.
+     * Therefore EventDetails supplies game ids/sides, while a non-empty LiveStats window proves
+     * that the game has actually started. getLive and game.state remain hints/fallbacks only.
      */
     override fun observe(matchId: String): Flow<LiveSnapshot> = flow {
         var currentEvent: LiveEventRef? = null
+        var knownGames: List<LiveGameRef> = emptyList()
+        var currentGame: LiveGameRef? = null
         var currentGameId = ""
         var previous: LiveSnapshot? = null
         var lockedFromSchedule = false
@@ -130,7 +141,7 @@ internal class LolEsportsLiveDataSource(
                         lockedFromSchedule = true
                         _status.value = LiveSourceStatus(
                             phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                            message = "已锁定 ${teamLabel(scheduled)}，直连 Riot EventDetails 等待 G1",
+                            message = "已锁定 ${teamLabel(scheduled)}，正在探测 Riot LiveStats",
                             eventId = scheduled.eventId,
                             lastUpdateEpochMs = System.currentTimeMillis()
                         )
@@ -143,6 +154,11 @@ internal class LolEsportsLiveDataSource(
                         currentEvent = client.findLiveLplEvent(preferredMatchId = matchId)
                     }
 
+                    knownGames = emptyList()
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+
                     if (currentEvent == null) {
                         delay(5_000)
                         continue
@@ -150,21 +166,34 @@ internal class LolEsportsLiveDataSource(
                 }
 
                 val event = currentEvent ?: continue
-                val game = client.fetchLiveGame(event)
-                if (game == null) {
-                    val beforeFirstGame = currentGameId.isBlank()
+                if (knownGames.isEmpty()) {
+                    knownGames = fetchEventGames(event)
+                }
+
+                // State is only a hint. Prefer it if Riot happens to update it correctly.
+                val stateGame = knownGames.firstOrNull { isInProgress(it.state) }
+
+                // Once a game is active, only probe the next numbered game for a newer window.
+                val newerWindowGame = currentGame?.let { active ->
+                    knownGames
+                        .filter { it.gameNumber > active.gameNumber }
+                        .minByOrNull { it.gameNumber }
+                        ?.takeIf { hasAnyLiveFrames(it.gameId) }
+                }
+
+                val discovered = stateGame
+                    ?: newerWindowGame
+                    ?: currentGame
+                    ?: findHighestStartedGame(knownGames)
+
+                if (discovered == null) {
                     _status.value = LiveSourceStatus(
-                        phase = if (beforeFirstGame) LiveSourcePhase.WAITING_FOR_MATCH else LiveSourcePhase.BETWEEN_GAMES,
-                        message = if (beforeFirstGame) {
-                            "赛事已锁定，正在直连 Riot EventDetails 等待 G1"
-                        } else {
-                            "上一局已结束，等待下一局 Live Feed"
-                        },
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "赛事已锁定，等待 Riot LiveStats 出现有效游戏帧",
                         eventId = event.eventId,
-                        gameId = currentGameId,
+                        gameId = "",
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
-                    // Known event: game-start detection should be fast and must not wait for getLive.
                     delay(2_000)
                     if (!lockedFromSchedule) {
                         currentEvent = client.findLiveLplEvent(preferredMatchId = matchId) ?: event
@@ -172,13 +201,16 @@ internal class LolEsportsLiveDataSource(
                     continue
                 }
 
-                if (game.gameId != currentGameId) {
-                    currentGameId = game.gameId
+                if (currentGame == null || discovered.gameId != currentGameId) {
+                    currentGame = discovered
+                    currentGameId = discovered.gameId
                     previous = null
                 }
 
-                val snapshot = client.fetchLiveWindow(event, game, previous)
+                val game = currentGame ?: continue
+                val snapshot = fetchLatestSnapshot(event, game, previous)
                 previous = snapshot
+
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.LIVE,
                     message = "Riot LoL Esports Live · G${snapshot.game}",
@@ -198,8 +230,136 @@ internal class LolEsportsLiveDataSource(
                 )
                 delay(3_000)
                 currentEvent = null
+                knownGames = emptyList()
+                currentGame = null
+                currentGameId = ""
+                previous = null
                 lockedFromSchedule = false
             }
+        }
+    }
+
+    private suspend fun fetchEventGames(event: LiveEventRef): List<LiveGameRef> {
+        val root = getJson(
+            "${LolEsportsConfig.PERSISTED_BASE}/getEventDetails?hl=en-US&id=${event.eventId}"
+        )
+        val match = root.optJSONObject("data")
+            ?.optJSONObject("event")
+            ?.optJSONObject("match") ?: return emptyList()
+        val games = match.optJSONArray("games") ?: JSONArray()
+
+        return buildList {
+            for (i in 0 until games.length()) {
+                val game = games.optJSONObject(i) ?: continue
+                val gameId = game.optString("id")
+                if (gameId.isBlank()) continue
+                var blueId = ""
+                var redId = ""
+                val sides = game.optJSONArray("teams") ?: JSONArray()
+                for (j in 0 until sides.length()) {
+                    val side = sides.optJSONObject(j) ?: continue
+                    when (side.optString("side").lowercase()) {
+                        "blue" -> blueId = side.optString("id")
+                        "red" -> redId = side.optString("id")
+                    }
+                }
+                add(
+                    LiveGameRef(
+                        gameId = gameId,
+                        gameNumber = game.optInt("number", i + 1),
+                        state = game.optString("state"),
+                        blueTeamId = blueId,
+                        redTeamId = redId,
+                        teams = event.teams
+                    )
+                )
+            }
+        }.sortedBy { it.gameNumber }
+    }
+
+    /** Find the highest-numbered game whose LiveStats endpoint has started returning frames. */
+    private suspend fun findHighestStartedGame(games: List<LiveGameRef>): LiveGameRef? {
+        for (game in games.sortedByDescending { it.gameNumber }) {
+            if (hasAnyLiveFrames(game.gameId)) return game
+        }
+        return null
+    }
+
+    private suspend fun hasAnyLiveFrames(gameId: String): Boolean = try {
+        val root = getJson("${LolEsportsConfig.LIVE_BASE}/window/$gameId")
+        (root.optJSONArray("frames")?.length() ?: 0) > 0
+    } catch (_: Throwable) {
+        false
+    }
+
+    /**
+     * The window endpoint is cursor based. Using Schedule.startTime is wrong for delayed starts
+     * and currently returns no JSON for this LPL series. Query near wall-clock "now" instead,
+     * with progressively wider safety lags, and accept the first meaningful current snapshot.
+     */
+    private suspend fun fetchLatestSnapshot(
+        event: LiveEventRef,
+        game: LiveGameRef,
+        previous: LiveSnapshot?
+    ): LiveSnapshot {
+        var lastError: Throwable? = null
+        val now = Instant.now()
+        val lagsSeconds = longArrayOf(15, 30, 60, 120, 300, 600)
+
+        for (lag in lagsSeconds) {
+            val cursorEvent = event.copy(startTimeIso = now.minusSeconds(lag).toString())
+            try {
+                val snapshot = client.fetchLiveWindow(cursorEvent, game, previous)
+                if (isMeaningful(snapshot)) return snapshot
+            } catch (t: Throwable) {
+                lastError = t
+            }
+        }
+
+        // No-cursor response is useful as a final proof/debug fallback, but Riot can return
+        // only initialization frames (all-zero stats), so never promote those to live data.
+        try {
+            val fallback = client.fetchLiveWindow(event.copy(startTimeIso = ""), game, previous)
+            if (isMeaningful(fallback)) return fallback
+        } catch (t: Throwable) {
+            lastError = t
+        }
+
+        throw IOException("LiveStats game ${game.gameNumber} exists but no current meaningful frame yet", lastError)
+    }
+
+    private fun isMeaningful(snapshot: LiveSnapshot): Boolean =
+        snapshot.blueGold > 0 ||
+            snapshot.redGold > 0 ||
+            snapshot.blueKills > 0 ||
+            snapshot.redKills > 0 ||
+            snapshot.bluePlayers.any { it.gold > 0 || it.creepScore > 0 || it.level > 1 } ||
+            snapshot.redPlayers.any { it.gold > 0 || it.creepScore > 0 || it.level > 1 }
+
+    private fun isInProgress(value: String): Boolean = value
+        .lowercase()
+        .replace("_", "")
+        .replace("-", "")
+        .contains("progress")
+
+    private suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 5_000
+            readTimeout = 5_000
+            setRequestProperty("x-api-key", LolEsportsConfig.API_KEY)
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "RiftLab/1.0 Android")
+        }
+        try {
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw IOException("HTTP $code from LoL Esports: ${body.take(160)}")
+            if (body.isBlank()) throw IOException("Empty response from LoL Esports")
+            JSONObject(body)
+        } finally {
+            connection.disconnect()
         }
     }
 
