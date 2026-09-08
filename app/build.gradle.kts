@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 17
-        versionName = "1.0.0-dev.17"
+        versionCode = 18
+        versionName = "1.0.0-dev.18"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -71,8 +71,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
 
-
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.17+: team/roster assets stay remote; shared Coil cache handles local reuse.
+// dev.18: remote cached team/player assets + complete roster/substitute/staff support.
