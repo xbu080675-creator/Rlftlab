@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0.0-dev.10"
+        versionCode = 11
+        versionName = "1.0.0-dev.11"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -70,4 +70,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.10: per-game Match Detail tabs, fixed role alignment, compact empty states and draft rendering.
+// dev.11: today-focused event center, navigable team pages/logos and BP final-pick recovery.
