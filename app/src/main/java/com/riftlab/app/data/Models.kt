@@ -36,7 +36,27 @@ data class EsportsTeamRef(
     val code: String,
     val name: String,
     val slug: String = "",
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val gameWins: Int = 0,
+    val outcome: String = "",
+    val recordWins: Int = 0,
+    val recordLosses: Int = 0
+)
+
+enum class ScheduleMatchPhase {
+    LIVE,
+    UPCOMING,
+    COMPLETED
+}
+
+data class ScheduleCenterState(
+    val matches: List<ScheduledEsportsMatch> = emptyList(),
+    val currentMatch: ScheduledEsportsMatch? = null,
+    val nextMatch: ScheduledEsportsMatch? = null,
+    val selectedMatch: ScheduledEsportsMatch? = null,
+    val liveDetectedAtEpochMs: Map<String, Long> = emptyMap(),
+    val lastRefreshEpochMs: Long = 0L,
+    val statusMessage: String = "赛程中心尚未同步"
 )
 
 data class EsportsPlayerRef(
