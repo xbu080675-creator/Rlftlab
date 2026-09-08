@@ -112,7 +112,16 @@ data class EsportsPlayerRef(
     val id: String,
     val summonerName: String,
     val role: String,
-    val imageUrl: String = ""
+    val imageUrl: String = "",
+    val firstName: String = "",
+    val lastName: String = ""
+)
+
+data class EsportsStaffRef(
+    val name: String,
+    val role: String,
+    val source: String,
+    val realName: String = ""
 )
 
 data class EsportsTeamDetails(
@@ -121,7 +130,8 @@ data class EsportsTeamDetails(
     val code: String,
     val name: String,
     val imageUrl: String = "",
-    val players: List<EsportsPlayerRef>
+    val players: List<EsportsPlayerRef>,
+    val staff: List<EsportsStaffRef> = emptyList()
 )
 
 data class LivePlayerSnapshot(
