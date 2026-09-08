@@ -17,7 +17,7 @@ jobs:
             'format':'json',
             'tables':'ListplayerCurrent=LPC',
             'fields':'LPC.ID,LPC.Name,LPC.Role,LPC.IsSubstitute,LPC.IsTrainee,LPC.Team,LPC.N',
-            'where':'LPC.Team="Bilibili Gaming"',
+            'where':'LPC._pageName="Bilibili Gaming" AND LPC.ID IS NOT NULL',
             'order_by':'LPC.N ASC',
             'limit':'50'
           }
@@ -27,5 +27,6 @@ jobs:
             text=r.read().decode('utf-8','replace')
             print('HTTP',r.status,'BYTES',len(text))
           data=json.loads(text)
+          print('ROWS',len(data.get('cargoquery',[])))
           for row in data.get('cargoquery',[]):
             print(row.get('title',{}))
