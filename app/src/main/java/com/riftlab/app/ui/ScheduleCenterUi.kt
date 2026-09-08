@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -57,12 +58,15 @@ private fun ScheduleCenterLauncher(modifier: Modifier = Modifier) {
     Button(
         onClick = { open = true },
         modifier = modifier.height(48.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = RiftPanelAlt,
+            contentColor = RiftText
+        ),
         shape = CutCornerShape(topStart = 10.dp, bottomEnd = 10.dp)
     ) {
         Icon(Icons.Default.CalendarMonth, null, tint = RiftCyan)
         Spacer(Modifier.width(7.dp))
-        Text("赛程中心", fontWeight = FontWeight.Black, fontSize = 11.sp)
+        Text("赛程中心", color = RiftText, fontWeight = FontWeight.Black, fontSize = 11.sp)
     }
 
     if (open) {
@@ -79,67 +83,95 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(
-            Modifier.fillMaxSize()
-                .background(RiftBg)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = RiftBg,
+            contentColor = RiftText
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("LPL 赛程数据中心", fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text("Riot Schedule · 计划时间只作参考，Live 状态优先", color = RiftMuted, fontSize = 10.sp)
-                }
-                Box(
-                    Modifier.clickable(onClick = onClose).padding(10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Close, null, tint = RiftMuted)
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
             Column(
-                Modifier.fillMaxWidth()
-                    .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
-                    .border(1.dp, RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
-                    .padding(12.dp)
+                Modifier.fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                Text(center.statusMessage, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                center.currentMatch?.let {
-                    Spacer(Modifier.height(5.dp))
-                    Text("● NOW  ${matchLabel(it)}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(MatchSessionStore.scheduleTimingNote(it), color = RiftMuted, fontSize = 9.sp)
-                }
-                center.nextMatch?.let {
-                    Spacer(Modifier.height(4.dp))
-                    Text("NEXT  ${matchLabel(it)} · ${MatchSessionStore.scheduleTimingNote(it)}", color = RiftMuted, fontSize = 10.sp)
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                groups.forEach { (date, matches) ->
-                    item(key = "date-$date") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
                         Text(
-                            date,
+                            "LPL 赛程数据中心",
+                            color = RiftText,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            "Riot Schedule · 计划时间只作参考，Live 状态优先",
                             color = RiftMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                            fontSize = 10.sp
                         )
                     }
-                    items(matches, key = { it.eventId.ifBlank { it.matchId } }) { match ->
-                        ScheduleMatchCard(
-                            match = match,
-                            selected = center.selectedMatch?.matchId == match.matchId,
-                            onClick = {
-                                MatchSessionStore.selectScheduleMatch(match.matchId)
-                                onClose()
-                            }
+                    Box(
+                        Modifier.clickable(onClick = onClose).padding(10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Close, null, tint = RiftMuted)
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier.fillMaxWidth()
+                        .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
+                        .border(1.dp, RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        center.statusMessage,
+                        color = RiftText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
+                    )
+                    center.currentMatch?.let {
+                        Spacer(Modifier.height(5.dp))
+                        Text(
+                            "● NOW  ${matchLabel(it)}",
+                            color = RiftCyan,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
                         )
+                        Text(MatchSessionStore.scheduleTimingNote(it), color = RiftMuted, fontSize = 9.sp)
+                    }
+                    center.nextMatch?.let {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "NEXT  ${matchLabel(it)} · ${MatchSessionStore.scheduleTimingNote(it)}",
+                            color = RiftMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    groups.forEach { (date, matches) ->
+                        item(key = "date-$date") {
+                            Text(
+                                date,
+                                color = RiftMuted,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                            )
+                        }
+                        items(matches, key = { it.eventId.ifBlank { it.matchId } }) { match ->
+                            ScheduleMatchCard(
+                                match = match,
+                                selected = center.selectedMatch?.matchId == match.matchId,
+                                onClick = {
+                                    MatchSessionStore.selectScheduleMatch(match.matchId)
+                                    onClose()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -183,7 +215,13 @@ private fun ScheduleMatchCard(
         }
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(match.teams.getOrNull(0)?.code ?: "—", fontSize = 20.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            Text(
+                match.teams.getOrNull(0)?.code ?: "—",
+                color = RiftText,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.weight(1f)
+            )
             Text(
                 if (phase == ScheduleMatchPhase.COMPLETED || match.teams.any { it.gameWins > 0 }) {
                     MatchSessionStore.scheduleScore(match)
@@ -195,6 +233,7 @@ private fun ScheduleMatchCard(
             )
             Text(
                 match.teams.getOrNull(1)?.code ?: "—",
+                color = RiftText,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.weight(1f),
