@@ -1,0 +1,26 @@
+name: Probe Liquipedia Staff
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-liquipedia-staff.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe BLG team page
+        shell: python
+        run: |
+          import urllib.request, re
+          url='https://liquipedia.net/leagueoflegends/Bilibili_Gaming'
+          req=urllib.request.Request(url,headers={
+              'User-Agent':'RiftLab/1.0 (Android esports companion; github.com/xbu080675-creator/Rlftlab)',
+              'Referer':'https://liquipedia.net/leagueoflegends/'
+          })
+          with urllib.request.urlopen(req,timeout=20) as r:
+              text=r.read().decode('utf-8','replace')
+              print('HTTP',r.status,'BYTES',len(text))
+          for needle in ['Organization','Active','Daeny','Ben','Chieh','Zyb','Liangfeng']:
+              print(needle, bool(re.search(re.escape(needle),text,re.I)))
+          pos=text.lower().find('organization')
+          print('SNIPPET',re.sub(r'\s+',' ',text[pos:pos+8000])[:2500] if pos>=0 else 'NO_ORGANIZATION')
