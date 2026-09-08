@@ -65,6 +65,13 @@ object MatchSessionStore {
 
     private val _schedule = MutableStateFlow<List<ScheduledEsportsMatch>>(emptyList())
     val schedule: StateFlow<List<ScheduledEsportsMatch>> = _schedule.asStateFlow()
+
+    private val _targetMatch = MutableStateFlow<ScheduledEsportsMatch?>(null)
+    val targetMatch: StateFlow<ScheduledEsportsMatch?> = _targetMatch.asStateFlow()
+
+    private val _scheduleStatus = MutableStateFlow("正在连接 Riot LoL Esports 赛程源…")
+    val scheduleStatus: StateFlow<String> = _scheduleStatus.asStateFlow()
+
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
 
     private val _live = MutableStateFlow(
@@ -91,8 +98,22 @@ object MatchSessionStore {
         if (scheduleJob?.isActive != true) {
             scheduleJob = scope.launch {
                 while (isActive) {
+                    _scheduleStatus.value = "正在同步 Riot LPL 赛程…"
                     runCatching { scheduleSource.fetchLeagueSchedule() }
-                        .onSuccess { _schedule.value = it }
+                        .onSuccess { matches ->
+                            _schedule.value = matches
+                            val target = matches.firstOrNull(::isTonightTarget)
+                            _targetMatch.value = target
+                            _scheduleStatus.value = if (target != null) {
+                                val teams = target.teams.joinToString(" vs ") { it.code }
+                                "Riot Schedule · $teams · ${target.state.uppercase()} · EVENT ${target.eventId}"
+                            } else {
+                                "Riot Schedule 已连接，但未找到 LGD vs IG 目标赛事"
+                            }
+                        }
+                        .onFailure { error ->
+                            _scheduleStatus.value = "赛程源 ERROR · ${error.message?.take(150) ?: error::class.java.simpleName}"
+                        }
                     delay(5 * 60 * 1000L)
                 }
             }
@@ -120,6 +141,11 @@ object MatchSessionStore {
 
     /** Kept temporarily so the current Compose shell does not need a broad rewrite. It no longer starts Mock data. */
     fun ensureMockRunning() = ensureDataRunning()
+
+    private fun isTonightTarget(match: ScheduledEsportsMatch): Boolean {
+        val codes = match.teams.map { it.code.uppercase() }.toSet()
+        return "LGD" in codes && "IG" in codes
+    }
 
     fun formatTime(seconds: Int): String = "%02d:%02d".format(seconds / 60, seconds % 60)
 }
