@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -85,13 +86,15 @@ private fun TeamIdentityVisual(
     teamNameFontSize: TextUnit,
     modifier: Modifier
 ) {
+    val context = LocalContext.current
     val label = code.ifBlank { "—" }
     val navigable = label !in setOf("—", "TBD", "N/A", "NA")
     Column(
         modifier.then(
             if (navigable) {
                 Modifier.clickable {
-                    AppEntityNavigator.openTeam(
+                    EntityDetailLauncher.openTeam(
+                        context,
                         EsportsTeamRef(
                             id = "",
                             code = label,
