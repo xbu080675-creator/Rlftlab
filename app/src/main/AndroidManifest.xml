@@ -36,6 +36,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.EntityDetailActivity"
+            android:exported="false"
+            android:screenOrientation="unspecified" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
