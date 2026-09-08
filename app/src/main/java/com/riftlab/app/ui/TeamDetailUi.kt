@@ -43,6 +43,7 @@ internal fun TeamDetailContent(
 ) {
     val state by TeamDetailRepository.state.collectAsState()
     val details = state.details
+    val displayTeam = if (state.imageUrl.isNotBlank()) team.copy(imageUrl = state.imageUrl) else team
     val roster = details?.players.orEmpty()
     val roleMap = roster.mapNotNull { player -> canonicalTeamRole(player.role)?.let { it to player } }.toMap()
     val teamMatches = matches
@@ -62,15 +63,15 @@ internal fun TeamDetailContent(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TeamLogo(
-                        imageUrl = team.imageUrl,
-                        code = team.code.ifBlank { team.name },
+                        imageUrl = displayTeam.imageUrl,
+                        code = displayTeam.code.ifBlank { displayTeam.name },
                         modifier = Modifier.size(64.dp)
                     )
                     Spacer(Modifier.width(13.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(team.code.ifBlank { team.name }, color = RiftText, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                        if (team.name.isNotBlank() && team.name != team.code) {
-                            Text(team.name, color = RiftMuted, fontSize = 10.sp)
+                        Text(displayTeam.code.ifBlank { displayTeam.name }, color = RiftText, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        if (displayTeam.name.isNotBlank() && displayTeam.name != displayTeam.code) {
+                            Text(displayTeam.name, color = RiftMuted, fontSize = 10.sp)
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(state.status, color = RiftMuted, fontSize = 9.sp)
@@ -88,14 +89,14 @@ internal fun TeamDetailContent(
                     TeamPlayerRow(
                         role = role,
                         player = roleMap[role],
-                        team = team
+                        team = displayTeam
                     )
                 }
             }
             val extras = roster.filter { canonicalTeamRole(it.role) == null }
             if (extras.isNotEmpty()) {
                 items(extras, key = { "extra-${it.id}-${it.summonerName}" }) { player ->
-                    TeamPlayerRow(role = player.role.ifBlank { "SUB" }, player = player, team = team)
+                    TeamPlayerRow(role = player.role.ifBlank { "SUB" }, player = player, team = displayTeam)
                 }
             }
         }
@@ -105,7 +106,7 @@ internal fun TeamDetailContent(
             item { TeamStatus("当前赛事目录没有找到该战队比赛") }
         } else {
             items(teamMatches.take(12), key = { it.eventId.ifBlank { it.matchId } }) { match ->
-                TeamMatchRow(team = team, match = match, onClick = { onMatchClick(match) })
+                TeamMatchRow(team = displayTeam, match = match, onClick = { onMatchClick(match) })
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
