@@ -58,17 +58,25 @@ jobs:
                   break
 
           assert target is not None, "LPL schedule reachable but LGD vs IG was not found"
-          print("schedule OK:", target.get("id"), target.get("startTime"), target.get("state"))
+          print("schedule OK:", target.get("startTime"), target.get("state"))
 
           for team in target.get("match", {}).get("teams", []):
-              slug = team.get("slug", "")
               code = team.get("code", "")
-              assert slug, f"{code} schedule entry has no slug"
-              payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(slug))
+              team_id = str(team.get("id", ""))
+              print("schedule team:", json.dumps(team, ensure_ascii=False, sort_keys=True))
+              assert team_id, f"{code} schedule entry has no id"
+              payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(team_id))
               returned = payload.get("data", {}).get("teams", [])
-              assert returned, f"getTeams returned no team for {slug}"
-              players = returned[0].get("players", [])
-              print(f"roster OK: {code} slug={slug} players={len(players)}")
+              assert returned, f"getTeams returned no team for id={team_id} ({code})"
+              resolved = returned[0]
+              players = resolved.get("players", [])
+              print(
+                  "roster OK:",
+                  code,
+                  "id=" + team_id,
+                  "slug=" + str(resolved.get("slug", "")),
+                  "players=" + str(len(players)),
+              )
 
           live = get("/getLive?hl=en-US")
           assert isinstance(live.get("data", {}).get("schedule", {}).get("events", []), list)
