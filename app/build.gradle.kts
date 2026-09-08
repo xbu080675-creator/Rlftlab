@@ -69,3 +69,5 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+// dev.7: generic live provider router + match resolver baseline.
