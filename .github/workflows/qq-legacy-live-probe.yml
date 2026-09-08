@@ -1,0 +1,96 @@
+name: QQ Legacy Live Probe
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe legacy QQ LPL endpoints
+        shell: python
+        run: |
+          import json, re, urllib.parse, urllib.request
+
+          BMID = "13503"
+
+          def get(base, params):
+              url = base + "?" + urllib.parse.urlencode(params)
+              req = urllib.request.Request(url, headers={
+                  "User-Agent": "Mozilla/5.0",
+                  "Referer": "https://lpl.qq.com/",
+              })
+              try:
+                  with urllib.request.urlopen(req, timeout=12) as r:
+                      text = r.read().decode("utf-8", "replace")
+                      print("HTTP", r.status, url)
+              except Exception as e:
+                  print("ERROR", url, repr(e))
+                  return None
+              print("BODY_PREFIX", text[:300].replace("\n", " "))
+              text = re.sub(r"^var[\s\S]*?=", "", text).strip()
+              if text.endswith(";"):
+                  text = text[:-1]
+              try:
+                  return json.loads(text)
+              except Exception as e:
+                  print("JSON_ERROR", repr(e))
+                  return None
+
+          series_urls = [
+              "https://apps.game.qq.com/lol/match/apis/searchSMatchList.php",
+              "http://apps.game.qq.com/lol/match/apis/searchSMatchList.php",
+          ]
+          payload = None
+          for base in series_urls:
+              payload = get(base, {"p0": BMID, "r1": "SMatchListArr"})
+              if payload:
+                  break
+
+          print("SERIES_TYPE", type(payload).__name__)
+          if not isinstance(payload, dict):
+              raise SystemExit(0)
+          print("SERIES_STATUS", payload.get("status"))
+          msg = payload.get("msg")
+          games = msg if isinstance(msg, list) else []
+          print("SERIES_COUNT", len(games))
+          for g in games:
+              if isinstance(g, dict):
+                  print("GAME_ROW", {k:g.get(k) for k in ["sMatchId","MatchNum","MatchStatus","BattleId","AreaId"]})
+
+          for g in games[-5:]:
+              if not isinstance(g, dict):
+                  continue
+              sid = str(g.get("sMatchId") or "")
+              if not sid:
+                  continue
+              info = None
+              for base in [
+                  "https://apps.game.qq.com/lol/match/apis/searchMatchInfo_s.php",
+                  "http://apps.game.qq.com/lol/match/apis/searchMatchInfo_s.php",
+              ]:
+                  info = get(base, {"p0": sid, "r1": "MatchInfo"})
+                  if info:
+                      break
+              if not isinstance(info, dict):
+                  continue
+              print("MATCH", sid, "STATUS", info.get("status"))
+              data = info.get("msg") if isinstance(info.get("msg"), dict) else {}
+              sm = data.get("sMatchInfo") if isinstance(data, dict) else {}
+              print("MATCH_INFO", {k:sm.get(k) for k in ["sMatchId","bMatchId","MatchNum","MatchStatus","BattleId","AreaId"]} if isinstance(sm,dict) else sm)
+              battle_info = data.get("battleInfo") if isinstance(data,dict) else {}
+              battle_raw = battle_info.get("BattleData") if isinstance(battle_info,dict) else None
+              print("BATTLE_LEN", len(battle_raw) if isinstance(battle_raw,str) else -1)
+              if isinstance(battle_raw, str) and battle_raw:
+                  try:
+                      b = json.loads(battle_raw)
+                      print("BATTLE_KEYS", list(b.keys())[:30])
+                      print("GAME_TIME", b.get("game-time"), "WIN", b.get("game-win"))
+                      for side in ["left","right"]:
+                          t = b.get(side) or {}
+                          print("SIDE", side, "tower", t.get("tower"), "dragon", t.get("s-dragon"), "baron", t.get("b-dragon"), "players", len(t.get("players") or []))
+                  except Exception as e:
+                      print("BATTLE_JSON_ERROR", repr(e))
