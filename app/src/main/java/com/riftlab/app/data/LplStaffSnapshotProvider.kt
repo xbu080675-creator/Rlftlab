@@ -52,7 +52,6 @@ internal class LplStaffSnapshotProvider {
                 staff("Zoom", "COACH", "Zhang Xingran"),
                 staff("Xiaobai", "COACH", "Yang Zhonghe"),
                 staff("Huge", "ASSISTANT_COACH", "Cui Hu"),
-                staff("Vus5o", "ANALYST", "Wu Shuo"),
                 staff("Karma", "ANALYST", "Huang Yihong"),
                 staff("Zizheng", "ANALYST", "Jia Zizheng")
             ),
@@ -66,8 +65,7 @@ internal class LplStaffSnapshotProvider {
             ),
             "TT" to listOf(
                 staff("NoName", "HEAD_COACH", "Zhou Qilin"),
-                staff("Benny", "ASSISTANT_COACH", "Lien Hsiu-chi"),
-                staff("Vlone", "ANALYST")
+                staff("Benny", "ASSISTANT_COACH", "Lien Hsiu-chi")
             ),
             "IG" to listOf(
                 staff("Helper", "HEAD_COACH", "Kwon Young-jae"),
