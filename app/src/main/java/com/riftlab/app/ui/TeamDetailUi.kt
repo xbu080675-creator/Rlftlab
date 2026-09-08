@@ -357,6 +357,7 @@ private fun staffRoleLabel(role: String): String = when (role.uppercase()) {
     "COACH" -> "教练"
     "ANALYST" -> "分析师"
     "MANAGER" -> "经理"
+    "SUPERVISOR" -> "监督"
     else -> role.replace('_', ' ')
 }
 
