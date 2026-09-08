@@ -8,25 +8,23 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Query BLG current roster
+      - name: Discover BLG current roster key
         shell: python
         run: |
           import json, urllib.parse, urllib.request
-          params={
-            'action':'cargoquery',
-            'format':'json',
-            'tables':'ListplayerCurrent=LPC',
-            'fields':'LPC.ID,LPC.Name,LPC.Role,LPC.IsSubstitute,LPC.IsTrainee,LPC.Team,LPC.N',
-            'where':'LPC._pageName="Bilibili Gaming" AND LPC.ID IS NOT NULL',
-            'order_by':'LPC.N ASC',
-            'limit':'50'
-          }
-          url='https://lol.fandom.com/api.php?'+urllib.parse.urlencode(params)
-          req=urllib.request.Request(url,headers={'User-Agent':'RiftLab/1.0 GitHub probe'})
-          with urllib.request.urlopen(req,timeout=20) as r:
-            text=r.read().decode('utf-8','replace')
-            print('HTTP',r.status,'BYTES',len(text))
-          data=json.loads(text)
-          print('ROWS',len(data.get('cargoquery',[])))
-          for row in data.get('cargoquery',[]):
-            print(row.get('title',{}))
+          def query(where):
+            params={
+              'action':'cargoquery','format':'json','tables':'ListplayerCurrent=LPC',
+              'fields':'LPC._pageName=Page,LPC.ID,LPC.Name,LPC.Role,LPC.IsSubstitute,LPC.IsTrainee,LPC.Team,LPC.N',
+              'where':where,'order_by':'LPC._pageName,LPC.N ASC','limit':'100'
+            }
+            url='https://lol.fandom.com/api.php?'+urllib.parse.urlencode(params)
+            req=urllib.request.Request(url,headers={'User-Agent':'RiftLab/1.0 GitHub probe'})
+            with urllib.request.urlopen(req,timeout=20) as r:
+              text=r.read().decode('utf-8','replace')
+              print('HTTP',r.status,'BYTES',len(text),'WHERE',where)
+            data=json.loads(text)
+            rows=data.get('cargoquery',[])
+            print('ROWS',len(rows))
+            for row in rows: print(row.get('title',{}))
+          query('LPC._pageName LIKE "%Bilibili%" OR LPC.Team LIKE "%Bilibili%" OR LPC.Team="BLG"')
