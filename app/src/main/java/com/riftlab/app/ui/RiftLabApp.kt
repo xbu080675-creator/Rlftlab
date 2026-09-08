@@ -57,6 +57,7 @@ import com.riftlab.app.data.MockAiInsightEngine
 import com.riftlab.app.data.PlayerCard
 import com.riftlab.app.stream.StreamLauncher
 import com.riftlab.app.stream.StreamPlatform
+import com.riftlab.app.update.AppUpdateManager
 import kotlin.math.abs
 
 private enum class Phase(val label: String) { PRE("赛前"), LIVE("赛中"), POST("赛后") }
@@ -67,6 +68,8 @@ fun RiftLabApp() {
         MatchSessionStore.ensureDataRunning()
         var phase by remember { mutableIntStateOf(1) }
         val context = LocalContext.current
+        var updateCenterOpen by remember { androidx.compose.runtime.mutableStateOf(false) }
+        LaunchedEffect(context) { AppUpdateManager.initialize(context) }
         val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
         LaunchedEffect(Unit) {
@@ -75,7 +78,8 @@ fun RiftLabApp() {
 
         Scaffold(containerColor = RiftBg) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
-                Header()
+                Header(onVersionClick = { updateCenterOpen = true })
+                if (updateCenterOpen) UpdateCenterDialog(onClose = { updateCenterOpen = false })
                 PhaseTabs(phase) { phase = it }
                 AnimatedContent(
                     targetState = Phase.entries[phase],
@@ -101,7 +105,7 @@ fun RiftLabApp() {
 }
 
 @Composable
-private fun Header() {
+private fun Header(onVersionClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -121,7 +125,8 @@ private fun Header() {
             BuildConfig.VERSION_NAME.replace("1.0.0-", "1.0 ").uppercase(),
             color = RiftCyan,
             fontSize = 10.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.clickable(onClick = onVersionClick).padding(horizontal = 6.dp, vertical = 8.dp)
         )
     }
 }

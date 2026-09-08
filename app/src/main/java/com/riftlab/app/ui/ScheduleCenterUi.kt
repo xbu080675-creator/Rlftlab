@@ -175,7 +175,6 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             bucket = selectedBucket,
                             selectedMatchId = center.selectedMatch?.matchId,
                             onMatchClick = { match ->
-                                MatchSessionStore.selectScheduleMatch(match.matchId)
                                 MatchDetailRepository.open(match)
                                 selectedDetailMatch = match
                             }

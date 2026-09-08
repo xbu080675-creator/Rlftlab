@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.0-dev.7"
+        versionCode = 8
+        versionName = "1.0.0-dev.8"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -70,4 +70,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.7: generic live provider router + match resolver baseline; registry API validated.
+// dev.8: independent match detail + official awards + in-app DEV OTA updater.
