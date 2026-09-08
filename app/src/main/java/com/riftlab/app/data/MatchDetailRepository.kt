@@ -227,7 +227,7 @@ object MatchDetailRepository {
                     EsportsAssetCache.normalize(extraImages[key].orEmpty()).takeIf { it.isNotBlank() }
                 }
             val riot = runCatching { teamAssetProvider.resolve(team.copy(imageUrl = "")) }.getOrDefault("")
-            val image = listOf(cached, extra, EsportsAssetCache.normalize(riot))
+            val image = listOf(cached, extra.orEmpty(), EsportsAssetCache.normalize(riot))
                 .firstOrNull { it.isNotBlank() }
                 .orEmpty()
 
