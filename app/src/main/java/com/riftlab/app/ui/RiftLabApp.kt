@@ -116,7 +116,7 @@ private fun Header() {
             Text("RIFTLAB", fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = 1.4.sp)
             Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 9.sp, letterSpacing = 1.1.sp)
         }
-        Text("1.0 DEV.3", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("1.0 DEV.5", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -314,7 +314,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         }
         item {
             Text(
-                "直播跳转只是快捷入口；今晚重点验 Riot 实时源。二路、POV、网页或其他直播与 RiftScreen 完全解耦。",
+                "直播跳转只是快捷入口；赛事数据、RiftScreen 与直播平台完全解耦。计划开赛时间仅作参考，Live 状态以 Riot 实际数据为准。",
                 color = RiftMuted,
                 fontSize = 11.sp,
                 lineHeight = 17.sp
