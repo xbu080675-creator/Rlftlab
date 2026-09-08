@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.0.0-dev.13"
+        versionCode = 14
+        versionName = "1.0.0-dev.14"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.13: Riot/OP.GG team-logo enrichment, OP.GG BP/MVP supplements, series-score alignment and pre-match side selection.
+// dev.14: visual match-detail cards with Riot player portraits and Data Dragon champion artwork.
