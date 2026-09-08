@@ -13,8 +13,9 @@ jobs:
       - name: Probe Riot getSchedule/getTeams and OP.GG
         shell: python
         run: |
-          import json, re, urllib.request, urllib.parse
+          import json, re, urllib.request, urllib.parse, sys
           from pathlib import Path
+          sys.stdout = open('team-assets-probe.txt', 'w', buffering=1)
 
           src = Path('app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt').read_text()
           key = re.search(r'API_KEY = "([^"]+)"', src).group(1)
@@ -48,8 +49,7 @@ jobs:
               arr=root.get('data',{}).get('teams',[])
               obj=arr[0] if arr else {}
               image=obj.get('image') or obj.get('imageUrl') or obj.get('imageUrlDarkMode') or obj.get('imageUrlLightMode')
-              status='NONE'
-              ctype=''
+              status='NONE'; ctype=''
               if image:
                   try:
                       req=urllib.request.Request(image,headers={'User-Agent':'Mozilla/5.0'})
@@ -79,3 +79,9 @@ jobs:
                               status=str(ir.status); ctype=ir.headers.get('content-type','')
                       except Exception as ex: status='ERR:'+type(ex).__name__
                   print(code, 'image=',repr(image), 'http=',status, ctype)
+          sys.stdout.close()
+      - name: Upload probe output
+        uses: actions/upload-artifact@v4
+        with:
+          name: team-assets-probe
+          path: team-assets-probe.txt
