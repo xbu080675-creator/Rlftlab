@@ -108,20 +108,29 @@ data class ScheduleCenterState(
     val statusMessage: String = "赛程中心尚未同步"
 )
 
+data class EsportsSocialLink(
+    val platform: String,
+    val url: String,
+    val label: String = platform,
+    val source: String = ""
+)
+
 data class EsportsPlayerRef(
     val id: String,
     val summonerName: String,
     val role: String,
     val imageUrl: String = "",
     val firstName: String = "",
-    val lastName: String = ""
+    val lastName: String = "",
+    val socialLinks: List<EsportsSocialLink> = emptyList()
 )
 
 data class EsportsStaffRef(
     val name: String,
     val role: String,
     val source: String,
-    val realName: String = ""
+    val realName: String = "",
+    val socialLinks: List<EsportsSocialLink> = emptyList()
 )
 
 data class EsportsTeamDetails(
@@ -131,7 +140,9 @@ data class EsportsTeamDetails(
     val name: String,
     val imageUrl: String = "",
     val players: List<EsportsPlayerRef>,
-    val staff: List<EsportsStaffRef> = emptyList()
+    val staff: List<EsportsStaffRef> = emptyList(),
+    val management: List<EsportsStaffRef> = emptyList(),
+    val socialLinks: List<EsportsSocialLink> = emptyList()
 )
 
 data class LivePlayerSnapshot(
