@@ -17,6 +17,63 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Smoke test Riot LoL Esports data source
+        continue-on-error: true
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import pathlib
+          import re
+          import urllib.parse
+          import urllib.request
+
+          source = pathlib.Path("app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt").read_text()
+          key = re.search(r'API_KEY = "([^"]+)"', source).group(1)
+          league_id = re.search(r'LPL_LEAGUE_ID = "([^"]+)"', source).group(1)
+          base = re.search(r'PERSISTED_BASE = "([^"]+)"', source).group(1)
+
+          def get(path):
+              req = urllib.request.Request(
+                  base + path,
+                  headers={
+                      "x-api-key": key,
+                      "Accept": "application/json",
+                      "User-Agent": "RiftLab-CI/1.0",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=15) as response:
+                  return json.load(response)
+
+          schedule = get(f"/getSchedule?hl=en-US&leagueId={league_id}")
+          events = schedule.get("data", {}).get("schedule", {}).get("events", [])
+          target = None
+          for event in events:
+              if event.get("type") != "match":
+                  continue
+              teams = event.get("match", {}).get("teams", [])
+              codes = {str(team.get("code", "")).upper() for team in teams}
+              if {"LGD", "IG"}.issubset(codes):
+                  target = event
+                  break
+
+          assert target is not None, "LPL schedule reachable but LGD vs IG was not found"
+          print("schedule OK:", target.get("id"), target.get("startTime"), target.get("state"))
+
+          for team in target.get("match", {}).get("teams", []):
+              slug = team.get("slug", "")
+              code = team.get("code", "")
+              assert slug, f"{code} schedule entry has no slug"
+              payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(slug))
+              returned = payload.get("data", {}).get("teams", [])
+              assert returned, f"getTeams returned no team for {slug}"
+              players = returned[0].get("players", [])
+              print(f"roster OK: {code} slug={slug} players={len(players)}")
+
+          live = get("/getLive?hl=en-US")
+          assert isinstance(live.get("data", {}).get("schedule", {}).get("events", []), list)
+          print("getLive endpoint OK")
+          PY
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
@@ -34,5 +91,5 @@ jobs:
           test "$DIGEST" = "$EXPECTED"
       - uses: actions/upload-artifact@v4
         with:
-          name: RiftLab-dev3-real-data-fixed-sign
+          name: RiftLab-dev4-riot-data-fixed-sign
           path: app/build/outputs/apk/debug/app-debug.apk
