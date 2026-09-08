@@ -22,7 +22,7 @@ internal class LolEsportsScheduleDataSource(
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
         val matches = client.fetchLplSchedule().map(::verifySeriesCompletion)
-        LiveMatchTargetRegistry.target = chooseLiveWatchTarget(matches)
+        LiveMatchTargetRegistry.update(chooseLiveWatchTarget(matches))
         return matches
     }
 
@@ -119,7 +119,7 @@ internal class LolEsportsLiveDataSource(
         while (currentCoroutineContext().isActive) {
             try {
                 if (currentEvent == null) {
-                    val scheduled = LiveMatchTargetRegistry.target
+                    val scheduled = LiveMatchTargetRegistry.snapshot()
                     if (scheduled != null && scheduled.eventId.isNotBlank()) {
                         currentEvent = LiveEventRef(
                             eventId = scheduled.eventId,
