@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 18
-        versionName = "1.0.0-dev.18"
+        versionCode = 19
+        versionName = "1.0.0-dev.19"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.18: remote cached team/player assets + complete roster/substitute/staff support.
+// dev.19: global team/match entity navigation + management/social profile surfaces.
