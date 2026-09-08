@@ -47,9 +47,9 @@ internal class LolEsportsLiveDataSource(
                     }
                 }
 
-                val event = currentEvent
+                val event = currentEvent ?: continue
                 val game = client.fetchLiveGame(event)
-                if (game == null || game.state.lowercase().contains("complete")) {
+                if (game == null) {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.BETWEEN_GAMES,
                         message = "系列赛已识别，等待下一局 Live Feed",
