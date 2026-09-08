@@ -71,7 +71,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
 
+    // Staff pages are HTML. Jsoup keeps the parser small and lets us isolate Active coaching staff
+    // without bundling another browser/WebView path.
+    implementation("org.jsoup:jsoup:1.18.3")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.17: global team-vs-team visual standard uses logos as primary identity across app and RiftScreen.
+// dev.17+: team/roster assets stay remote; shared Coil cache handles local reuse.
