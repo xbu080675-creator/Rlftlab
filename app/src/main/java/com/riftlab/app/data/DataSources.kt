@@ -10,6 +10,14 @@ interface ScheduleDataSource {
 }
 
 /**
+ * Riot tournament / standings / bracket 接入点。
+ */
+interface StandingsDataSource {
+    suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef>
+    suspend fun fetchStandings(tournamentId: String): TournamentStandings?
+}
+
+/**
  * 队伍与当前 Riot roster 接入点。
  */
 interface TeamDataSource {
