@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.0-dev.8"
+        versionCode = 9
+        versionName = "1.0.0-dev.9"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -70,4 +70,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.8: independent match detail + official awards + in-app DEV OTA updater.
+// dev.9: official LPL POG/MVP post-game voting panel + dev OTA updates.
