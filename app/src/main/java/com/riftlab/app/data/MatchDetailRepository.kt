@@ -115,7 +115,7 @@ object MatchDetailRepository {
                 status = when (phase) {
                     ScheduleMatchPhase.UPCOMING -> "比赛尚未开始 · 当前展示赛程与赛前元数据"
                     ScheduleMatchPhase.LIVE -> "比赛进行中 · 当前局实时数据由赛中 Provider Router 提供"
-                    ScheduleMatchPhase.COMPLETED -> "正在加载历史终局、官方 MVP / POG 与 BP…"
+                    ScheduleMatchPhase.COMPLETED -> "正在加载历史终局、MVP / POG 与 BP…"
                 },
                 updatedAtEpochMs = System.currentTimeMillis()
             )
@@ -129,7 +129,7 @@ object MatchDetailRepository {
             val result = runCatching {
                 resolverMutex.withLock { resolver.resolve(match) }
             }
-            val resolved = result.getOrNull()
+            val resolved = result.getOrNull()?.normalizeDetailRoles()
             val bmid = resolved?.matchKey
                 ?.takeIf { it.startsWith("TJ:") }
                 ?.removePrefix("TJ:")
@@ -137,24 +137,26 @@ object MatchDetailRepository {
 
             val awards = if (bmid.isNotBlank()) {
                 runCatching { awardsProvider.fetch(bmid) }.getOrElse {
-                    OfficialAwardsResult(status = "MVP / 投票同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+                    OfficialAwardsResult(status = "MVP / POG 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
                 }
             } else {
-                OfficialAwardsResult(status = "MVP / 投票等待历史 bMatchId")
+                OfficialAwardsResult(status = "MVP / POG 等待历史 bMatchId")
             }
-            val drafts = runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
+            val draftResult = runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
                 OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
             }
+            val decoratedDrafts = runCatching { ChampionCatalog.decorateDrafts(draftResult.drafts) }
+                .getOrDefault(draftResult.drafts)
 
             val finalState = base.copy(
                 loading = false,
                 series = resolved,
-                seriesMvp = awards.seriesMvp,
-                gameMvps = awards.gameMvps,
-                votes = awards.votes,
-                drafts = drafts.drafts,
+                seriesMvp = awards.seriesMvp?.withDisplaySource(match),
+                gameMvps = awards.gameMvps.map { it.withDisplaySource(match) },
+                votes = awards.votes.map { it.withDisplaySource(match) },
+                drafts = decoratedDrafts.map { it.withDisplaySource(match) },
                 status = when {
-                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${drafts.status}"
+                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${draftResult.status}"
                     result.isFailure -> "比赛详情同步失败"
                     else -> resolver.status.value
                 },
@@ -181,4 +183,55 @@ object MatchDetailRepository {
             (current.eventId.isNotBlank() && current.eventId == match.eventId)
         return MatchSessionStore.live.value.takeIf { same && it.game > 0 }
     }
+
+    private fun CompletedSeriesSnapshot.normalizeDetailRoles(): CompletedSeriesSnapshot = copy(
+        games = games.map { game ->
+            game.copy(
+                bluePlayers = game.bluePlayers.map { player -> player.copy(role = normalizeRole(player.role)) },
+                redPlayers = game.redPlayers.map { player -> player.copy(role = normalizeRole(player.role)) }
+            )
+        }
+    )
+
+    private fun normalizeRole(raw: String): String {
+        val key = raw.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "")
+        return when (key) {
+            "TOP", "TOPLANE", "1" -> "TOP"
+            "JUN", "JUG", "JGL", "JUNG", "JUNGLE", "JUNGLER", "JUNGLEPOSITION", "2" -> "JUG"
+            "MID", "MIDDLE", "MIDLANE", "3" -> "MID"
+            "BOT", "BOTTOM", "ADC", "AD", "BOTTOMLANE", "4" -> "BOT"
+            "SUP", "SUPPORT", "SUPP", "5" -> "SUP"
+            else -> raw.uppercase().ifBlank { "—" }
+        }
+    }
+
+    private fun OfficialMvpRecord.withDisplaySource(match: ScheduledEsportsMatch): OfficialMvpRecord =
+        copy(source = displaySource(source, match))
+
+    private fun OfficialVoteRecord.withDisplaySource(match: ScheduledEsportsMatch): OfficialVoteRecord =
+        copy(source = displaySource(source, match))
+
+    private fun DraftPickRecord.withDisplaySource(match: ScheduledEsportsMatch): DraftPickRecord =
+        copy(source = displaySource(source, match))
+
+    private fun displaySource(raw: String, match: ScheduledEsportsMatch): String {
+        val source = raw.trim()
+        val lower = source.lowercase()
+        if (source.isBlank()) return "来源未标注"
+        if (lower.contains("op.gg") || lower.contains("opgg")) return source.ensurePrefix("OP.GG")
+        if (lower.contains("tjstats") || lower.contains("lpl.qq.com")) return source.ensurePrefix("LPL 官方")
+        if (lower.contains("lolesports") || lower.contains("riot")) {
+            val league = match.league.lowercase()
+            return when {
+                league.contains("world") || league.contains("全球总决赛") -> source.ensurePrefix("全球总决赛官方")
+                league.contains("lck") -> source.ensurePrefix("LCK 官方")
+                league.contains("lpl") -> source.ensurePrefix("LPL 官方")
+                else -> source.ensurePrefix("Riot 官方")
+            }
+        }
+        return source
+    }
+
+    private fun String.ensurePrefix(prefix: String): String =
+        if (startsWith(prefix, ignoreCase = true)) this else "$prefix · $this"
 }
