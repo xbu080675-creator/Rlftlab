@@ -60,22 +60,22 @@ jobs:
           assert target is not None, "LPL schedule reachable but LGD vs IG was not found"
           print("schedule OK:", target.get("startTime"), target.get("state"))
 
-          for team in target.get("match", {}).get("teams", []):
-              code = team.get("code", "")
-              team_id = str(team.get("id", ""))
-              print("schedule team:", json.dumps(team, ensure_ascii=False, sort_keys=True))
-              assert team_id, f"{code} schedule entry has no id"
-              payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(team_id))
-              returned = payload.get("data", {}).get("teams", [])
-              assert returned, f"getTeams returned no team for id={team_id} ({code})"
-              resolved = returned[0]
-              players = resolved.get("players", [])
+          payload = get("/getTeams?hl=en-US&id=" + urllib.parse.quote(league_id))
+          returned = payload.get("data", {}).get("teams", [])
+          assert returned, "getTeams returned no teams for LPL league id"
+          by_code = {str(team.get("code", "")).upper(): team for team in returned}
+          for code in ("LGD", "IG"):
+              team = by_code.get(code)
+              assert team is not None, f"LPL team list has no {code}"
+              players = team.get("players", [])
+              assert len(players) >= 5, f"{code} roster has only {len(players)} players"
               print(
                   "roster OK:",
                   code,
-                  "id=" + team_id,
-                  "slug=" + str(resolved.get("slug", "")),
+                  "id=" + str(team.get("id", "")),
+                  "slug=" + str(team.get("slug", "")),
                   "players=" + str(len(players)),
+                  "names=" + ",".join(str(p.get("summonerName", "")) for p in players),
               )
 
           live = get("/getLive?hl=en-US")
