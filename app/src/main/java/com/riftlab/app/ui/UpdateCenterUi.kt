@@ -1,0 +1,100 @@
+package com.riftlab.app.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.riftlab.app.BuildConfig
+import com.riftlab.app.update.AppUpdateManager
+
+@Composable
+internal fun UpdateCenterDialog(onClose: () -> Unit) {
+    val state by AppUpdateManager.state.collectAsState()
+    LaunchedEffect(Unit) { AppUpdateManager.checkForUpdates() }
+
+    Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier.fillMaxWidth()
+                .background(RiftPanel, CutCornerShape(topEnd = 18.dp, bottomStart = 12.dp))
+                .border(1.dp, if (state.available) RiftCyan.copy(alpha = 0.6f) else RiftLine, CutCornerShape(topEnd = 18.dp, bottomStart = 12.dp))
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("RIFTLAB UPDATE", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("当前版本", color = RiftMuted, fontSize = 9.sp)
+            Text("${BuildConfig.VERSION_NAME} · code ${BuildConfig.VERSION_CODE}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+
+            if (state.latestVersionName.isNotBlank()) {
+                Spacer(Modifier.height(3.dp))
+                Text("最新 DEV", color = RiftMuted, fontSize = 9.sp)
+                Text("${state.latestVersionName} · code ${state.latestVersionCode}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Text(state.status, color = if (state.available) RiftCyan else RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+
+            if (state.changelog.isNotBlank()) {
+                Text("更新内容", color = RiftMuted, fontSize = 9.sp)
+                Text(state.changelog, fontSize = 10.sp, lineHeight = 15.sp)
+            }
+
+            if (state.downloading) {
+                val sizeText = if (state.totalBytes > 0) {
+                    "%.1f MB / %.1f MB".format(state.downloadedBytes / 1048576f, state.totalBytes / 1048576f)
+                } else {
+                    "%.1f MB".format(state.downloadedBytes / 1048576f)
+                }
+                Text("${state.progressPercent}% · $sizeText", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            state.error?.let { Text(it, color = RiftRed, fontSize = 9.sp) }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = AppUpdateManager::checkForUpdates,
+                    enabled = !state.checking && !state.downloading,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftText),
+                    shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+                ) {
+                    Text(if (state.checking) "检查中" else "检查更新", fontSize = 10.sp)
+                }
+                Button(
+                    onClick = AppUpdateManager::downloadAndInstall,
+                    enabled = state.available && !state.downloading,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = RiftCyan, contentColor = RiftBg),
+                    shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+                ) {
+                    Text(if (state.downloading) "下载中" else "下载并安装", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+
+            Button(
+                onClick = onClose,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftMuted),
+                shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+            ) {
+                Text("关闭", fontSize = 10.sp)
+            }
+        }
+    }
+}
