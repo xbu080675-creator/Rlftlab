@@ -9,50 +9,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve today's LPL bMatchId from official feeds
+      - name: Print compact current LGD IG ids
         shell: bash
         run: |
           python - <<'PY'
-          import re, json, urllib.request
+          import re, urllib.request
+
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'
           BASE='https://lpl.qq.com'
-          paths=[
+          PATHS=[
             '/web201612/data/LOL_MATCH2_MATCH_HOMEPAGE_BMATCH_LIST.js',
             '/web201612/data/LOL_MATCH2_LIVE_BMATCH_LIST.js',
             '/v2/web201901/js/LOL_MATCH2_LIVE_BMATCH_LIST.js',
             '/web201612/data/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
             '/v2/web201901/js/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
           ]
+
           def get(path):
-            req=urllib.request.Request(BASE+path,headers={'User-Agent':UA,'Referer':BASE+'/'})
-            try:
-              with urllib.request.urlopen(req,timeout=15) as r:
-                text=r.read().decode('utf-8','replace')
-                print('\n===',path,'HTTP',r.status,'LEN',len(text),'===')
-                return text
-            except Exception as e:
-              print('\n===',path,'ERR',repr(e),'==='); return ''
-          def print_hits(path,text):
-            low=text.lower()
-            hits=[]
-            for needle in ['2026-09-08','2026/09/08','lgd','invictus','"teama":"4"','"teamb":"4"','"teama":"2"','"teamb":"2"']:
-              start=0
-              while True:
-                p=low.find(needle.lower(),start)
-                if p<0: break
-                hits.append(p); start=p+len(needle)
-            for p in sorted(set(hits)):
-              chunk=text[max(0,p-1400):p+2600]
-              cl=chunk.lower()
-              if ('lgd' in cl and ('invictus' in cl or '"2"' in cl)) or ('2026-09-08' in cl and ('"4"' in cl or 'lgd' in cl)):
-                print('\nHIT@',p,chunk.replace('\n',' ')[:4000])
-            # Generic regex extraction around today/current team IDs.
-            for m in re.finditer(r'\{[^{}]{0,1800}(?:bMatchId|bmatchid)[^{}]{0,1800}\}', text, re.I):
-              s=m.group(0)
-              sl=s.lower()
-              if ('2026-09-08' in s or 'lgd' in sl) and (('ig' in sl) or 'invictus' in sl or ('"4"' in s and '"2"' in s)):
-                print('\nOBJECT',s[:5000])
-          for path in paths:
-            text=get(path)
-            if text: print_hits(path,text)
+              req=urllib.request.Request(BASE+path,headers={'User-Agent':UA,'Referer':BASE+'/'})
+              try:
+                  with urllib.request.urlopen(req,timeout=15) as r:
+                      return r.read().decode('utf-8','replace')
+              except Exception:
+                  return ''
+
+          def val(s,key):
+              m=re.search(r'["\']?'+re.escape(key)+r'["\']?\s*:\s*["\']?([^,"\'}\]\s]+)',s,re.I)
+              return m.group(1) if m else ''
+
+          results=[]
+          for path in PATHS:
+              text=get(path)
+              for m in re.finditer(r'bMatchId',text,re.I):
+                  chunk=text[max(0,m.start()-2600):m.start()+3600]
+                  low=chunk.lower()
+                  # Today's series, LGD/IG by names or Tencent team ids 4/2.
+                  today=('2026-09-08' in chunk or '2026/09/08' in chunk or '2026.09.08' in chunk or '09-08' in chunk)
+                  names=('lgd' in low and ('invictus' in low or re.search(r'\big\b',low)))
+                  ta=val(chunk,'TeamA'); tb=val(chunk,'TeamB')
+                  ids={ta,tb}
+                  idmatch=('4' in ids and '2' in ids)
+                  if not (today and (names or idmatch)):
+                      continue
+                  row={
+                    'src':path.split('/')[-1],
+                    'bMatchId':val(chunk,'bMatchId'),
+                    'GameId':val(chunk,'GameId'),
+                    'MatchDate':val(chunk,'MatchDate'),
+                    'MatchStatus':val(chunk,'MatchStatus'),
+                    'TeamA':ta,
+                    'TeamB':tb,
+                    'TeamNameA':val(chunk,'TeamNameA'),
+                    'TeamNameB':val(chunk,'TeamNameB'),
+                    'ScoreA':val(chunk,'ScoreA'),
+                    'ScoreB':val(chunk,'ScoreB'),
+                  }
+                  key=tuple(row.items())
+                  if row['bMatchId'] and row not in results:
+                      results.append(row)
+
+          # Prefer exact 4-vs-2 today; newest/highest ids last as a practical tie-breaker.
+          results.sort(key=lambda r:(r['MatchDate'], int(r['bMatchId']) if r['bMatchId'].isdigit() else 0), reverse=True)
+          for r in results[:8]:
+              print('RESULT '+' '.join(f'{k}={v}' for k,v in r.items()))
+          if not results:
+              print('RESULT NONE')
           PY
