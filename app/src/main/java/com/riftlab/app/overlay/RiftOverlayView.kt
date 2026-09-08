@@ -10,7 +10,10 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.riftlab.app.data.LiveSnapshot
+import com.riftlab.app.data.LiveSourcePhase
+import com.riftlab.app.data.LiveSourceStatus
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.ScheduledEsportsMatch
 import kotlin.math.abs
 
 class RiftOverlayView(
@@ -27,26 +30,26 @@ class RiftOverlayView(
         setPadding(dp(14), dp(10), dp(14), dp(12))
     }
 
-    private val title = text("LIVE · G2", 11f, 0xFF6CEBFF.toInt(), bold = true)
-    private val timer = text("18:42", 11f, 0xFF94A0B2.toInt())
+    private val title = text("等待数据", 11f, 0xFF94A0B2.toInt(), bold = true)
+    private val timer = text("--:--", 11f, 0xFF94A0B2.toInt())
     private val modeChip = text("COMPACT ›", 9f, 0xFF6CEBFF.toInt(), bold = true)
-    private val blue = text("BLG", 18f, Color.WHITE, bold = true).apply {
+    private val blue = text("—", 18f, Color.WHITE, bold = true).apply {
         gravity = Gravity.START or Gravity.CENTER_VERTICAL
     }
-    private val red = text("AL", 18f, Color.WHITE, bold = true).apply {
+    private val red = text("—", 18f, Color.WHITE, bold = true).apply {
         gravity = Gravity.END or Gravity.CENTER_VERTICAL
     }
-    private val goldDiff = text("+1.6K", 22f, 0xFF6CEBFF.toInt(), bold = true).apply {
+    private val goldDiff = text("—", 22f, 0xFF94A0B2.toInt(), bold = true).apply {
         gravity = Gravity.CENTER
         minWidth = dp(84)
         setPadding(dp(10), 0, dp(10), 0)
     }
-    private val miniLine = text("BLG   +1.6K   AL", 17f, Color.WHITE, bold = true).apply {
+    private val miniLine = text("等待赛事数据", 17f, Color.WHITE, bold = true).apply {
         gravity = Gravity.CENTER
     }
-    private val metrics = text("K 8:6   T 4:3   D 2:1", 12f, 0xFFD1D7E2.toInt())
-    private val goldLine = text("GOLD 34.7K : 33.1K", 11f, 0xFFD1D7E2.toInt())
-    private val event = text("EVENT · 18:37 · BLG 获得小龙", 10f, 0xFF8C98AA.toInt())
+    private val metrics = text("K —   T —   D —", 12f, 0xFFD1D7E2.toInt())
+    private val goldLine = text("GOLD — : —   LEAD —", 11f, 0xFFD1D7E2.toInt())
+    private val event = text("STATUS · 等待 Riot 数据源", 10f, 0xFF8C98AA.toInt())
     private val hint = text("轻点切换尺寸 · 拖动可移动", 9f, 0xFF667386.toInt())
     private val accent = View(context)
     private val teams = LinearLayout(context).apply {
@@ -115,22 +118,60 @@ class RiftOverlayView(
         applyMode()
     }
 
-    fun render(snapshot: LiveSnapshot) {
-        title.text = "LIVE · G${snapshot.game}"
-        timer.text = MatchSessionStore.formatTime(snapshot.elapsedSeconds)
-        blue.text = snapshot.blue
-        red.text = snapshot.red
-        val diff = formatDiff(snapshot.goldDiff)
-        val leadColor = if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt()
-        goldDiff.text = diff
-        goldDiff.setTextColor(leadColor)
-        miniLine.text = "${snapshot.blue}     $diff     ${snapshot.red}"
-        miniLine.setTextColor(leadColor)
-        metrics.text = "K ${snapshot.blueKills}:${snapshot.redKills}   T ${snapshot.blueTowers}:${snapshot.redTowers}   D ${snapshot.blueDragons}:${snapshot.redDragons}"
-        goldLine.text = "GOLD %.1fK : %.1fK   LEAD $diff".format(snapshot.blueGold / 1000f, snapshot.redGold / 1000f)
-        event.text = "EVENT · ${snapshot.latestEvent}"
+    fun render(
+        snapshot: LiveSnapshot,
+        status: LiveSourceStatus,
+        target: ScheduledEsportsMatch?
+    ) {
+        val isLive = status.phase == LiveSourcePhase.LIVE
+        val scheduledLeft = target?.teams?.getOrNull(0)?.displayCode().orEmpty()
+        val scheduledRight = target?.teams?.getOrNull(1)?.displayCode().orEmpty()
+        val left = if (isLive) snapshot.blue else scheduledLeft.ifBlank { "—" }
+        val right = if (isLive) snapshot.red else scheduledRight.ifBlank { "—" }
+
+        title.text = when (status.phase) {
+            LiveSourcePhase.LIVE -> "LIVE · G${snapshot.game}"
+            LiveSourcePhase.BETWEEN_GAMES -> "等待本局"
+            LiveSourcePhase.WAITING_FOR_MATCH -> "等待比赛"
+            LiveSourcePhase.ERROR -> "数据源异常"
+            LiveSourcePhase.IDLE -> "等待数据"
+        }
+        title.setTextColor(
+            when (status.phase) {
+                LiveSourcePhase.LIVE -> 0xFF6CEBFF.toInt()
+                LiveSourcePhase.ERROR -> 0xFFFF667A.toInt()
+                else -> 0xFF94A0B2.toInt()
+            }
+        )
+        timer.text = if (isLive) MatchSessionStore.formatTime(snapshot.elapsedSeconds) else "--:--"
+        blue.text = left
+        red.text = right
+
+        if (isLive) {
+            val diff = formatDiff(snapshot.goldDiff)
+            val leadColor = if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt()
+            goldDiff.text = diff
+            goldDiff.setTextColor(leadColor)
+            miniLine.text = "$left     $diff     $right"
+            miniLine.setTextColor(leadColor)
+            metrics.text = "K ${snapshot.blueKills}:${snapshot.redKills}   T ${snapshot.blueTowers}:${snapshot.redTowers}   D ${snapshot.blueDragons}:${snapshot.redDragons}"
+            goldLine.text = "GOLD %.1fK : %.1fK   LEAD $diff".format(snapshot.blueGold / 1000f, snapshot.redGold / 1000f)
+            event.text = "EVENT · ${snapshot.latestEvent}"
+        } else {
+            goldDiff.text = "—"
+            goldDiff.setTextColor(0xFF94A0B2.toInt())
+            miniLine.text = if (left != "—" || right != "—") "$left     VS     $right" else "等待赛事数据"
+            miniLine.setTextColor(Color.WHITE)
+            metrics.text = "K —   T —   D —"
+            goldLine.text = "GOLD — : —   LEAD —"
+            event.text = "STATUS · ${status.message}"
+        }
+
         flashAccent()
     }
+
+    private fun com.riftlab.app.data.EsportsTeamRef.displayCode(): String =
+        code.ifBlank { name }.ifBlank { "—" }
 
     private fun applyMode() {
         when (mode) {
