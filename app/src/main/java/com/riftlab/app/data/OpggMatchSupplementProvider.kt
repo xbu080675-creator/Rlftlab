@@ -28,6 +28,34 @@ internal data class OpggMatchSupplement(
 internal class OpggMatchSupplementProvider {
     companion object {
         private const val GRAPHQL = "https://esports.op.gg/matches/graphql"
+
+        private const val LIST_MATCHES_QUERY = """
+            query ListPagedAllMatches(${ '$' }status: String!, ${ '$' }leagueId: ID, ${ '$' }teamId: ID, ${ '$' }page: Int, ${ '$' }year: Int, ${ '$' }month: Int, ${ '$' }limit: Int) {
+              pagedAllMatches(status: ${ '$' }status, leagueId: ${ '$' }leagueId, teamId: ${ '$' }teamId, page: ${ '$' }page, year: ${ '$' }year, month: ${ '$' }month, limit: ${ '$' }limit) {
+                id name scheduledAt beginAt status homeScore awayScore
+                homeTeam { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
+                awayTeam { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
+              }
+            }
+        """
+
+        private const val GAME_QUERY = """
+            query GetGameByMatch(${ '$' }matchId: ID!, ${ '$' }set: Int) {
+              gameByMatch(matchId: ${ '$' }matchId, set: ${ '$' }set) {
+                id finished length
+                winner { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
+                teams {
+                  side bans
+                  team { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
+                }
+                players {
+                  side championId position mvpPoint
+                  team { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
+                  player { id nickName position imageUrl }
+                }
+              }
+            }
+        """
     }
 
     suspend fun fetch(match: ScheduledEsportsMatch): OpggMatchSupplement = withContext(Dispatchers.IO) {
@@ -230,7 +258,7 @@ internal class OpggMatchSupplementProvider {
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (code !in 200..299) error("OP.GG HTTP $code")
             val root = JSONObject(text)
-            if (root.optJSONArray("errors")?.length() ?: 0 > 0) error("OP.GG GraphQL errors")
+            if ((root.optJSONArray("errors")?.length() ?: 0) > 0) error("OP.GG GraphQL errors")
             root
         } finally {
             connection.disconnect()
@@ -275,35 +303,5 @@ internal class OpggMatchSupplementProvider {
         is Number -> raw.toDouble()
         is String -> raw.toDoubleOrNull() ?: 0.0
         else -> 0.0
-    }
-
-    private companion object Queries {
-        const val LIST_MATCHES_QUERY = """
-            query ListPagedAllMatches(${ '$' }status: String!, ${ '$' }leagueId: ID, ${ '$' }teamId: ID, ${ '$' }page: Int, ${ '$' }year: Int, ${ '$' }month: Int, ${ '$' }limit: Int) {
-              pagedAllMatches(status: ${ '$' }status, leagueId: ${ '$' }leagueId, teamId: ${ '$' }teamId, page: ${ '$' }page, year: ${ '$' }year, month: ${ '$' }month, limit: ${ '$' }limit) {
-                id name scheduledAt beginAt status homeScore awayScore
-                homeTeam { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
-                awayTeam { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
-              }
-            }
-        """
-
-        const val GAME_QUERY = """
-            query GetGameByMatch(${ '$' }matchId: ID!, ${ '$' }set: Int) {
-              gameByMatch(matchId: ${ '$' }matchId, set: ${ '$' }set) {
-                id finished length
-                winner { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
-                teams {
-                  side bans
-                  team { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
-                }
-                players {
-                  side championId position mvpPoint
-                  team { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
-                  player { id nickName position imageUrl }
-                }
-              }
-            }
-        """
     }
 }
