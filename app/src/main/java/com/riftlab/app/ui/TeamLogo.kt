@@ -33,6 +33,15 @@ internal fun TeamLogo(
             .components { add(SvgDecoder.Factory()) }
             .build()
     }
+    val resolvedUrl = remember(imageUrl) {
+        val raw = imageUrl.trim()
+        when {
+            raw.isBlank() || raw.equals("null", true) || raw.equals("undefined", true) -> ""
+            raw.startsWith("//") -> "https:$raw"
+            raw.startsWith("https://", true) || raw.startsWith("http://", true) -> raw
+            else -> ""
+        }
+    }
     val fallback: @Composable () -> Unit = {
         Text(
             text = code.take(4).ifBlank { "—" },
@@ -46,12 +55,12 @@ internal fun TeamLogo(
         modifier.background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
         contentAlignment = Alignment.Center
     ) {
-        if (imageUrl.isBlank()) {
+        if (resolvedUrl.isBlank()) {
             fallback()
         } else {
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(resolvedUrl)
                     .crossfade(true)
                     .build(),
                 imageLoader = imageLoader,
