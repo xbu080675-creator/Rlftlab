@@ -52,8 +52,8 @@ internal object SideSelectionStore {
                 records = rows,
                 status = when {
                     result.isFailure -> "选边同步失败 · ${result.exceptionOrNull()?.message?.take(100) ?: "unknown"}"
-                    rows.isNotEmpty() -> "Riot EventDetails · 已公布 ${rows.size} 局蓝红方"
-                    else -> "当前 EventDetails 尚未公布蓝红方；不猜测选边权"
+                    rows.isNotEmpty() -> "Riot EventDetails · 已确认 ${rows.size} 局蓝红方"
+                    else -> "官方尚未确认选边；EventDetails 未开赛槽位不作为公布结果"
                 }
             )
         }
@@ -61,10 +61,10 @@ internal object SideSelectionStore {
 }
 
 /**
- * Riot EventDetails exposes each game's blue/red assignment before or during a series when Riot
- * has published it. Blue side is the first-pick side in standard LoL draft. The endpoint does not
- * reliably identify which team owned the right to choose a side, so selectionOwner stays blank
- * unless a future provider supplies that fact explicitly.
+ * Riot EventDetails contains blue/red slots even for some games that have not started. Those slots
+ * can be placeholders and must not be presented as an official pre-match side-selection announcement.
+ * We only trust a side assignment when the game has actually started/finished, or when the payload
+ * contains an explicit side-selection confirmation marker.
  */
 private class RiotSideSelectionProvider {
     suspend fun fetch(match: ScheduledEsportsMatch): List<SideSelectionRecord> {
@@ -90,6 +90,8 @@ private class RiotSideSelectionProvider {
         return buildList {
             for (i in 0 until games.length()) {
                 val game = games.optJSONObject(i) ?: continue
+                if (!isConfirmedSideAssignment(game)) continue
+
                 val sides = game.optJSONArray("teams") ?: JSONArray()
                 var blueId = ""
                 var redId = ""
@@ -109,11 +111,34 @@ private class RiotSideSelectionProvider {
                         blueTeam = blue,
                         redTeam = red,
                         firstPickTeam = blue,
-                        source = "Riot LoL Esports · EventDetails"
+                        source = "Riot LoL Esports · EventDetails（已确认）"
                     )
                 )
             }
         }.sortedBy { it.game }
+    }
+
+    private fun isConfirmedSideAssignment(game: JSONObject): Boolean {
+        val state = game.optString("state")
+            .lowercase()
+            .replace("_", "")
+            .replace("-", "")
+            .replace(" ", "")
+        if (state.contains("progress") || state.contains("complete") || state == "finished") return true
+
+        if (game.optBoolean("hasSideSelection", false) || game.optBoolean("sideSelectionConfirmed", false)) return true
+        val explicitFields = listOf(
+            "sideSelection",
+            "sideSelectionStatus",
+            "selectionOwner",
+            "sideSelectionOwner",
+            "sideSelectedBy",
+            "sideChoice"
+        )
+        return explicitFields.any { key ->
+            val raw = game.opt(key)
+            raw != null && raw != JSONObject.NULL && raw.toString().trim().let { it.isNotBlank() && !it.equals("null", true) }
+        }
     }
 
     private fun getJson(url: String): JSONObject {
