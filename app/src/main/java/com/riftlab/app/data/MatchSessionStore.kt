@@ -67,7 +67,7 @@ object MatchSessionStore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val scheduleSource = LolEsportsScheduleDataSource()
     private val teamSource = LolEsportsTeamDataSource()
-    private val liveDataSource = LolEsportsLiveDataSource()
+    private val liveDataSource = LplOfficialLiveDataSource()
 
     private var liveJob: Job? = null
     private var scheduleJob: Job? = null
@@ -104,8 +104,8 @@ object MatchSessionStore {
             redTowers = 0,
             blueDragons = 0,
             redDragons = 0,
-            latestEvent = "Riot Live · 等待 LPL 实时比赛",
-            source = "Riot LoL Esports Live"
+            latestEvent = "LPL Official · 等待赛事实时数据",
+            source = "LPL Official · TJStats"
         )
     )
     val live: StateFlow<LiveSnapshot> = _live.asStateFlow()
@@ -122,8 +122,8 @@ object MatchSessionStore {
 
         if (liveJob?.isActive != true) {
             liveJob = scope.launch {
-                // Empty preference means: follow the LPL event that Riot actually marks live.
-                // Planned start time never gates discovery, so early starts are not missed.
+                // LPL realtime now follows the official Tencent/LPL live index first.
+                // Riot schedule remains the control-plane fallback for the schedule center.
                 liveDataSource.observe("").collect { snapshot ->
                     _live.value = snapshot
                 }
