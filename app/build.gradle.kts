@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.riftlab.app"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.riftlab.app"
