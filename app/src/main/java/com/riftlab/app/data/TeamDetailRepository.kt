@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 internal data class TeamDetailState(
     val team: EsportsTeamRef? = null,
     val details: EsportsTeamDetails? = null,
+    val imageUrl: String = "",
     val loading: Boolean = false,
     val status: String = "选择一支战队查看详情",
     val errorMessage: String? = null
@@ -21,7 +22,9 @@ internal data class TeamDetailState(
 internal object TeamDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val source: TeamDataSource = LolEsportsTeamDataSource()
+    private val assetProvider = RiotTeamAssetProvider()
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
+    private val imageCache = linkedMapOf<String, String>()
     private var loadJob: Job? = null
 
     private val _state = MutableStateFlow(TeamDetailState())
@@ -30,11 +33,13 @@ internal object TeamDetailRepository {
     fun open(team: EsportsTeamRef, forceRefresh: Boolean = false) {
         val key = team.slug.ifBlank { team.id }.ifBlank { team.code }
         val cached = cache[key]
-        if (!forceRefresh && cached != null) {
+        val cachedImage = team.imageUrl.ifBlank { imageCache[key].orEmpty() }
+        if (!forceRefresh && cached != null && cachedImage.isNotBlank()) {
             _state.value = TeamDetailState(
                 team = team,
                 details = cached,
-                status = "Riot Teams · 阵容已加载"
+                imageUrl = cachedImage,
+                status = "Riot Teams · 阵容与队标已加载"
             )
             return
         }
@@ -42,6 +47,7 @@ internal object TeamDetailRepository {
         loadJob?.cancel()
         _state.value = TeamDetailState(
             team = team,
+            imageUrl = cachedImage,
             loading = true,
             status = "正在同步 ${team.code.ifBlank { team.name }} 战队资料…"
         )
@@ -50,6 +56,7 @@ internal object TeamDetailRepository {
             if (slug.isBlank()) {
                 _state.value = TeamDetailState(
                     team = team,
+                    imageUrl = runCatching { assetProvider.resolve(team) }.getOrDefault(cachedImage),
                     loading = false,
                     status = "战队资料暂不可用",
                     errorMessage = "缺少 Riot team slug/id"
@@ -57,19 +64,25 @@ internal object TeamDetailRepository {
                 return@launch
             }
 
-            val result = runCatching { source.fetchTeam(slug) }
-            val details = result.getOrNull()
+            val detailResult = runCatching { source.fetchTeam(slug) }
+            val details = detailResult.getOrNull()
+            val image = team.imageUrl.ifBlank {
+                runCatching { assetProvider.resolve(team) }.getOrDefault("")
+            }
             if (details != null) cache[key] = details
+            if (image.isNotBlank()) imageCache[key] = image
             _state.value = TeamDetailState(
                 team = team,
                 details = details,
+                imageUrl = image,
                 loading = false,
                 status = when {
-                    details != null -> "Riot Teams · ${details.players.size} 名选手"
-                    result.isFailure -> "战队资料同步失败"
+                    details != null && image.isNotBlank() -> "Riot Teams · ${details.players.size} 名选手 · 队标已连接"
+                    details != null -> "Riot Teams · ${details.players.size} 名选手 · 队标暂未返回"
+                    detailResult.isFailure -> "战队资料同步失败"
                     else -> "Riot Teams 暂未返回战队详情"
                 },
-                errorMessage = result.exceptionOrNull()?.message
+                errorMessage = detailResult.exceptionOrNull()?.message
             )
         }
     }
