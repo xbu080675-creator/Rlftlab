@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
@@ -12,8 +13,10 @@ import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.riftlab.app.R
 import com.riftlab.app.data.MatchSessionStore
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class RiftOverlayService : Service() {
     private lateinit var windowManager: WindowManager
@@ -32,20 +36,40 @@ class RiftOverlayService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         createChannel()
         startAsForeground()
         MatchSessionStore.ensureMockRunning()
-        if (Settings.canDrawOverlays(this)) showOverlay()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (overlay == null && Settings.canDrawOverlays(this)) showOverlay()
+        when (intent?.action) {
+            ACTION_HIDE -> hideOverlay()
+            ACTION_SHOW -> showOverlay()
+            ACTION_STOP -> stopSelf()
+            else -> syncOverlayVisibility()
+        }
         return START_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private fun syncOverlayVisibility() {
+        if (hostInForeground) hideOverlay() else showOverlay()
+    }
+
     private fun showOverlay() {
+        if (!Settings.canDrawOverlays(this)) return
+        if (overlay == null) createOverlay()
+        overlay?.visibility = View.VISIBLE
+    }
+
+    private fun hideOverlay() {
+        overlay?.visibility = View.GONE
+    }
+
+    private fun createOverlay() {
+        if (overlay != null) return
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val view = RiftOverlayView(this) { stopSelf() }
         val layoutParams = WindowManager.LayoutParams(
@@ -75,6 +99,9 @@ class RiftOverlayService : Service() {
         var downY = 0f
         var startX = 0
         var startY = 0
+        var moved = false
+        val threshold = dp(6)
+
         view.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -82,16 +109,25 @@ class RiftOverlayService : Service() {
                     downY = event.rawY
                     startX = lp.x
                     startY = lp.y
+                    moved = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - downX).toInt()
                     val dy = (event.rawY - downY).toInt()
-                    lp.x = (startX - dx).coerceAtLeast(0)
-                    lp.y = (startY + dy).coerceAtLeast(0)
-                    windowManager.updateViewLayout(view, lp)
+                    if (abs(dx) > threshold || abs(dy) > threshold) moved = true
+                    if (moved) {
+                        lp.x = (startX - dx).coerceAtLeast(0)
+                        lp.y = (startY + dy).coerceAtLeast(0)
+                        windowManager.updateViewLayout(view, lp)
+                    }
                     true
                 }
+                MotionEvent.ACTION_UP -> {
+                    if (!moved) view.cycleMode()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> true
                 else -> false
             }
         }
@@ -109,7 +145,7 @@ class RiftOverlayService : Service() {
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_rift)
         .setContentTitle("RiftScreen 正在运行")
-        .setContentText("BLG vs AL · 实时赛事副屏")
+        .setContentText("实时赛事副屏 · 返回 RiftLab 时自动隐藏")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .build()
@@ -122,6 +158,7 @@ class RiftOverlayService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         collectJob?.cancel()
         overlay?.let {
             runCatching { windowManager.removeView(it) }
@@ -135,5 +172,28 @@ class RiftOverlayService : Service() {
 
     companion object {
         private const val CHANNEL_ID = "riftscreen_overlay"
+        const val ACTION_SHOW = "com.riftlab.app.overlay.SHOW"
+        const val ACTION_HIDE = "com.riftlab.app.overlay.HIDE"
+        const val ACTION_STOP = "com.riftlab.app.overlay.STOP"
+        private const val ACTION_SYNC = "com.riftlab.app.overlay.SYNC"
+
+        @Volatile
+        var isRunning: Boolean = false
+            private set
+
+        @Volatile
+        private var hostInForeground: Boolean = false
+
+        fun start(context: Context) {
+            val intent = Intent(context, RiftOverlayService::class.java).setAction(ACTION_SYNC)
+            ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun setHostForeground(context: Context, foreground: Boolean) {
+            hostInForeground = foreground
+            if (!isRunning) return
+            val action = if (foreground) ACTION_HIDE else ACTION_SHOW
+            context.startService(Intent(context, RiftOverlayService::class.java).setAction(action))
+        }
     }
 }
