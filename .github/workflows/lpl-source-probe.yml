@@ -9,69 +9,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print compact current LGD IG ids
+      - name: Extract official realtime call parameters
         shell: bash
         run: |
           python - <<'PY'
           import re, urllib.request
-
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'
           BASE='https://lpl.qq.com'
           PATHS=[
-            '/web201612/data/LOL_MATCH2_MATCH_HOMEPAGE_BMATCH_LIST.js',
-            '/web201612/data/LOL_MATCH2_LIVE_BMATCH_LIST.js',
-            '/v2/web201901/js/LOL_MATCH2_LIVE_BMATCH_LIST.js',
-            '/web201612/data/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
-            '/v2/web201901/js/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
+            '/web202301/js/index.js',
+            '/web202301/js/common.js',
+            '/web201612/js/showdata2.js',
+            '/web201612/js/after-data-1.js',
+            '/web201612/js/LPL_Live.js',
+            '/web201612/js/lplMatchConfig.js',
           ]
-
           def get(path):
+            try:
               req=urllib.request.Request(BASE+path,headers={'User-Agent':UA,'Referer':BASE+'/'})
-              try:
-                  with urllib.request.urlopen(req,timeout=15) as r:
-                      return r.read().decode('utf-8','replace')
-              except Exception:
-                  return ''
-
-          def val(s,key):
-              m=re.search(r'["\']?'+re.escape(key)+r'["\']?\s*:\s*["\']?([^,"\'}\]\s]+)',s,re.I)
-              return m.group(1) if m else ''
-
-          results=[]
+              with urllib.request.urlopen(req,timeout=15) as r:
+                return r.read().decode('utf-8','replace')
+            except Exception:
+              return ''
+          found=0
           for path in PATHS:
-              text=get(path)
-              for m in re.finditer(r'bMatchId',text,re.I):
-                  chunk=text[max(0,m.start()-2600):m.start()+3600]
-                  low=chunk.lower()
-                  # Today's series, LGD/IG by names or Tencent team ids 4/2.
-                  today=('2026-09-08' in chunk or '2026/09/08' in chunk or '2026.09.08' in chunk or '09-08' in chunk)
-                  names=('lgd' in low and ('invictus' in low or re.search(r'\big\b',low)))
-                  ta=val(chunk,'TeamA'); tb=val(chunk,'TeamB')
-                  ids={ta,tb}
-                  idmatch=('4' in ids and '2' in ids)
-                  if not (today and (names or idmatch)):
-                      continue
-                  row={
-                    'src':path.split('/')[-1],
-                    'bMatchId':val(chunk,'bMatchId'),
-                    'GameId':val(chunk,'GameId'),
-                    'MatchDate':val(chunk,'MatchDate'),
-                    'MatchStatus':val(chunk,'MatchStatus'),
-                    'TeamA':ta,
-                    'TeamB':tb,
-                    'TeamNameA':val(chunk,'TeamNameA'),
-                    'TeamNameB':val(chunk,'TeamNameB'),
-                    'ScoreA':val(chunk,'ScoreA'),
-                    'ScoreB':val(chunk,'ScoreB'),
-                  }
-                  key=tuple(row.items())
-                  if row['bMatchId'] and row not in results:
-                      results.append(row)
-
-          # Prefer exact 4-vs-2 today; newest/highest ids last as a practical tie-breaker.
-          results.sort(key=lambda r:(r['MatchDate'], int(r['bMatchId']) if r['bMatchId'].isdigit() else 0), reverse=True)
-          for r in results[:8]:
-              print('RESULT '+' '.join(f'{k}={v}' for k,v in r.items()))
-          if not results:
-              print('RESULT NONE')
+            text=get(path)
+            for m in re.finditer(r'(?:getTJStats\s*\([^\)]{0,120}|["\']/(?:pro/)?realtime/[^"\']+)',text,re.I):
+              p=m.start()
+              chunk=text[max(0,p-520):min(len(text),p+1200)]
+              if 'realtime/' not in chunk.lower() and 'schedule/starting' not in chunk.lower():
+                continue
+              # One compact single-line context per actual call.
+              print('CALL src='+path.split('/')[-1]+' ctx='+re.sub(r'\s+',' ',chunk)[:1650])
+              found+=1
+              if found>=30: break
+            if found>=30: break
+          print('CALL_COUNT='+str(found))
           PY
