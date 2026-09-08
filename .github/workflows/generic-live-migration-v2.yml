@@ -28,3 +28,5 @@ jobs:
           git add -A
           git commit -m "refactor: generalize live engine for all LPL matches"
           git push origin HEAD:main
+
+# one-shot trigger
