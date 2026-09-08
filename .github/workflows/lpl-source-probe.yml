@@ -9,82 +9,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trace current LPL match ids and frontend routes
+      - name: Resolve today's LPL bMatchId from official feeds
         shell: bash
         run: |
           python - <<'PY'
-          import re, urllib.request, urllib.error
-
+          import re, json, urllib.request
           UA='Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36'
           BASE='https://lpl.qq.com'
-
-          def get(path):
-              url=path if path.startswith('http') else BASE+path
-              req=urllib.request.Request(url,headers={'User-Agent':UA,'Referer':BASE+'/'})
-              try:
-                  with urllib.request.urlopen(req,timeout=15) as r:
-                      body=r.read().decode('utf-8','replace')
-                      print('FETCH',path,'HTTP',r.status,'LEN',len(body))
-                      return body
-              except Exception as e:
-                  print('FETCH',path,'ERR',repr(e)); return ''
-
-          files={
-            'home': get('/'),
-            'index': get('/web202301/js/index.js'),
-            'common': get('/web202301/js/common.js'),
-            'public': get('/web201612/js/public.js'),
-            'showdata2': get('/web201612/js/showdata2.js'),
-            'afterdata': get('/web201612/js/after-data-1.js'),
-            'live': get('/web201612/js/LPL_Live.js'),
-            'config': get('/web201612/js/lplMatchConfig.js'),
-          }
-
-          print('\n=== DATA FILE REFERENCES ===')
-          refs=set()
-          for name,text in files.items():
-              for m in re.finditer(r'(?:https?:)?//[^\"\']+\.js|/[A-Za-z0-9_./-]+\.js',text):
-                  s=m.group(0)
-                  if 'MATCH' in s.upper() or '/data/' in s or 'match' in s.lower(): refs.add(s)
-          for x in sorted(refs): print(x)
-
-          print('\n=== API/URL CONTEXTS ===')
-          needles=['apps.game.qq.com','/lol/match/apis/','searchBMatch','searchMatch','bMatchId','MatchStatus','MatchList','getTJStats','/schedule/']
-          for name,text in files.items():
-              for needle in needles:
-                  pos=0; shown=0
-                  while shown<8:
-                      p=text.lower().find(needle.lower(),pos)
-                      if p<0: break
-                      print('\nSOURCE',name,'NEEDLE',needle,'POS',p)
-                      print(text[max(0,p-420):p+1050].replace('\n',' ')[:1500])
-                      shown+=1; pos=p+len(needle)
-
-          print('\n=== TRY LIKELY CURRENT MATCH DATA FILES ===')
-          candidates=[
-            '/web201612/data/LOL_MATCH2_MATCH_LIST.js',
-            '/web201612/data/LOL_MATCH2_MATCH_LIST_BRIEF.js',
-            '/web201612/data/LOL_MATCH2_BMATCH_LIST.js',
-            '/web201612/data/LOL_MATCH2_BMATCH_LIST_BRIEF.js',
-            '/web201612/data/LOL_MATCH2_MATCH_INFO.js',
-            '/web201612/data/LOL_MATCH2_GAME_LIST_BRIEF.js',
-            '/web201612/data/LOL_MATCH2_TEAM_LIST.js',
+          paths=[
+            '/web201612/data/LOL_MATCH2_MATCH_HOMEPAGE_BMATCH_LIST.js',
+            '/web201612/data/LOL_MATCH2_LIVE_BMATCH_LIST.js',
+            '/v2/web201901/js/LOL_MATCH2_LIVE_BMATCH_LIST.js',
+            '/web201612/data/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
+            '/v2/web201901/js/LOL_NEWMATCH_LIVE_PAGE_LIVING_GAMES.js',
           ]
-          for path in candidates:
-              text=get(path)
-              if not text: continue
-              low=text.lower()
-              # Print every occurrence where LGD and IG are reasonably near each other.
-              starts=[m.start() for m in re.finditer('lgd',low)]
-              for p in starts[-30:]:
-                  chunk=text[max(0,p-2500):p+4500]
-                  cl=chunk.lower()
-                  if 'ig' in cl or 'invictus' in cl:
-                      print('\nCANDIDATE CURRENT MATCH',path,'AT',p)
-                      print(chunk.replace('\n',' ')[:7000])
-              for date in ['2026-09-08','2026/09/08','2026.09.08','09-08','09/08']:
-                  p=low.find(date.lower())
-                  if p>=0:
-                      print('\nDATE HIT',path,date,'AT',p)
-                      print(text[max(0,p-2200):p+4500].replace('\n',' ')[:6800])
+          def get(path):
+            req=urllib.request.Request(BASE+path,headers={'User-Agent':UA,'Referer':BASE+'/'})
+            try:
+              with urllib.request.urlopen(req,timeout=15) as r:
+                text=r.read().decode('utf-8','replace')
+                print('\n===',path,'HTTP',r.status,'LEN',len(text),'===')
+                return text
+            except Exception as e:
+              print('\n===',path,'ERR',repr(e),'==='); return ''
+          def print_hits(path,text):
+            low=text.lower()
+            hits=[]
+            for needle in ['2026-09-08','2026/09/08','lgd','invictus','"teama":"4"','"teamb":"4"','"teama":"2"','"teamb":"2"']:
+              start=0
+              while True:
+                p=low.find(needle.lower(),start)
+                if p<0: break
+                hits.append(p); start=p+len(needle)
+            for p in sorted(set(hits)):
+              chunk=text[max(0,p-1400):p+2600]
+              cl=chunk.lower()
+              if ('lgd' in cl and ('invictus' in cl or '"2"' in cl)) or ('2026-09-08' in cl and ('"4"' in cl or 'lgd' in cl)):
+                print('\nHIT@',p,chunk.replace('\n',' ')[:4000])
+            # Generic regex extraction around today/current team IDs.
+            for m in re.finditer(r'\{[^{}]{0,1800}(?:bMatchId|bmatchid)[^{}]{0,1800}\}', text, re.I):
+              s=m.group(0)
+              sl=s.lower()
+              if ('2026-09-08' in s or 'lgd' in sl) and (('ig' in sl) or 'invictus' in sl or ('"4"' in s and '"2"' in s)):
+                print('\nOBJECT',s[:5000])
+          for path in paths:
+            text=get(path)
+            if text: print_hits(path,text)
           PY
