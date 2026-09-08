@@ -1,6 +1,15 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+val devSigningB64 = rootProject.file("signing/riftlab-dev.keystore.b64")
+val devSigningStore = layout.buildDirectory.file("signing/riftlab-dev.keystore").get().asFile
+if (!devSigningStore.exists() && devSigningB64.exists()) {
+    devSigningStore.parentFile.mkdirs()
+    devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
 android {
@@ -11,8 +20,25 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0-dev"
+        versionCode = 2
+        versionName = "1.0.0-dev.2"
+    }
+
+    // Public DEV identity: used only so test builds can overwrite each other.
+    // Production releases must use a separate private release key from CI secrets.
+    signingConfigs {
+        create("riftlabDev") {
+            storeFile = devSigningStore
+            storePassword = "riftlab-dev"
+            keyAlias = "riftlab-dev"
+            keyPassword = "riftlab-dev"
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("riftlabDev")
+        }
     }
 
     buildFeatures {
