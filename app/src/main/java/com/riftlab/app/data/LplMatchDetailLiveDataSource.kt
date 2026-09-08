@@ -101,12 +101,13 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
                 val infos = data.optJSONArray("matchInfos") ?: JSONArray()
                 val games = parseGames(infos)
 
+                // A finished game still carries its final teamInfos/playerInfos. Those values are
+                // meaningful historical data, but they must NEVER prove that the game is live.
+                // Only the per-game matchStatus=2 flag is allowed to enter LIVE.
                 val explicitLive = games.firstOrNull { it.status == 2 }
-                val expectedBo = (scoreA + scoreB + 1).coerceAtLeast(1)
-                val current = explicitLive
-                    ?: games.firstOrNull { it.bo == expectedBo }
-                    ?: ParsedGame(expectedBo, 0, 0, 0, emptyList())
-                val bo = current.bo.coerceAtLeast(1)
+                val maxFinishedBo = games.filter { it.status == 3 }.maxOfOrNull { it.bo } ?: 0
+                val expectedBo = maxOf(scoreA + scoreB + 1, maxFinishedBo + 1).coerceAtLeast(1)
+                val bo = explicitLive?.bo?.coerceAtLeast(1) ?: expectedBo
 
                 if (bo != lastBo) {
                     previous = null
@@ -125,6 +126,25 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
                     continue
                 }
 
+                if (explicitLive == null) {
+                    previous = null
+                    val phase = if (maxFinishedBo > 0 || scoreA + scoreB > 0) {
+                        LiveSourcePhase.BETWEEN_GAMES
+                    } else {
+                        LiveSourcePhase.WAITING_FOR_MATCH
+                    }
+                    val statuses = games.joinToString(",") { "G${it.bo}:${it.status}" }
+                    _status.value = LiveSourceStatus(
+                        phase = phase,
+                        message = "LPL matchDetail · bmid=${active.bmid} · 等待 G$expectedBo · no gameStatus=2 · finishedMax=$maxFinishedBo · statuses=[$statuses] · score=$scoreA:$scoreB",
+                        gameId = "TJ:${active.bmid}:G$expectedBo",
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(POLL_MS)
+                    continue
+                }
+
+                val current = explicitLive
                 val blueId = current.blueTeamId.takeIf { it > 0 } ?: teamAId
                 val redId = when (blueId) {
                     teamAId -> teamBId
@@ -137,10 +157,9 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
                 val meaningful = blue != null && red != null && isMeaningful(blue, red)
 
                 if (!meaningful) {
-                    val phase = if (scoreA + scoreB > 0) LiveSourcePhase.BETWEEN_GAMES else LiveSourcePhase.WAITING_FOR_MATCH
                     _status.value = LiveSourceStatus(
-                        phase = phase,
-                        message = "LPL matchDetail · bmid=${active.bmid} · G$bo · seriesStatus=$seriesStatus · gameStatus=${current.status} · gameTime=${current.gameTime} · teamInfos=${current.teams.size} · score=$scoreA:$scoreB",
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "LPL matchDetail · bmid=${active.bmid} · G$bo 已标记进行中但实时数值尚未更新 · gameStatus=${current.status} · gameTime=${current.gameTime} · teamInfos=${current.teams.size} · score=$scoreA:$scoreB",
                         gameId = "TJ:${active.bmid}:G$bo",
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
@@ -181,7 +200,7 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
                 previous = snapshot
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.LIVE,
-                    message = "LPL Official · matchDetail LIVE · bmid=${active.bmid} · G$bo · teamInfos=${current.teams.size} · players=${blueState.players.size + redState.players.size}",
+                    message = "LPL Official · matchDetail LIVE · bmid=${active.bmid} · G$bo · gameStatus=${current.status} · teamInfos=${current.teams.size} · players=${blueState.players.size + redState.players.size}",
                     gameId = snapshot.gameId,
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
