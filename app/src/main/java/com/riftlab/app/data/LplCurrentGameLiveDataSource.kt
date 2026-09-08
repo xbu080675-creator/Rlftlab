@@ -78,7 +78,7 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
                         message = "正在读取 LPL 官方 LIVE feed…"
                     )
-                    ref = fetchCurrentMatch()
+                    ref = fetchCurrentMatch(matchId)
                     if (ref == null) {
                         delay(3_000L)
                         continue
@@ -119,7 +119,7 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     delay(4_000L)
-                    ref = fetchCurrentMatch()
+                    ref = fetchCurrentMatch(matchId)
                     continue
                 }
 
@@ -327,16 +327,58 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
         }
     }
 
-    private suspend fun fetchCurrentMatch(): MatchRef? {
+    private suspend fun fetchCurrentMatch(requestedMatchId: String): MatchRef? {
         val text = getText(LIVE_FEED, auth = false)
         val candidates = Regex("bMatchId", RegexOption.IGNORE_CASE).findAll(text).mapNotNull { hit ->
             val start = (hit.range.first - 2400).coerceAtLeast(0)
             val end = (hit.range.first + 3600).coerceAtMost(text.length)
             parseRef(text.substring(start, end))
         }.distinctBy { it.bmid }.toList()
-        return candidates.firstOrNull { it.teamAName.isNotBlank() && it.teamBName.isNotBlank() }
-            ?: candidates.firstOrNull()
+        if (candidates.isEmpty()) return null
+
+        requestedMatchId.trim().takeIf { it.isNotBlank() }?.let { requested ->
+            candidates.firstOrNull { it.bmid == requested }?.let { return it }
+        }
+
+        val target = LiveMatchTargetRegistry.snapshot()
+        if (target != null && target.teams.size >= 2) {
+            val ranked = candidates.map { it to matchScore(it, target) }.sortedByDescending { it.second }
+            val best = ranked.firstOrNull()
+            if (best != null && best.second > 0) return best.first
+        }
+
+        return candidates.singleOrNull()
     }
+
+    private fun matchScore(ref: MatchRef, target: ScheduledEsportsMatch): Int {
+        val left = target.teams.getOrNull(0) ?: return 0
+        val right = target.teams.getOrNull(1) ?: return 0
+        val directA = teamMatches(ref.teamAName, left)
+        val directB = teamMatches(ref.teamBName, right)
+        val swapA = teamMatches(ref.teamAName, right)
+        val swapB = teamMatches(ref.teamBName, left)
+        return when {
+            directA && directB -> 100
+            swapA && swapB -> 95
+            directA || directB -> 30
+            swapA || swapB -> 25
+            else -> 0
+        }
+    }
+
+    private fun teamMatches(upstreamName: String, team: EsportsTeamRef): Boolean {
+        val upstream = teamKey(upstreamName)
+        if (upstream.isBlank()) return false
+        val candidates = listOf(team.code, team.name, team.slug).map(::teamKey).filter { it.isNotBlank() }
+        return candidates.any { token ->
+            upstream == token ||
+                (token.length >= 4 && upstream.contains(token)) ||
+                (upstream.length >= 4 && token.contains(upstream))
+        }
+    }
+
+    private fun teamKey(value: String): String =
+        value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
     private fun parseRef(chunk: String): MatchRef? {
         val bmid = field(chunk, "bMatchId")

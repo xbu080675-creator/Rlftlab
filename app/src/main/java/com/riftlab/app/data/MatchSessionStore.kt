@@ -18,24 +18,6 @@ import java.time.format.DateTimeFormatter
 object MatchSessionStore {
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
 
-    // Match-specific fallback is intentionally limited to lineups separately verified before the match.
-    // The generic schedule center never invents a starting five for other teams.
-    private val verifiedLgdRoster = listOf(
-        PlayerCard("TOP", "Burdol", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("JUG", "Heng", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("MID", "Tangyuan", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("BOT", "Shaoye", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("SUP", "Crisp", "RANK 待接", "赛前已验证缓存")
-    )
-
-    private val verifiedIgRoster = listOf(
-        PlayerCard("TOP", "TheShy", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("JUG", "Wei", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("MID", "Rookie", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("BOT", "JiaQi", "RANK 待接", "赛前已验证缓存"),
-        PlayerCard("SUP", "Meiko", "RANK 待接", "赛前已验证缓存")
-    )
-
     private val emptyPreMatch = PreMatchInfo(
         league = "LPL",
         stage = "SCHEDULE CENTER",
@@ -123,7 +105,7 @@ object MatchSessionStore {
         blueDragons = 0,
         redDragons = 0,
         latestEvent = message,
-        source = "LPL Official · current-game only",
+        source = "Live Provider Router",
         gameId = ""
     )
 
@@ -171,6 +153,7 @@ object MatchSessionStore {
         } ?: return
 
         _targetMatch.value = match
+        LiveMatchTargetRegistry.update(match)
         _scheduleCenter.value = _scheduleCenter.value.copy(selectedMatch = match)
         scope.launch { refreshPreMatchFromTarget(match) }
     }
@@ -201,6 +184,7 @@ object MatchSessionStore {
             )
             _scheduleCenter.value = center
             _targetMatch.value = selected
+            LiveMatchTargetRegistry.update(selected)
             _scheduleStatus.value = center.statusMessage
 
             if (selected != null) {
@@ -218,12 +202,13 @@ object MatchSessionStore {
     }
 
     private suspend fun syncLiveStatusIntoSchedule(status: LiveSourceStatus) {
-        if (status.eventId.isBlank()) return
+        val resolvedEventId = status.eventId.ifBlank { LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty() }
+        if (resolvedEventId.isBlank()) return
         if (status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return
 
         val center = _scheduleCenter.value
         val liveMatch = center.matches.firstOrNull {
-            it.eventId == status.eventId || it.matchId == status.eventId
+            it.eventId == resolvedEventId || it.matchId == resolvedEventId
         } ?: return
 
         val key = scheduleKey(liveMatch)
@@ -244,6 +229,7 @@ object MatchSessionStore {
             statusMessage = buildScheduleStatus(center.matches, liveMatch, next)
         )
         _targetMatch.value = liveMatch
+        LiveMatchTargetRegistry.update(liveMatch)
         _scheduleStatus.value = _scheduleCenter.value.statusMessage
 
         if (targetChanged) refreshPreMatchFromTarget(liveMatch)
@@ -265,10 +251,8 @@ object MatchSessionStore {
         val rightRiotRoster = rightDetails?.players.orEmpty().toPlayerCards()
         val leftUniqueFive = leftRiotRoster.uniqueStartingFiveOrNull()
         val rightUniqueFive = rightRiotRoster.uniqueStartingFiveOrNull()
-        val leftFallback = fallbackRoster(left.code)
-        val rightFallback = fallbackRoster(right.code)
-        val leftRoster = leftUniqueFive ?: leftFallback
-        val rightRoster = rightUniqueFive ?: rightFallback
+        val leftRoster = leftUniqueFive ?: emptyList()
+        val rightRoster = rightUniqueFive ?: emptyList()
         val connectedCount = listOf(leftDetails != null, rightDetails != null).count { it }
         val autoStarterCount = listOf(leftUniqueFive != null, rightUniqueFive != null).count { it }
 
@@ -286,9 +270,9 @@ object MatchSessionStore {
                 connectedCount == 2 && autoStarterCount == 2 ->
                     "两队 Riot getTeams roster 已连接，五位置均唯一；当前显示 Riot roster 五人。Rank 将接独立 Ranked 数据源。"
                 connectedCount == 2 ->
-                    "两队 Riot team roster 已连接；存在替补或位置歧义时不会冒充本场首发。只有单独核实过的阵容才允许走缓存。"
+                    "两队 Riot team roster 已连接；存在替补或位置歧义时保持空缺，不使用任何场次专属缓存。"
                 connectedCount == 1 ->
-                    "一侧 Riot roster 已连接；另一侧若没有单独核实的首发则保持空缺，不伪造。Rank 暂未接入。"
+                    "一侧 Riot roster 已连接；另一侧保持空缺，不使用战队或场次硬编码。Rank 暂未接入。"
                 else ->
                     "Riot Schedule 已连接，但当前队伍 roster 暂不可用；没有独立核实的数据就保持空缺。Rank 暂未接入。"
             }
@@ -299,13 +283,6 @@ object MatchSessionStore {
 
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
         if (team.slug.isNotBlank()) return team.slug
-
-        val verified = when (team.code.uppercase()) {
-            "LGD" -> "lgd-gaming"
-            "IG" -> "invictus-gaming"
-            else -> null
-        }
-        if (verified != null) return verified
 
         return team.name
             .lowercase()
@@ -331,11 +308,6 @@ object MatchSessionStore {
         return coreRoles.map { role -> byRole.getValue(role).single() }
     }
 
-    private fun fallbackRoster(code: String): List<PlayerCard> = when (code.uppercase()) {
-        "LGD" -> verifiedLgdRoster
-        "IG" -> verifiedIgRoster
-        else -> emptyList()
-    }
 
     private fun roleOrder(role: String): Int = when (role.uppercase()) {
         "TOP" -> 0

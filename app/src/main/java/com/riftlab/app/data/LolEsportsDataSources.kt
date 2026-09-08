@@ -17,23 +17,12 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
 
-/**
- * Keeps the schedule-selected live-watch target inside the data layer.
- * The live feed must not depend on getLive exposing LPL in time: when Schedule already knows
- * an eventId, EventDetails becomes the primary game-id source and LiveStats frames are the
- * authoritative proof that a game has actually started.
- */
-private object LiveScheduleTargetRegistry {
-    @Volatile
-    var target: ScheduledEsportsMatch? = null
-}
-
 internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
         val matches = client.fetchLplSchedule().map(::verifySeriesCompletion)
-        LiveScheduleTargetRegistry.target = chooseLiveWatchTarget(matches)
+        LiveMatchTargetRegistry.target = chooseLiveWatchTarget(matches)
         return matches
     }
 
@@ -130,7 +119,7 @@ internal class LolEsportsLiveDataSource(
         while (currentCoroutineContext().isActive) {
             try {
                 if (currentEvent == null) {
-                    val scheduled = LiveScheduleTargetRegistry.target
+                    val scheduled = LiveMatchTargetRegistry.target
                     if (scheduled != null && scheduled.eventId.isNotBlank()) {
                         currentEvent = LiveEventRef(
                             eventId = scheduled.eventId,
