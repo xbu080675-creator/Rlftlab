@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 15
-        versionName = "1.0.0-dev.15"
+        versionCode = 16
+        versionName = "1.0.0-dev.16"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.15: conservative side-selection confirmation and hardened team/player image resolution.
+// dev.16: provider-shared team/player artwork routing with OP.GG portrait and logo fallbacks.
