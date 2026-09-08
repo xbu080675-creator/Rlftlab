@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.0-dev.2"
+        versionCode = 3
+        versionName = "1.0.0-dev.3"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
