@@ -120,6 +120,7 @@ data class EsportsTeamDetails(
     val slug: String,
     val code: String,
     val name: String,
+    val imageUrl: String = "",
     val players: List<EsportsPlayerRef>
 )
 
