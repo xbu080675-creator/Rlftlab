@@ -227,7 +227,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 standings = selectedStandings,
                                 scheduleMatches = selectedBucket.matches,
                                 onTeamClick = { team ->
-                                    TeamDetailRepository.open(team)
+                                    TeamDetailRepository.open(team, selectedBucket.matches)
                                     selectedTeam = team
                                 }
                             )
@@ -662,7 +662,14 @@ private fun TeamsView(
             .filter { teamCode(it) != "TBD" && teamCode(it) != "—" }
             .groupBy(TeamAssetCatalog::canonicalKey)
             .values
-            .map { variants -> variants.maxByOrNull { if (it.imageUrl.isNotBlank()) 1 else 0 } ?: variants.first() }
+            .map { variants ->
+                variants.maxByOrNull { team ->
+                    (if (team.id.isNotBlank()) 8 else 0) +
+                        (if (team.slug.isNotBlank()) 4 else 0) +
+                        (if (team.imageUrl.isNotBlank()) 2 else 0) +
+                        (if (team.code.isNotBlank()) 1 else 0)
+                } ?: variants.first()
+            }
             .sortedBy { teamCode(it) }
     }
     if (teams.isEmpty()) {

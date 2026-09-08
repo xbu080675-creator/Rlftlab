@@ -185,7 +185,9 @@ internal class LolEsportsApiClient {
                         id = player.optString("id"),
                         summonerName = summoner,
                         role = normalizeRole(player.optString("role")),
-                        imageUrl = playerImage
+                        imageUrl = playerImage,
+                        firstName = player.optString("firstName"),
+                        lastName = player.optString("lastName")
                     )
                 )
             }
