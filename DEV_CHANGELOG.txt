@@ -1,1 +1,1 @@
-Match Detail 与主界面赛事目标彻底解耦；接入 LPL/TJStats 官方 MVP / MVP 投票数据；新增 APP 内检查更新、APK 下载进度、SHA-256 校验与系统安装。
+重做 Match Detail：新增系列赛 / G1 / G2 / G3… 小局切换；历史选手数据固定按上野中下辅五位置对齐，缺失位置不再错位；展示英雄 ID 与 Gold；MVP、POG、BP 无数据时改为紧凑状态；BP 数据存在时可直接按小局展示 Ban/Pick。
