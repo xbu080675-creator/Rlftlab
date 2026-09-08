@@ -160,7 +160,7 @@ object MatchSessionStore {
             _schedule.value = matches
 
             val currentBySchedule = matches.firstOrNull(::isLiveState)
-            val next = matches.firstOrNull { !isCompletedState(it) && !isLiveState(it) }
+            val next = findNextMatch(matches, currentBySchedule?.matchId.orEmpty())
             val oldSelectedId = _scheduleCenter.value.selectedMatch?.matchId
             val selected = matches.firstOrNull { it.matchId == oldSelectedId }
                 ?: currentBySchedule
@@ -212,9 +212,7 @@ object MatchSessionStore {
         }
 
         val targetChanged = _targetMatch.value?.matchId != liveMatch.matchId
-        val next = center.matches.firstOrNull { match ->
-            match.matchId != liveMatch.matchId && !isCompletedState(match) && !isLiveState(match)
-        }
+        val next = findNextMatch(center.matches, liveMatch.matchId)
 
         _scheduleCenter.value = center.copy(
             currentMatch = liveMatch,
@@ -333,6 +331,23 @@ object MatchSessionStore {
             "RIOT SCHEDULE"
         }
 
+    private fun findNextMatch(
+        matches: List<ScheduledEsportsMatch>,
+        excludeMatchId: String = ""
+    ): ScheduledEsportsMatch? {
+        val candidates = matches.filter { match ->
+            match.matchId != excludeMatchId && !isCompletedState(match) && !isLiveState(match)
+        }
+        if (candidates.isEmpty()) return null
+
+        // Riot can occasionally leave an old event marked "unstarted". Keep a generous
+        // 12-hour grace window for delayed series, but do not let stale records become NEXT.
+        val staleCutoff = System.currentTimeMillis() - 12 * 60 * 60 * 1000L
+        return candidates.firstOrNull { match ->
+            plannedStartEpochMs(match)?.let { it >= staleCutoff } ?: true
+        } ?: candidates.maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
+    }
+
     private fun buildScheduleStatus(
         matches: List<ScheduledEsportsMatch>,
         current: ScheduledEsportsMatch?,
@@ -378,8 +393,7 @@ object MatchSessionStore {
 
     fun scheduleTimingNote(match: ScheduledEsportsMatch): String {
         val detectedAt = _scheduleCenter.value.liveDetectedAtEpochMs[scheduleKey(match)] ?: return "计划 ${formatLocalStart(match.startTimeIso)}"
-        val planned = runCatching { Instant.parse(match.startTimeIso).toEpochMilli() }.getOrNull()
-            ?: return "LIVE 已检测"
+        val planned = plannedStartEpochMs(match) ?: return "LIVE 已检测"
         val deltaMs = planned - detectedAt
         return if (deltaMs >= 60_000L) {
             "计划 ${formatLocalStart(match.startTimeIso)} · 提前约 ${deltaMs / 60_000L} 分钟检测到 LIVE"
@@ -393,6 +407,9 @@ object MatchSessionStore {
 
     private fun normalizeState(value: String): String =
         value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
+
+    private fun plannedStartEpochMs(match: ScheduledEsportsMatch): Long? =
+        runCatching { Instant.parse(match.startTimeIso).toEpochMilli() }.getOrNull()
 
     private fun formatLocalStart(iso: String): String {
         if (iso.isBlank()) return "--:--"
