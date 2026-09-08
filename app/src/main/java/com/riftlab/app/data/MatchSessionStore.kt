@@ -53,16 +53,35 @@ object MatchSessionStore {
     val preMatch: PreMatchInfo get() = _preMatch.value
     val preMatchFlow: StateFlow<PreMatchInfo> = _preMatch.asStateFlow()
 
-    val postMatch = PostMatchInfo(
-        score = "—",
-        winner = "等待赛果",
-        mvp = "—",
-        mvpRole = "—",
-        mvpDpm = 0,
-        mvpGoldDiff15 = 0,
-        positionRank = "POST MATCH DATA PENDING",
-        keyPoint = "比赛结束后再由真实赛后源生成，当前不显示 Mock 结论。"
-    )
+    val completedGame: StateFlow<LiveSnapshot?> = CompletedGameArchive.latest
+
+    /**
+     * Post tab is fed by the last completed small-game snapshot only.
+     * It never reads the current live surface.
+     */
+    val postMatch: PostMatchInfo
+        get() {
+            val game = completedGame.value ?: return PostMatchInfo(
+                score = "—",
+                winner = "等待赛果",
+                mvp = "—",
+                mvpRole = "—",
+                mvpDpm = 0,
+                mvpGoldDiff15 = 0,
+                positionRank = "POST MATCH DATA PENDING",
+                keyPoint = "比赛结束后，最后一帧真实数据会从赛中迁移到这里；当前不显示 Mock 结论。"
+            )
+            return PostMatchInfo(
+                score = "G${game.game}",
+                winner = "G${game.game} 已结束 · ${game.blue} vs ${game.red}",
+                mvp = "—",
+                mvpRole = "—",
+                mvpDpm = 0,
+                mvpGoldDiff15 = game.goldDiff,
+                positionRank = "FINAL SNAPSHOT · ${formatTime(game.elapsedSeconds)} · GOLD ${formatGold(game.blueGold)} : ${formatGold(game.redGold)}",
+                keyPoint = "K ${game.blueKills}:${game.redKills} · T ${game.blueTowers}:${game.redTowers} · D ${game.blueDragons}:${game.redDragons} · B ${game.blueBarons}:${game.redBarons} · SOURCE ${game.source}"
+            )
+        }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val scheduleSource = LolEsportsScheduleDataSource()
@@ -90,23 +109,26 @@ object MatchSessionStore {
 
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
 
+    private fun emptyLiveSnapshot(message: String): LiveSnapshot = LiveSnapshot(
+        game = 0,
+        elapsedSeconds = 0,
+        blue = "—",
+        red = "—",
+        blueGold = 0,
+        redGold = 0,
+        blueKills = 0,
+        redKills = 0,
+        blueTowers = 0,
+        redTowers = 0,
+        blueDragons = 0,
+        redDragons = 0,
+        latestEvent = message,
+        source = "LPL Official · current-game only",
+        gameId = ""
+    )
+
     private val _live = MutableStateFlow(
-        LiveSnapshot(
-            game = 1,
-            elapsedSeconds = 0,
-            blue = "BLUE",
-            red = "RED",
-            blueGold = 0,
-            redGold = 0,
-            blueKills = 0,
-            redKills = 0,
-            blueTowers = 0,
-            redTowers = 0,
-            blueDragons = 0,
-            redDragons = 0,
-            latestEvent = "LPL Official · 等待赛事实时数据",
-            source = "LPL Official · TJStats"
-        )
+        emptyLiveSnapshot("LPL Official · 等待当前正在进行的小局")
     )
     val live: StateFlow<LiveSnapshot> = _live.asStateFlow()
 
@@ -122,8 +144,7 @@ object MatchSessionStore {
 
         if (liveJob?.isActive != true) {
             liveJob = scope.launch {
-                // LPL realtime now follows the official Tencent/LPL live index first.
-                // Riot schedule remains the control-plane fallback for the schedule center.
+                // Live surface receives current-game snapshots only.
                 liveDataSource.observe("").collect { snapshot ->
                     _live.value = snapshot
                 }
@@ -133,9 +154,10 @@ object MatchSessionStore {
         if (statusJob?.isActive != true) {
             statusJob = scope.launch {
                 liveDataSource.status.collect { status ->
+                    // Strong boundary: the moment the provider is not LIVE, the live cache is
+                    // cleared. Finished-game values are available only from CompletedGameArchive.
                     if (status.phase != LiveSourcePhase.LIVE) {
-                        val current = _live.value
-                        _live.value = current.copy(latestEvent = status.message)
+                        _live.value = emptyLiveSnapshot(status.message)
                     }
                     syncLiveStatusIntoSchedule(status)
                 }
@@ -428,6 +450,9 @@ object MatchSessionStore {
                 .format(Instant.parse(iso))
         }.getOrElse { iso }
     }
+
+    private fun formatGold(value: Int): String =
+        if (value >= 1000) "%.1fK".format(value / 1000f) else value.toString()
 
     /** Compatibility alias retained for older overlay/UI call sites. */
     fun ensureMockRunning() = ensureDataRunning()
