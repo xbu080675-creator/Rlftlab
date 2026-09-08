@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 12
-        versionName = "1.0.0-dev.12"
+        versionCode = 13
+        versionName = "1.0.0-dev.13"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.12: source-attributed match panels, team-logo rendering fixes, role normalization and named BP champions.
+// dev.13: Riot/OP.GG team-logo enrichment, OP.GG BP/MVP supplements, series-score alignment and pre-match side selection.
