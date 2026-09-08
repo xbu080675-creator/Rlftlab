@@ -121,16 +121,17 @@ internal class LolEsportsApiClient {
         val teams = parseTeams(match.optJSONArray("teams"))
         val games = match.optJSONArray("games") ?: return null
 
-        var fallback: LiveGameRef? = null
         for (i in 0 until games.length()) {
             val game = games.optJSONObject(i) ?: continue
-            val state = game.optString("state")
-            val parsed = parseGame(game, teams) ?: continue
-            val normalized = state.lowercase().replace("_", "")
-            if (normalized.contains("progress")) return parsed
-            if (!normalized.contains("complete")) fallback = parsed
+            val normalized = game.optString("state")
+                .lowercase()
+                .replace("_", "")
+                .replace("-", "")
+            if (!normalized.contains("progress")) continue
+            return parseGame(game, teams)
         }
-        return fallback
+        // Between games, or before game 1, do not probe an unstarted gameId.
+        return null
     }
 
     suspend fun fetchLiveWindow(
