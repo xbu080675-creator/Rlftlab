@@ -1,4 +1,4 @@
-name: Apply dev18 Patch
+name: Apply dev18 Context Fix
 on:
   push:
     paths:
@@ -14,73 +14,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Patch sources
+      - name: Patch team detail navigation
         shell: python
         run: |
           from pathlib import Path
-
-          def patch(path, old, new):
-              p=Path(path); s=p.read_text()
-              if old not in s:
-                  raise SystemExit(f'pattern not found in {path}: {old[:100]!r}')
-              p.write_text(s.replace(old,new))
-
-          patch('app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt',
-                'val matches = client.fetchLplSchedule().map(::verifySeriesCompletion)',
-                'val matches = TeamAssetCatalog.enrichMatches(client.fetchLplSchedule().map(::verifySeriesCompletion))')
-
-          p=Path('app/src/main/java/com/riftlab/app/data/RiotTeamAssetProvider.kt')
-          s=p.read_text().replace('val keys = listOf(team.slug, slugify(team.name), team.code, team.id)',
-                                  'val keys = listOf(team.id, team.slug, team.code, slugify(team.name), team.name)')
-          p.write_text(s)
-
           p=Path('app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt')
           s=p.read_text()
-          s=s.replace('import com.riftlab.app.data.TeamDetailRepository\n', 'import com.riftlab.app.data.TeamDetailRepository\nimport com.riftlab.app.data.TeamAssetCatalog\n')
-          s=s.replace('.groupBy { it.id.ifBlank { teamCode(it) } }', '.groupBy(TeamAssetCatalog::canonicalKey)')
-          s=s.replace('row.joinToString("-") { it.id.ifBlank { teamCode(it) } }', 'row.joinToString("-") { TeamAssetCatalog.canonicalKey(it) }')
-          s=s.replace('logoSize = 48.dp,\n            centerFontSize = 18.sp', 'logoSize = 44.dp,\n            centerFontSize = 18.sp')
-          s=s.replace('logoSize = 34.dp,\n            centerFontSize = 14.sp', 'logoSize = 30.dp,\n            centerFontSize = 14.sp')
-          s=s.replace('modifier = Modifier.size(38.dp)', 'modifier = Modifier.size(34.dp)')
-          p.write_text(s)
-
-          p=Path('app/src/main/java/com/riftlab/app/ui/TeamMatchupVisual.kt')
-          s=p.read_text().replace('logoSize: Dp = 62.dp', 'logoSize: Dp = 54.dp')
-          p.write_text(s)
-
-          p=Path('app/src/main/java/com/riftlab/app/ui/MatchDetailUi.kt')
-          s=p.read_text()
-          reps={
-            'logoSize = 68.dp':'logoSize = 58.dp',
-            'logoSize = 34.dp':'logoSize = 30.dp',
-            'logoSize = 48.dp':'logoSize = 42.dp',
-            'logoSize = 50.dp':'logoSize = 44.dp',
-            'Modifier.width(92.dp).height(142.dp)':'Modifier.width(82.dp).height(132.dp)',
-            '.height(142.dp)\n            .background':'.height(132.dp)\n            .background',
-            'modifier = Modifier.size(86.dp)':'modifier = Modifier.size(72.dp)',
-            'ChampionIconRow(picks, iconSize = 46)':'ChampionIconRow(picks, iconSize = 40)',
-            'ChampionIconRow(bans, iconSize = 34)':'ChampionIconRow(bans, iconSize = 28)',
-            'Modifier.size(30.dp).background':'Modifier.size(26.dp).background',
-            'Modifier.size(30.dp)\n            .clip':'Modifier.size(26.dp)\n            .clip',
-          }
-          for a,b in reps.items(): s=s.replace(a,b)
-          p.write_text(s)
-
-          p=Path('app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt')
-          s=p.read_text()
-          old='''                add(\n                    EsportsPlayerRef(\n                        id = player.optString("id"),\n                        summonerName = summoner,\n                        role = normalizeRole(player.optString("role")),\n                        imageUrl = player.optString("image")\n                    )\n                )'''
-          new='''                val playerImage = EsportsAssetCache.normalize(player.optString("image"))\n                    .ifBlank { EsportsAssetCache.normalize(player.optString("imageUrl")) }\n                    .ifBlank { EsportsAssetCache.normalize(player.optString("portraitUrl")) }\n                if (playerImage.isNotBlank()) {\n                    EsportsAssetCache.putPlayer(summoner, team.optString("code"), playerImage)\n                }\n                add(\n                    EsportsPlayerRef(\n                        id = player.optString("id"),\n                        summonerName = summoner,\n                        role = normalizeRole(player.optString("role")),\n                        imageUrl = playerImage\n                    )\n                )'''
-          if old not in s: raise SystemExit('player image pattern not found')
-          s=s.replace(old,new)
-          old2='''        return EsportsTeamDetails(\n            id = team.optString("id"),\n            slug = team.optString("slug", slug),\n            code = team.optString("code").ifBlank { team.optString("name").take(4).uppercase() },\n            name = team.optString("name"),\n            players = players\n        )'''
-          new2='''        val teamCode = team.optString("code").ifBlank { team.optString("name").take(4).uppercase() }\n        val teamImage = EsportsAssetCache.normalize(team.optString("image"))\n            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrl")) }\n            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrlDarkMode")) }\n            .ifBlank { EsportsAssetCache.normalize(team.optString("imageUrlLightMode")) }\n        if (teamImage.isNotBlank()) {\n            EsportsAssetCache.putTeam(teamImage, team.optString("id"), team.optString("slug"), teamCode, team.optString("name"))\n        }\n        return EsportsTeamDetails(\n            id = team.optString("id"),\n            slug = team.optString("slug", slug),\n            code = teamCode,\n            name = team.optString("name"),\n            imageUrl = teamImage,\n            players = players\n        )'''
-          if old2 not in s: raise SystemExit('team detail pattern not found')
-          p.write_text(s.replace(old2,new2))
-
+          old='TeamDetailRepository.open(team, selectedBucket.matches)'
+          new='TeamDetailRepository.open(team, center.matches)'
+          if old not in s:
+              raise SystemExit('team open pattern not found')
+          p.write_text(s.replace(old,new))
       - name: Commit patch
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app/src/main/java
-          git commit -m "fix: hydrate team logos globally and dedupe teams"
+          git add app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt
+          git commit -m "fix: derive current lineup from global schedule"
           git push
