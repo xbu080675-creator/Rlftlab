@@ -110,24 +110,17 @@ jobs:
         }.distinctBy { it.bmid }.toList()
         if (candidates.isEmpty()) return null
 
-        // Some callers may already know a Tencent bMatchId. Prefer an exact match when present.
         requestedMatchId.trim().takeIf { it.isNotBlank() }?.let { requested ->
             candidates.firstOrNull { it.bmid == requested }?.let { return it }
         }
 
-        // Normal path: map Riot schedule metadata to the Tencent/LPL live feed by both teams.
-        // This works for every series and avoids any team-name or match-id special case.
         val target = LiveMatchTargetRegistry.snapshot()
         if (target != null && target.teams.size >= 2) {
-            val ranked = candidates
-                .map { it to matchScore(it, target) }
-                .sortedByDescending { it.second }
+            val ranked = candidates.map { it to matchScore(it, target) }.sortedByDescending { it.second }
             val best = ranked.firstOrNull()
             if (best != null && best.second > 0) return best.first
         }
 
-        // A single active candidate is unambiguous. If the upstream ever exposes several
-        // concurrent LPL series and none matches our schedule target, refuse to guess.
         return candidates.singleOrNull()
     }
 
@@ -138,7 +131,6 @@ jobs:
         val directB = teamMatches(ref.teamBName, right)
         val swapA = teamMatches(ref.teamAName, right)
         val swapB = teamMatches(ref.teamBName, left)
-
         return when {
             directA && directB -> 100
             swapA && swapB -> 95
@@ -151,9 +143,7 @@ jobs:
     private fun teamMatches(upstreamName: String, team: EsportsTeamRef): Boolean {
         val upstream = teamKey(upstreamName)
         if (upstream.isBlank()) return false
-        val candidates = listOf(team.code, team.name, team.slug)
-            .map(::teamKey)
-            .filter { it.isNotBlank() }
+        val candidates = listOf(team.code, team.name, team.slug).map(::teamKey).filter { it.isNotBlank() }
         return candidates.any { token ->
             upstream == token ||
                 (token.length >= 4 && upstream.contains(token)) ||
@@ -168,14 +158,14 @@ jobs:
           s = s[:old_start] + replacement + s[old_end:]
           p.write_text(s, encoding='utf-8')
 
-          # 4) Version bump: this is the first generic live-engine build, not another match patch.
+          # 4) Version bump: first generic live-engine build.
           p = root / 'app/build.gradle.kts'
           s = p.read_text(encoding='utf-8')
           s = s.replace('versionCode = 6', 'versionCode = 7')
           s = s.replace('versionName = "1.0.0-dev.6"', 'versionName = "1.0.0-dev.7"')
           p.write_text(s, encoding='utf-8')
 
-          # 5) Remove one-off match probes from normal CI. Diagnostics belong outside the runtime path.
+          # 5) Remove one-off probes and this one-shot migration workflow.
           for name in [
               'live-event-probe.yml',
               'lpl-source-probe.yml',
