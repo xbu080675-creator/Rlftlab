@@ -2,6 +2,7 @@ package com.riftlab.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,7 +56,7 @@ internal fun TeamLogo(
                     .build(),
                 imageLoader = imageLoader,
                 contentDescription = "$code 战队队标",
-                modifier = Modifier.matchParentSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
                 loading = { fallback() },
                 error = { fallback() },
