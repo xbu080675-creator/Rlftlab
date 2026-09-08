@@ -13,12 +13,12 @@ internal class RiotTeamAssetProvider {
     private val cache = linkedMapOf<String, String>()
 
     suspend fun resolve(team: EsportsTeamRef): String = withContext(Dispatchers.IO) {
-        if (team.imageUrl.isNotBlank()) return@withContext team.imageUrl
-        val keys = listOf(team.id, team.slug, slugify(team.name), team.code)
+        validAssetUrl(team.imageUrl)?.let { return@withContext it }
+        val keys = listOf(team.slug, slugify(team.name), team.code, team.id)
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()
-        val cacheKey = keys.firstOrNull().orEmpty()
+        val cacheKey = keys.firstOrNull().orEmpty().uppercase()
         cache[cacheKey]?.let { return@withContext it }
 
         for (lookup in keys) {
@@ -27,10 +27,12 @@ internal class RiotTeamAssetProvider {
             }.getOrNull() ?: continue
             val teams = root.optJSONObject("data")?.optJSONArray("teams") ?: JSONArray()
             val selected = selectTeam(teams, team) ?: continue
-            val image = selected.optString("image")
-                .ifBlank { selected.optString("imageUrl") }
-                .ifBlank { selected.optString("imageUrlDarkMode") }
-                .ifBlank { selected.optString("imageUrlLightMode") }
+            val image = firstValidAsset(
+                selected.opt("image"),
+                selected.opt("imageUrl"),
+                selected.opt("imageUrlDarkMode"),
+                selected.opt("imageUrlLightMode")
+            )
             if (image.isNotBlank()) {
                 if (cacheKey.isNotBlank()) cache[cacheKey] = image
                 return@withContext image
@@ -54,7 +56,21 @@ internal class RiotTeamAssetProvider {
             .map(::token).filter { it.isNotBlank() }
         val expected = listOf(target.id, target.slug, target.code, target.name)
             .map(::token).filter { it.isNotBlank() }
-        return candidates.any { a -> expected.any { b -> a == b } }
+        return candidates.any { a -> expected.any { b -> a == b || (a.length >= 3 && b.contains(a)) || (b.length >= 3 && a.contains(b)) } }
+    }
+
+    private fun firstValidAsset(vararg values: Any?): String =
+        values.asSequence().mapNotNull(::validAssetUrl).firstOrNull().orEmpty()
+
+    private fun validAssetUrl(raw: Any?): String? {
+        if (raw == null || raw == JSONObject.NULL) return null
+        val value = raw.toString().trim()
+        if (value.isBlank() || value.equals("null", true) || value.equals("undefined", true)) return null
+        return when {
+            value.startsWith("https://", true) || value.startsWith("http://", true) -> value
+            value.startsWith("//") -> "https:$value"
+            else -> null
+        }
     }
 
     private fun getJson(url: String): JSONObject {
@@ -63,6 +79,7 @@ internal class RiotTeamAssetProvider {
             connection.requestMethod = "GET"
             connection.connectTimeout = 6_000
             connection.readTimeout = 8_000
+            connection.instanceFollowRedirects = true
             connection.setRequestProperty("x-api-key", LolEsportsConfig.API_KEY)
             connection.setRequestProperty("Accept", "application/json")
             connection.setRequestProperty("User-Agent", "RiftLab/1.0 Android")
