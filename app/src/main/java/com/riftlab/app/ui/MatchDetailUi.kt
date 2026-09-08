@@ -137,48 +137,69 @@ internal fun MatchDetailContent() {
             }
         }
 
-        item { DetailSectionTitle("MVP / 官方评选") }
-        item {
-            DetailPanel(accent = state.seriesMvp != null || state.gameMvps.isNotEmpty()) {
-                val seriesMvp = state.seriesMvp
-                if (seriesMvp == null && state.gameMvps.isEmpty()) {
-                    Text("暂无可核实官方 MVP 数据", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    Spacer(Modifier.height(5.dp))
-                    Text("不会用伤害最高、KDA 最高等规则自行冒充官方 MVP。上游接入后直接挂到当前 Match Detail。", color = RiftMuted, fontSize = 10.sp, lineHeight = 16.sp)
-                } else {
-                    seriesMvp?.let {
-                        Text("SERIES MVP · ${it.playerName}", color = RiftCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text("${it.team} · ${it.role} · ${it.source}", color = RiftMuted, fontSize = 9.sp)
-                    }
-                    state.gameMvps.forEach { mvp ->
-                        Spacer(Modifier.height(6.dp))
-                        Text("G${mvp.game ?: 0} MVP · ${mvp.playerName} · ${mvp.team}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        if (phase == ScheduleMatchPhase.COMPLETED || state.seriesMvp != null || state.gameMvps.isNotEmpty()) {
+            item { DetailSectionTitle("MVP / 官方评选") }
+            item {
+                DetailPanel(accent = state.seriesMvp != null || state.gameMvps.isNotEmpty()) {
+                    val seriesMvp = state.seriesMvp
+                    if (seriesMvp == null && state.gameMvps.isEmpty()) {
+                        Text("暂无可核实官方 MVP 数据", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Spacer(Modifier.height(5.dp))
+                        Text("不会用伤害最高、KDA 最高等规则自行冒充官方 MVP。上游接入后直接挂到当前 Match Detail。", color = RiftMuted, fontSize = 10.sp, lineHeight = 16.sp)
+                    } else {
+                        seriesMvp?.let {
+                            Text("SERIES MVP · ${it.playerName}", color = RiftCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("${it.team} · ${it.role} · ${it.source}", color = RiftMuted, fontSize = 9.sp)
+                        }
+                        state.gameMvps.forEach { mvp ->
+                            Spacer(Modifier.height(6.dp))
+                            Text("G${mvp.game ?: 0} MVP · ${mvp.playerName} · ${mvp.team}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
         }
 
-        item { DetailSectionTitle("VOTE / 官方投票") }
-        if (state.votes.isEmpty()) {
-            item {
-                DetailPanel {
-                    Text("暂无可核实官方投票数据", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    Spacer(Modifier.height(5.dp))
-                    Text("后续接 POG/MVP/赛后观众投票源；没有官方结果时保持空缺，不生成 Mock 票数。", color = RiftMuted, fontSize = 10.sp, lineHeight = 16.sp)
-                }
-            }
-        } else {
-            items(state.votes, key = { it.title }) { vote ->
-                DetailPanel(accent = true) {
-                    Text(vote.title, color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                    vote.options.forEach { option ->
+        if (phase == ScheduleMatchPhase.COMPLETED || state.votes.isNotEmpty()) {
+            item { DetailSectionTitle("POG VOTES / 官方数据面板") }
+            if (state.votes.isEmpty()) {
+                item {
+                    DetailPanel {
+                        Text("暂无可核实官方 POG / MVP 投票面板数据", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                         Spacer(Modifier.height(5.dp))
-                        Row {
-                            Text(option.label, modifier = Modifier.weight(1f), fontSize = 10.sp)
-                            Text(option.percent?.let { "%.1f%%".format(it) } ?: option.votes.toString(), color = RiftMuted, fontSize = 10.sp)
-                        }
+                        Text(
+                            "这里对应官方赛后数据面板展示的 POG/MVP 投票结果（例如 6/8），不是 RiftLab 用户投票，也不是赛季 MVP 积分榜。",
+                            color = RiftMuted,
+                            fontSize = 10.sp,
+                            lineHeight = 16.sp
+                        )
                     }
-                    Text(vote.source, color = RiftMuted, fontSize = 8.sp)
+                }
+            } else {
+                items(state.votes, key = { it.title }) { vote ->
+                    DetailPanel(accent = true) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(vote.title, modifier = Modifier.weight(1f), color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            vote.totalVotes?.let { total ->
+                                Text("TOTAL $total", color = RiftMuted, fontSize = 9.sp)
+                            }
+                        }
+                        vote.options.forEach { option ->
+                            Spacer(Modifier.height(5.dp))
+                            Row {
+                                Text(option.label, modifier = Modifier.weight(1f), fontSize = 10.sp)
+                                val percent = option.percent ?: vote.totalVotes
+                                    ?.takeIf { it > 0L }
+                                    ?.let { total -> option.votes * 100.0 / total }
+                                Text(
+                                    percent?.let { "${option.votes} · %.1f%%".format(it) } ?: option.votes.toString(),
+                                    color = RiftMuted,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                        Text(vote.source, color = RiftMuted, fontSize = 8.sp)
+                    }
                 }
             }
         }
