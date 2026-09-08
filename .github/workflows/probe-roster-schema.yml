@@ -13,7 +13,7 @@ jobs:
       - name: Probe Riot BLG roster schema
         shell: python
         run: |
-          import json, re, urllib.request, urllib.parse
+          import json, re, urllib.request, urllib.parse, datetime
           from pathlib import Path
 
           src = Path('app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt').read_text()
@@ -26,28 +26,41 @@ jobs:
               with urllib.request.urlopen(req,timeout=20) as r:
                   return json.load(r)
 
-          sched=get(f'https://esports-api.lolesports.com/persisted/gw/getSchedule?hl=en-US&leagueId={league}')
+          tournaments=get(f'https://esports-api.lolesports.com/persisted/gw/getTournamentsForLeague?hl=en-US&leagueId={league}')
+          ts=[]
+          for lg in tournaments.get('data',{}).get('leagues',[]):
+              ts.extend(lg.get('tournaments',[]) or [])
+          today=datetime.date.today().isoformat()
+          current=[t for t in ts if str(t.get('startDate') or '')[:10] <= today <= str(t.get('endDate') or '9999-12-31')[:10]]
+          tournament=(current[-1] if current else sorted(ts,key=lambda t:str(t.get('startDate') or ''))[-1])
+          tid=tournament.get('id')
+          print('TOURNAMENT',tournament)
+          standings=get('https://esports-api.lolesports.com/persisted/gw/getStandings?hl=en-US&tournamentId='+urllib.parse.quote(str(tid)))
           blg=None
-          for ev in sched.get('data',{}).get('schedule',{}).get('events',[]):
-              for t in ev.get('match',{}).get('teams',[]) if ev.get('type')=='match' else []:
-                  if (t.get('code') or '').upper()=='BLG':
-                      blg=t; break
-              if blg: break
-          print('SCHEDULE_BLG', {k:blg.get(k) for k in sorted(blg.keys()) if k not in {'result'}})
-          tid=str(blg.get('id') or '')
-          root=get('https://esports-api.lolesports.com/persisted/gw/getTeams?hl=en-US&id='+urllib.parse.quote(tid))
-          teams=root.get('data',{}).get('teams',[])
-          print('TEAM_COUNT',len(teams))
-          for idx,team in enumerate(teams[:3]):
-              print('TEAM',idx,'KEYS',sorted(team.keys()))
-              for keyname in ['id','slug','code','name','image','status','homeLeague']:
-                  if keyname in team: print(' ',keyname,repr(team.get(keyname)))
-              for arrname in ['players','coaches','staff','members']:
-                  arr=team.get(arrname)
-                  if isinstance(arr,list):
-                      print(' ',arrname,'COUNT',len(arr))
-                      for item in arr:
-                          if not isinstance(item,dict):
-                              print('   ',repr(item)); continue
-                          safe={k:item.get(k) for k in sorted(item.keys()) if k.lower() not in {'email','phone'}}
-                          print('   ',safe)
+          for standing in standings.get('data',{}).get('standings',[]):
+              for stage in standing.get('stages',[]):
+                  for section in stage.get('sections',[]):
+                      for rank in section.get('rankings',[]) or []:
+                          for t in rank.get('teams',[]) or []:
+                              if (t.get('code') or '').upper()=='BLG': blg=t
+          print('STANDINGS_BLG',blg)
+          team_id=str((blg or {}).get('id') or '')
+          team_slug=str((blg or {}).get('slug') or '')
+          for lookup in [team_id, team_slug, 'bilibili-gaming', 'BLG']:
+              if not lookup: continue
+              root=get('https://esports-api.lolesports.com/persisted/gw/getTeams?hl=en-US&id='+urllib.parse.quote(lookup))
+              teams=root.get('data',{}).get('teams',[])
+              print('LOOKUP',lookup,'COUNT',len(teams))
+              for idx,team in enumerate(teams[:3]):
+                  print(' TEAM',idx,'KEYS',sorted(team.keys()))
+                  for keyname in ['id','slug','code','name','image','status','homeLeague']:
+                      if keyname in team: print('  ',keyname,repr(team.get(keyname)))
+                  for arrname in ['players','coaches','staff','members']:
+                      arr=team.get(arrname)
+                      if isinstance(arr,list):
+                          print('  ',arrname,'COUNT',len(arr))
+                          for item in arr:
+                              if not isinstance(item,dict):
+                                  print('    ',repr(item)); continue
+                              safe={k:item.get(k) for k in sorted(item.keys()) if k.lower() not in {'email','phone'}}
+                              print('    ',safe)
