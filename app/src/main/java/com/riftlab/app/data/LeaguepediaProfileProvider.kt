@@ -64,7 +64,11 @@ internal class LeaguepediaProfileProvider {
             },
             limit = 5
         )
-        val teamTitle = teamRows.firstOrNull()?.optJSONObject("title")
+        val teamTitle = if (teamRows.length() > 0) {
+            teamRows.optJSONObject(0)?.optJSONObject("title")
+        } else {
+            null
+        }
         val overviewPage = teamTitle?.optString("OverviewPage").orEmpty()
             .ifBlank { teamTitle?.optString("Name").orEmpty() }
             .ifBlank { requestedName }
