@@ -20,12 +20,16 @@ import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.riftlab.app.R
+import com.riftlab.app.data.LiveSnapshot
+import com.riftlab.app.data.LiveSourceStatus
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.ScheduledEsportsMatch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -36,12 +40,18 @@ class RiftOverlayService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var collectJob: Job? = null
 
+    private data class OverlayUiState(
+        val snapshot: LiveSnapshot,
+        val status: LiveSourceStatus,
+        val target: ScheduledEsportsMatch?
+    )
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
         createChannel()
         startAsForeground()
-        MatchSessionStore.ensureMockRunning()
+        MatchSessionStore.ensureDataRunning()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -99,7 +109,15 @@ class RiftOverlayService : Service() {
         view.post { clampOverlayToDisplay() }
 
         collectJob = scope.launch {
-            MatchSessionStore.live.collect { view.render(it) }
+            combine(
+                MatchSessionStore.live,
+                MatchSessionStore.liveSourceStatus,
+                MatchSessionStore.targetMatch
+            ) { snapshot, status, target ->
+                OverlayUiState(snapshot, status, target)
+            }.collect { state ->
+                view.render(state.snapshot, state.status, state.target)
+            }
         }
     }
 
@@ -185,7 +203,7 @@ class RiftOverlayService : Service() {
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_rift)
         .setContentTitle("RiftScreen 正在运行")
-        .setContentText("实时赛事副屏 · 返回 RiftLab 时自动隐藏")
+        .setContentText("赛事副屏 · 赛程状态与 Riot 实时数据同步")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .build()
