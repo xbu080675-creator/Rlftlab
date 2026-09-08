@@ -1,4 +1,4 @@
-name: Apply dev18 Cleanup Patch
+name: Cleanup dev18 Workflows
 on:
   push:
     paths:
@@ -8,35 +8,25 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Patch staff UI and dependencies
-        shell: python
+      - name: Remove one-shot probes and patch workflows
         run: |
-          from pathlib import Path
-
-          ui=Path('app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt')
-          s=ui.read_text()
-          old='    "MANAGER" -> "经理"\n    else -> role.replace(\'_\', \' \')'
-          new='    "MANAGER" -> "经理"\n    "SUPERVISOR" -> "监督"\n    else -> role.replace(\'_\', \' \')'
-          if old not in s:
-              raise SystemExit('staff role pattern not found')
-          ui.write_text(s.replace(old,new))
-
-          gradle=Path('app/build.gradle.kts')
-          g=gradle.read_text()
-          block='''\n    // Staff pages are HTML. Jsoup keeps the parser small and lets us isolate Active coaching staff\n    // without bundling another browser/WebView path.\n    implementation("org.jsoup:jsoup:1.18.3")\n'''
-          if block not in g:
-              raise SystemExit('jsoup block not found')
-          gradle.write_text(g.replace(block,'\n'))
-      - name: Commit patch
+          git rm -f \
+            .github/workflows/apply-dev18-patch.yml \
+            .github/workflows/apply-roster-runtime-patch.yml \
+            .github/workflows/probe-leaguepedia-roster.yml \
+            .github/workflows/probe-liquipedia-staff.yml \
+            .github/workflows/probe-roster-schema.yml \
+            .github/workflows/probe-team-assets.yml \
+            .github/workflows/probe-tj-comm.yml
+      - name: Commit cleanup
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt app/build.gradle.kts
-          git commit -m "refactor: use cached staff data without runtime wiki parser"
+          git commit -m "chore: remove temporary dev18 probes"
           git push
