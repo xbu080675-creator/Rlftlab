@@ -32,8 +32,11 @@ internal object TeamDetailRepository {
 
     fun open(team: EsportsTeamRef, forceRefresh: Boolean = false) {
         val key = team.slug.ifBlank { team.id }.ifBlank { team.code }
+        val aliases = arrayOf(team.id, team.code, team.name, team.slug)
         val cached = cache[key]
-        val cachedImage = team.imageUrl.ifBlank { imageCache[key].orEmpty() }
+        val cachedImage = EsportsAssetCache.normalize(team.imageUrl)
+            .ifBlank { EsportsAssetCache.normalize(imageCache[key].orEmpty()) }
+            .ifBlank { EsportsAssetCache.team(*aliases) }
         if (!forceRefresh && cached != null && cachedImage.isNotBlank()) {
             _state.value = TeamDetailState(
                 team = team,
@@ -54,9 +57,13 @@ internal object TeamDetailRepository {
         loadJob = scope.launch {
             val slug = team.slug.ifBlank { team.id }
             if (slug.isBlank()) {
+                val resolved = runCatching { assetProvider.resolve(team.copy(imageUrl = "")) }
+                    .getOrDefault(cachedImage)
+                    .let(EsportsAssetCache::normalize)
+                if (resolved.isNotBlank()) EsportsAssetCache.putTeam(resolved, *aliases)
                 _state.value = TeamDetailState(
                     team = team,
-                    imageUrl = runCatching { assetProvider.resolve(team) }.getOrDefault(cachedImage),
+                    imageUrl = resolved,
                     loading = false,
                     status = "战队资料暂不可用",
                     errorMessage = "缺少 Riot team slug/id"
@@ -66,11 +73,15 @@ internal object TeamDetailRepository {
 
             val detailResult = runCatching { source.fetchTeam(slug) }
             val details = detailResult.getOrNull()
-            val image = team.imageUrl.ifBlank {
-                runCatching { assetProvider.resolve(team) }.getOrDefault("")
+            val image = cachedImage.ifBlank {
+                runCatching { assetProvider.resolve(team.copy(imageUrl = "")) }.getOrDefault("")
+                    .let(EsportsAssetCache::normalize)
             }
             if (details != null) cache[key] = details
-            if (image.isNotBlank()) imageCache[key] = image
+            if (image.isNotBlank()) {
+                imageCache[key] = image
+                EsportsAssetCache.putTeam(image, *aliases)
+            }
             _state.value = TeamDetailState(
                 team = team,
                 details = details,
