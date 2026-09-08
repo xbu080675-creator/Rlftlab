@@ -19,15 +19,17 @@ internal data class TeamDetailState(
     val status: String = "选择一支战队查看详情",
     val lineupStatus: String = "首发阵容尚未识别",
     val staffStatus: String = "教练组尚未同步",
+    val profileStatus: String = "管理层 / 社交资料尚未同步",
     val errorMessage: String? = null
 )
 
-/** Independent team-detail navigation state for the event center. */
+/** Independent team-detail navigation state shared by event center and global entity pages. */
 internal object TeamDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val source: TeamDataSource = LolEsportsTeamDataSource()
     private val assetProvider = RiotTeamAssetProvider()
     private val staffProvider = LplStaffSnapshotProvider()
+    private val profileProvider = LeaguepediaProfileProvider()
     private val lineupProvider = OpggMatchSupplementProvider()
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
     private val imageCache = linkedMapOf<String, String>()
@@ -65,9 +67,20 @@ internal object TeamDetailRepository {
                 details = cached,
                 imageUrl = cachedImage,
                 starters = cachedStarters,
-                status = rosterSummary(cached.players.size, cachedStarters.size, substitutes, cached.staff.size),
+                status = rosterSummary(
+                    cached.players.size,
+                    cachedStarters.size,
+                    substitutes,
+                    cached.staff.size,
+                    cached.management.size
+                ),
                 lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
-                staffStatus = if (cached.staff.isNotEmpty()) "Liquipedia · 2026-09-09 快照 · 已缓存" else "教练组尚未同步"
+                staffStatus = if (cached.staff.isNotEmpty()) "教练组 · 已缓存" else "教练组尚未同步",
+                profileStatus = if (cached.management.isNotEmpty() || cached.socialLinks.isNotEmpty() || cached.players.any { it.socialLinks.isNotEmpty() }) {
+                    "Leaguepedia · 管理层 / 社交账号已缓存"
+                } else {
+                    "管理层 / 社交资料尚未同步"
+                }
             )
             return
         }
@@ -134,8 +147,31 @@ internal object TeamDetailRepository {
                 staffProvider.fetch(effectiveTeam, baseDetails)
             } else TeamStaffSupplement(status = "教练组等待 Riot roster")
 
+            val profileSupplement = if (baseDetails != null) {
+                runCatching { profileProvider.fetch(effectiveTeam, baseDetails) }
+                    .getOrElse {
+                        TeamProfileSupplement(status = "管理层 / 社交资料同步失败 · ${it.message?.take(80).orEmpty()}")
+                    }
+            } else {
+                TeamProfileSupplement(status = "管理层 / 社交资料等待 Riot roster")
+            }
+
             val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
-            val details = baseDetails?.copy(staff = staff)
+            val management = profileSupplement.management.ifEmpty { cached?.management.orEmpty() }
+            val teamSocialLinks = profileSupplement.teamLinks.ifEmpty { cached?.socialLinks.orEmpty() }
+            val enrichedPlayers = baseDetails?.players?.map { player ->
+                val links = profileSupplement.playerLinks[token(player.summonerName)]
+                    .orEmpty()
+                    .ifEmpty { cached?.players?.firstOrNull { token(it.summonerName) == token(player.summonerName) }?.socialLinks.orEmpty() }
+                if (links == player.socialLinks) player else player.copy(socialLinks = links)
+            }.orEmpty()
+
+            val details = baseDetails?.copy(
+                players = enrichedPlayers,
+                staff = staff,
+                management = management,
+                socialLinks = teamSocialLinks
+            )
             if (details != null) cache[key] = details
             if (starters.size >= 5) starterCache[key] = starters
             if (image.isNotBlank()) {
@@ -151,7 +187,13 @@ internal object TeamDetailRepository {
                 starters = starters,
                 loading = false,
                 status = when {
-                    details != null -> rosterSummary(details.players.size, starters.size, substitutes, details.staff.size)
+                    details != null -> rosterSummary(
+                        details.players.size,
+                        starters.size,
+                        substitutes,
+                        details.staff.size,
+                        details.management.size
+                    )
                     detailResult.isFailure -> "战队资料同步失败"
                     else -> "Riot Teams 暂未返回战队详情"
                 },
@@ -162,6 +204,7 @@ internal object TeamDetailRepository {
                     else -> "最近比赛阵容暂未匹配；不猜首发/替补"
                 },
                 staffStatus = if (staff.isNotEmpty() && staffSupplement.staff.isEmpty()) "教练组 · 本地缓存" else staffSupplement.status,
+                profileStatus = profileSupplement.status,
                 errorMessage = detailResult.exceptionOrNull()?.message
             )
         }
@@ -183,9 +226,9 @@ internal object TeamDetailRepository {
         return players.count { token(it.summonerName) !in starterTokens }
     }
 
-    private fun rosterSummary(players: Int, starters: Int, substitutes: Int, staff: Int): String = when {
-        starters >= 5 -> "Riot Teams · $players 名选手 · 首发 $starters · 替补 $substitutes · 教练组 $staff"
-        else -> "Riot Teams · $players 名现役选手 · 教练组 $staff"
+    private fun rosterSummary(players: Int, starters: Int, substitutes: Int, staff: Int, management: Int): String = when {
+        starters >= 5 -> "Riot Teams · $players 名选手 · 首发 $starters · 替补 $substitutes · 教练组 $staff · 管理层 $management"
+        else -> "Riot Teams · $players 名现役选手 · 教练组 $staff · 管理层 $management"
     }
 
     private fun sameTeam(a: EsportsTeamRef, b: EsportsTeamRef): Boolean =
