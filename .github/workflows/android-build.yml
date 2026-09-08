@@ -3,7 +3,7 @@ name: Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, feat/schedule-center ]
 
 jobs:
   build:
@@ -17,11 +17,12 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-      - name: Probe Riot LoL Esports data source
+      - name: Probe Riot LoL Esports schedule center source
         continue-on-error: true
         shell: bash
         run: |
           python - <<'PY'
+          import collections
           import json
           import pathlib
           import re
@@ -54,42 +55,60 @@ jobs:
                   print("ERROR", path, repr(e))
                   return {}, 0
 
-          schedule, _ = get(f"/getSchedule?hl=en-US&leagueId={league_id}")
-          events = schedule.get("data", {}).get("schedule", {}).get("events", [])
-          target = None
-          for event in events:
-              if event.get("type") != "match":
-                  continue
-              teams = event.get("match", {}).get("teams", [])
-              codes = {str(team.get("code", "")).upper() for team in teams}
-              if {"LGD", "IG"}.issubset(codes):
-                  target = event
-                  break
-          print("schedule target:", target.get("startTime") if target else None, target.get("state") if target else None)
-
-          live, _ = get("/getLive?hl=en-US")
-          live_events = live.get("data", {}).get("schedule", {}).get("events", [])
-          print("getLive events:", len(live_events) if isinstance(live_events, list) else "invalid")
-
-          probes = [
-              ("no-id", "/getTeams?hl=en-US"),
-              ("lgd-gaming", "/getTeams?hl=en-US&id=lgd-gaming"),
-              ("invictus-gaming", "/getTeams?hl=en-US&id=invictus-gaming"),
-              ("invictus-gaming-ig", "/getTeams?hl=en-US&id=invictus-gaming-ig"),
-          ]
-          for label, path in probes:
+          def schedule_page(token=None):
+              path = f"/getSchedule?hl=en-US&leagueId={league_id}"
+              if token:
+                  path += "&pageToken=" + urllib.parse.quote(token, safe="")
               payload, status = get(path)
-              teams = payload.get("data", {}).get("teams", [])
-              print("probe", label, "http", status, "teams", len(teams) if isinstance(teams, list) else "invalid")
-              for team in teams[:3] if isinstance(teams, list) else []:
-                  print(
-                      " team",
-                      team.get("code"),
-                      team.get("name"),
-                      "id=" + str(team.get("id", "")),
-                      "slug=" + str(team.get("slug", "")),
-                      "players=" + str(len(team.get("players", []))),
-                  )
+              schedule = payload.get("data", {}).get("schedule", {})
+              return schedule, status
+
+          center, status = schedule_page()
+          print("schedule center http:", status)
+          pages = [center]
+
+          for direction in ("older", "newer"):
+              token = center.get("pages", {}).get(direction)
+              seen = set()
+              for _ in range(2):
+                  if not token or token in seen:
+                      break
+                  seen.add(token)
+                  page, page_status = schedule_page(token)
+                  print("schedule page", direction, "http", page_status, "events", len(page.get("events", [])))
+                  pages.append(page)
+                  token = page.get("pages", {}).get(direction)
+
+          events = {}
+          for page in pages:
+              for event in page.get("events", []) or []:
+                  if event.get("type") != "match":
+                      continue
+                  match = event.get("match", {}) or {}
+                  event_id = str(event.get("id") or match.get("id") or "")
+                  if event_id:
+                      events[event_id] = event
+
+          state_counts = collections.Counter(str(e.get("state", "unknown")) for e in events.values())
+          print("schedule unique matches:", len(events))
+          print("schedule states:", dict(state_counts))
+          for event in sorted(events.values(), key=lambda e: str(e.get("startTime", "")))[:8]:
+              teams = event.get("match", {}).get("teams", []) or []
+              codes = " vs ".join(str(t.get("code") or t.get("name") or "?") for t in teams[:2])
+              scores = ":".join(str((t.get("result") or {}).get("gameWins", 0)) for t in teams[:2])
+              print(" match", event.get("startTime"), event.get("state"), codes, scores, event.get("blockName"))
+
+          live, live_status = get("/getLive?hl=en-US")
+          live_events = live.get("data", {}).get("schedule", {}).get("events", []) or []
+          lpl_live = []
+          for event in live_events:
+              league = event.get("league", {}) or {}
+              if str(league.get("id", "")) == league_id or str(league.get("slug", "")).lower() == "lpl":
+                  lpl_live.append(event)
+          print("getLive http:", live_status, "LPL events:", len(lpl_live))
+          for event in lpl_live:
+              teams = event.get("match", {}).get("teams", []) or []
+              print(" live", event.get("id"), " / ".join(str(t.get("code", "?")) for t in teams[:2]))
           PY
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -108,5 +127,5 @@ jobs:
           test "$DIGEST" = "$EXPECTED"
       - uses: actions/upload-artifact@v4
         with:
-          name: RiftLab-dev4-riot-data-fixed-sign
+          name: RiftLab-dev5-schedule-center
           path: app/build/outputs/apk/debug/app-debug.apk
