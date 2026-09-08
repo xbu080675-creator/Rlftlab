@@ -20,6 +20,36 @@ data class PreMatchInfo(
     val rosterNote: String
 )
 
+data class ScheduledEsportsMatch(
+    val eventId: String,
+    val matchId: String,
+    val league: String,
+    val blockName: String,
+    val startTimeIso: String,
+    val state: String,
+    val bestOf: Int,
+    val teams: List<EsportsTeamRef>
+)
+
+data class EsportsTeamRef(
+    val id: String,
+    val code: String,
+    val name: String
+)
+
+data class LivePlayerSnapshot(
+    val participantId: Int,
+    val role: String,
+    val summonerName: String,
+    val championId: String,
+    val level: Int,
+    val kills: Int,
+    val deaths: Int,
+    val assists: Int,
+    val creepScore: Int,
+    val gold: Int
+)
+
 data class LiveSnapshot(
     val game: Int,
     val elapsedSeconds: Int,
@@ -33,7 +63,13 @@ data class LiveSnapshot(
     val redTowers: Int,
     val blueDragons: Int,
     val redDragons: Int,
-    val latestEvent: String
+    val latestEvent: String,
+    val blueBarons: Int = 0,
+    val redBarons: Int = 0,
+    val bluePlayers: List<LivePlayerSnapshot> = emptyList(),
+    val redPlayers: List<LivePlayerSnapshot> = emptyList(),
+    val source: String = "unknown",
+    val gameId: String = ""
 ) {
     val goldDiff: Int get() = blueGold - redGold
 }
@@ -47,4 +83,20 @@ data class PostMatchInfo(
     val mvpGoldDiff15: Int,
     val positionRank: String,
     val keyPoint: String
+)
+
+enum class LiveSourcePhase {
+    IDLE,
+    WAITING_FOR_MATCH,
+    BETWEEN_GAMES,
+    LIVE,
+    ERROR
+}
+
+data class LiveSourceStatus(
+    val phase: LiveSourcePhase,
+    val message: String,
+    val eventId: String = "",
+    val gameId: String = "",
+    val lastUpdateEpochMs: Long = 0L
 )
