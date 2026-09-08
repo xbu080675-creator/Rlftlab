@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'tools/patch_post_schema_fallback.py'
+      - '.github/workflows/patch-post-schema-fallback.yml'
 
 permissions:
   contents: write
