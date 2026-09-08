@@ -9,13 +9,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 
-class LolEsportsScheduleDataSource(
+internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> = client.fetchLplSchedule()
 }
 
-class LolEsportsLiveDataSource(
+internal class LolEsportsLiveDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient(),
     private val preferredTeamCodes: Set<String> = emptySet()
 ) : LiveMatchDataSource {
@@ -87,7 +87,6 @@ class LolEsportsLiveDataSource(
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
                 delay(5_000)
-                // Re-discover the live event after an error. This also handles a series moving to a new game id.
                 currentEvent = null
             }
         }
