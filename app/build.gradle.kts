@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.0.0-dev.16"
+        versionCode = 17
+        versionName = "1.0.0-dev.17"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.16: provider-shared team/player artwork routing with OP.GG portrait and logo fallbacks.
+// dev.17: global team-vs-team visual standard uses logos as primary identity across app and RiftScreen.
