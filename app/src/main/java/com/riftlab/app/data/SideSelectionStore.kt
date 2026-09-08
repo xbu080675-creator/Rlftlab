@@ -135,10 +135,31 @@ private class RiotSideSelectionProvider {
             "sideSelectedBy",
             "sideChoice"
         )
-        return explicitFields.any { key ->
-            val raw = game.opt(key)
-            raw != null && raw != JSONObject.NULL && raw.toString().trim().let { it.isNotBlank() && !it.equals("null", true) }
+        return explicitFields.any { key -> explicitConfirmation(game.opt(key)) }
+    }
+
+    private fun explicitConfirmation(raw: Any?): Boolean {
+        if (raw == null || raw == JSONObject.NULL) return false
+        return when (raw) {
+            is Boolean -> raw
+            is Number -> raw.toInt() > 0
+            is JSONArray -> raw.length() > 0
+            is JSONObject -> {
+                if (raw.length() == 0) false
+                else {
+                    val status = raw.optString("status").ifBlank { raw.optString("state") }
+                    if (status.isBlank()) true else confirmationText(status)
+                }
+            }
+            else -> confirmationText(raw.toString())
         }
+    }
+
+    private fun confirmationText(value: String): Boolean {
+        val normalized = value.trim().lowercase()
+        if (normalized.isBlank() || normalized == "null" || normalized == "undefined") return false
+        val negative = listOf("pending", "unconfirmed", "unpublished", "unknown", "tbd", "unset", "none", "notset")
+        return negative.none { normalized.contains(it) }
     }
 
     private fun getJson(url: String): JSONObject {
