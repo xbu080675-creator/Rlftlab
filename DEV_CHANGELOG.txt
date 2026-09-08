@@ -1,0 +1,1 @@
+Match Detail 与主界面赛事目标彻底解耦；接入 LPL/TJStats 官方 MVP / MVP 投票数据；新增 APP 内检查更新、APK 下载进度、SHA-256 校验与系统安装。
