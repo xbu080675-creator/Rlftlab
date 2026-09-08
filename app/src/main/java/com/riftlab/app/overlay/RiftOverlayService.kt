@@ -7,10 +7,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.util.DisplayMetrics
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -54,6 +56,11 @@ class RiftOverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        overlay?.post { clampOverlayToDisplay() }
+    }
+
     private fun syncOverlayVisibility() {
         if (hostInForeground) hideOverlay() else showOverlay()
     }
@@ -62,6 +69,7 @@ class RiftOverlayService : Service() {
         if (!Settings.canDrawOverlays(this)) return
         if (overlay == null) createOverlay()
         overlay?.visibility = View.VISIBLE
+        overlay?.post { clampOverlayToDisplay() }
     }
 
     private fun hideOverlay() {
@@ -77,7 +85,7 @@ class RiftOverlayService : Service() {
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.END
@@ -88,6 +96,7 @@ class RiftOverlayService : Service() {
         overlay = view
         attachDrag(view, layoutParams)
         windowManager.addView(view, layoutParams)
+        view.post { clampOverlayToDisplay() }
 
         collectJob = scope.launch {
             MatchSessionStore.live.collect { view.render(it) }
@@ -119,17 +128,48 @@ class RiftOverlayService : Service() {
                     if (moved) {
                         lp.x = (startX - dx).coerceAtLeast(0)
                         lp.y = (startY + dy).coerceAtLeast(0)
+                        clampLayoutParams(view, lp)
                         windowManager.updateViewLayout(view, lp)
                     }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!moved) view.cycleMode()
+                    if (!moved) {
+                        view.cycleMode()
+                        view.post { clampOverlayToDisplay() }
+                    }
                     true
                 }
                 MotionEvent.ACTION_CANCEL -> true
                 else -> false
             }
+        }
+    }
+
+    private fun clampOverlayToDisplay() {
+        val view = overlay ?: return
+        val lp = params ?: return
+        if (view.width <= 0 || view.height <= 0) return
+        clampLayoutParams(view, lp)
+        runCatching { windowManager.updateViewLayout(view, lp) }
+    }
+
+    private fun clampLayoutParams(view: View, lp: WindowManager.LayoutParams) {
+        val (screenWidth, screenHeight) = displaySize()
+        val maxX = (screenWidth - view.width).coerceAtLeast(0)
+        val maxY = (screenHeight - view.height).coerceAtLeast(0)
+        lp.x = lp.x.coerceIn(0, maxX)
+        lp.y = lp.y.coerceIn(0, maxY)
+    }
+
+    private fun displaySize(): Pair<Int, Int> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            bounds.width() to bounds.height()
+        } else {
+            @Suppress("DEPRECATION")
+            val metrics = DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            metrics.widthPixels to metrics.heightPixels
         }
     }
 
