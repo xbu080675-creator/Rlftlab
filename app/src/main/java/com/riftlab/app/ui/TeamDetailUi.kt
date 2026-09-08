@@ -1,5 +1,7 @@
 package com.riftlab.app.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Text
@@ -24,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,6 +36,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.riftlab.app.data.EsportsAssetCache
 import com.riftlab.app.data.EsportsPlayerRef
+import com.riftlab.app.data.EsportsSocialLink
 import com.riftlab.app.data.EsportsStaffRef
 import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.MatchSessionStore
@@ -60,6 +65,10 @@ internal fun TeamDetailContent(
     val hasConfirmedLineup = starterTokens.size >= 5
     val starters = if (hasConfirmedLineup) roster.filter { playerToken(it.summonerName) in starterTokens } else emptyList()
     val substitutes = if (hasConfirmedLineup) roster.filter { playerToken(it.summonerName) !in starterTokens } else emptyList()
+    val snapshotStaff = details?.staff.orEmpty()
+    val management = (details?.management.orEmpty() + snapshotStaff.filter(::isManagementStaff))
+        .distinctBy { playerToken(it.name) to playerToken(it.role) }
+    val coachingStaff = snapshotStaff.filterNot(::isManagementStaff)
     val teamMatches = matches
         .filter { match -> match.teams.any { sameTeam(it, team) } }
         .sortedByDescending { matchEpoch(it) }
@@ -92,6 +101,12 @@ internal fun TeamDetailContent(
                     }
                 }
             }
+        }
+
+        if (details?.socialLinks?.isNotEmpty() == true) {
+            item { TeamSectionTitle("OFFICIAL SOCIALS / 官方账号") }
+            item { SocialLinkRow(details.socialLinks) }
+            item { TeamSourceNote(state.profileStatus) }
         }
 
         if (state.loading && roster.isEmpty()) {
@@ -142,12 +157,22 @@ internal fun TeamDetailContent(
             item { TeamSourceNote(state.lineupStatus) }
         }
 
+        item { TeamSectionTitle("TEAM MANAGEMENT / 战队管理层") }
+        if (management.isEmpty()) {
+            item { TeamStatus(state.profileStatus) }
+        } else {
+            items(management, key = { "management-${it.name}-${it.role}" }) { staff ->
+                TeamStaffRow(staff, management = true)
+            }
+            item { TeamSourceNote(state.profileStatus) }
+        }
+
         item { TeamSectionTitle("COACHING STAFF / 教练组") }
-        if (details?.staff.isNullOrEmpty()) {
+        if (coachingStaff.isEmpty()) {
             item { TeamStatus(state.staffStatus) }
         } else {
-            items(details!!.staff, key = { "staff-${it.name}-${it.role}" }) { staff ->
-                TeamStaffRow(staff)
+            items(coachingStaff, key = { "staff-${it.name}-${it.role}" }) { staff ->
+                TeamStaffRow(staff, management = false)
             }
         }
 
@@ -192,6 +217,10 @@ private fun TeamPlayerRow(
                 player?.lastName?.takeIf { it.isNotBlank() }
             ).joinToString(" ")
             if (realName.isNotBlank()) Text(realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            if (!player?.socialLinks.isNullOrEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                SocialLinkRow(player!!.socialLinks, compact = true)
+            }
         }
         if (badge.isNotBlank()) {
             Text(
@@ -243,7 +272,7 @@ private fun PlayerAvatar(player: EsportsPlayerRef?, team: EsportsTeamRef, modifi
 }
 
 @Composable
-private fun TeamStaffRow(staff: EsportsStaffRef) {
+private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
     Row(
         Modifier.fillMaxWidth()
             .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
@@ -255,16 +284,45 @@ private fun TeamStaffRow(staff: EsportsStaffRef) {
             Modifier.size(34.dp).background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("教", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(if (management) "管" else "教", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(staff.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             if (staff.realName.isNotBlank()) Text(staff.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            if (staff.socialLinks.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                SocialLinkRow(staff.socialLinks, compact = true)
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(staffRoleLabel(staff.role), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             Text(staff.source, color = RiftMuted, fontSize = 7.sp)
+        }
+    }
+}
+
+@Composable
+private fun SocialLinkRow(links: List<EsportsSocialLink>, compact: Boolean = false) {
+    val context = LocalContext.current
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp)) {
+        items(links.distinctBy { it.platform to it.url }, key = { "${it.platform}-${it.url}" }) { link ->
+            Text(
+                link.label.ifBlank { link.platform },
+                color = RiftCyan,
+                fontSize = if (compact) 7.sp else 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .background(RiftPanelAlt, CutCornerShape(topEnd = 5.dp, bottomStart = 4.dp))
+                    .clickable {
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(link.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                    }
+                    .padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 3.dp else 5.dp)
+            )
         }
     }
 }
@@ -350,15 +408,33 @@ private fun teamRoleLabel(role: String): String = when (canonicalTeamRole(role) 
     else -> "替"
 }
 
-private fun staffRoleLabel(role: String): String = when (role.uppercase()) {
-    "HEAD_COACH" -> "主教练"
-    "ASSISTANT_COACH" -> "助理教练"
-    "STRATEGIC_COACH" -> "战术教练"
+private fun staffRoleLabel(role: String): String = when (playerToken(role)) {
+    "HEADCOACH" -> "主教练"
+    "ASSISTANTCOACH" -> "助理教练"
+    "STRATEGICCOACH" -> "战术教练"
     "COACH" -> "教练"
     "ANALYST" -> "分析师"
-    "MANAGER" -> "经理"
+    "MANAGER", "TEAMMANAGER" -> "经理"
+    "GENERALMANAGER" -> "总经理"
+    "ASSISTANTMANAGER" -> "助理经理"
+    "LEADER" -> "领队"
     "SUPERVISOR" -> "监督"
+    "DIRECTOR" -> "主管"
+    "OWNER" -> "负责人"
+    "COOWNER" -> "联合负责人"
+    "CEO", "CHIEFEXECUTIVEOFFICER" -> "CEO"
+    "COO", "CHIEFOPERATINGOFFICER" -> "COO"
+    "HEADOFESPORTS" -> "电竞负责人"
+    "HEADOFLOL" -> "英雄联盟负责人"
     else -> role.replace('_', ' ')
+}
+
+private fun isManagementStaff(staff: EsportsStaffRef): Boolean {
+    val key = playerToken(staff.role)
+    return key.contains("MANAGER") || key in setOf(
+        "LEADER", "SUPERVISOR", "DIRECTOR", "OWNER", "COOWNER", "CEO",
+        "CHIEFEXECUTIVEOFFICER", "COO", "CHIEFOPERATINGOFFICER", "HEADOFESPORTS", "HEADOFLOL"
+    )
 }
 
 private fun roleOrder(role: String?): Int = when (role) {
