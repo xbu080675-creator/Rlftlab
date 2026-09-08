@@ -1,4 +1,4 @@
-name: Probe Leaguepedia Roster
+name: Probe Riot GCD
 on:
   push:
     paths:
@@ -8,19 +8,34 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect BLG cargo response
+      - name: Query official China GCD
         shell: python
         run: |
-          import json, urllib.parse, urllib.request
-          params={
-            'action':'cargoquery','format':'json','tables':'ListplayerCurrent=LPC',
-            'fields':'LPC._pageName=Page,LPC.ID,LPC.Name,LPC.Role,LPC.IsSubstitute,LPC.IsTrainee,LPC.Team,LPC.N',
-            'where':'LPC._pageName LIKE "%Bilibili%" OR LPC.Team LIKE "%Bilibili%" OR LPC.Team="BLG"',
-            'limit':'100'
-          }
-          url='https://lol.fandom.com/api.php?'+urllib.parse.urlencode(params)
-          req=urllib.request.Request(url,headers={'User-Agent':'RiftLab/1.0 GitHub probe'})
-          with urllib.request.urlopen(req,timeout=20) as r:
-            text=r.read().decode('utf-8','replace')
-            print('HTTP',r.status,'BYTES',len(text))
-          print(text)
+          import urllib.request, csv, io
+          sheet='1Y7k5kQ2AegbuyiGwEPsa62e883FYVtHqr6UVut9RC4o'
+          gid='594163931'
+          urls=[
+            f'https://docs.google.com/spreadsheets/d/{sheet}/export?format=csv&gid={gid}',
+            f'https://docs.google.com/spreadsheets/d/{sheet}/pub?gid={gid}&single=true&output=csv',
+            f'https://docs.google.com/spreadsheets/u/1/d/{sheet}/gviz/tq?tqx=out:csv&gid={gid}',
+          ]
+          text=None
+          for url in urls:
+            try:
+              req=urllib.request.Request(url,headers={'User-Agent':'RiftLab/1.0 GCD probe'})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                body=r.read().decode('utf-8-sig','replace')
+                print('TRY',url,'HTTP',r.status,'BYTES',len(body),'TYPE',r.headers.get('content-type'))
+                if r.status==200 and len(body)>100:
+                  text=body; break
+            except Exception as e:
+              print('FAIL',url,repr(e))
+          if not text: raise SystemExit('no GCD csv')
+          rows=list(csv.reader(io.StringIO(text)))
+          print('ROWCOUNT',len(rows))
+          for row in rows[:8]: print('HEAD',row)
+          print('--- BLG ---')
+          for row in rows:
+            joined=' | '.join(row)
+            if 'Bilibili' in joined or 'BLG' in row:
+              print(row)
