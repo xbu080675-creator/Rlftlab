@@ -27,7 +27,7 @@ internal object TeamDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val source: TeamDataSource = LolEsportsTeamDataSource()
     private val assetProvider = RiotTeamAssetProvider()
-    private val staffProvider = LiquipediaTeamStaffProvider()
+    private val staffProvider = LplStaffSnapshotProvider()
     private val lineupProvider = OpggMatchSupplementProvider()
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
     private val imageCache = linkedMapOf<String, String>()
@@ -67,7 +67,7 @@ internal object TeamDetailRepository {
                 starters = cachedStarters,
                 status = rosterSummary(cached.players.size, cachedStarters.size, substitutes, cached.staff.size),
                 lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
-                staffStatus = if (cached.staff.isNotEmpty()) "教练组数据已缓存" else "教练组尚未同步"
+                staffStatus = if (cached.staff.isNotEmpty()) "Liquipedia · 2026-09-09 快照 · 已缓存" else "教练组尚未同步"
             )
             return
         }
@@ -131,8 +131,7 @@ internal object TeamDetailRepository {
             } else cachedStarters
 
             val staffSupplement = if (baseDetails != null) {
-                runCatching { staffProvider.fetch(effectiveTeam, baseDetails) }
-                    .getOrElse { TeamStaffSupplement(status = "教练组数据源暂不可用") }
+                staffProvider.fetch(effectiveTeam, baseDetails)
             } else TeamStaffSupplement(status = "教练组等待 Riot roster")
 
             val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
