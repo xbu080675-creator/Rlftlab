@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.EsportsTournamentRef
+import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
@@ -110,6 +111,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
         buildCompetitionBuckets(center.matches, standingsCenter.tournaments)
     }
     var selectedBucketKey by remember { mutableStateOf<String?>(null) }
+    var selectedDetailMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
     var tabIndex by remember { mutableIntStateOf(0) }
     val selectedBucket = buckets.firstOrNull { it.key == selectedBucketKey }
     val selectedStandings = standingsCenter.standings
@@ -122,27 +124,36 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
         Surface(Modifier.fillMaxSize(), color = RiftBg, contentColor = RiftText) {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)) {
                 ScheduleCenterHeader(
-                    title = selectedBucket?.title ?: "英雄联盟赛事",
-                    subtitle = if (selectedBucket == null) {
+                    title = selectedDetailMatch?.let(::matchLabel) ?: selectedBucket?.title ?: "英雄联盟赛事",
+                    subtitle = selectedDetailMatch?.let { match ->
+                        "${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateKey(match)}"
+                    } ?: if (selectedBucket == null) {
                         "按官方 Tournament 整理"
                     } else {
                         competitionRange(selectedBucket.matches)
                     },
-                    canGoBack = selectedBucket != null,
+                    canGoBack = selectedDetailMatch != null || selectedBucket != null,
                     onBack = {
-                        selectedBucketKey = null
-                        tabIndex = 0
+                        if (selectedDetailMatch != null) {
+                            selectedDetailMatch = null
+                        } else {
+                            selectedBucketKey = null
+                            tabIndex = 0
+                        }
                     },
                     onClose = onClose
                 )
 
                 Spacer(Modifier.height(12.dp))
-                if (selectedBucket == null) {
+                if (selectedDetailMatch != null) {
+                    MatchDetailContent()
+                } else if (selectedBucket == null) {
                     CompetitionDirectory(
                         buckets = buckets,
                         currentMatchId = center.currentMatch?.matchId,
                         nextMatchId = center.nextMatch?.matchId,
                         onSelect = { bucket ->
+                            selectedDetailMatch = null
                             selectedBucketKey = bucket.key
                             tabIndex = 0
                             bucket.tournamentId?.let(StandingsCenterStore::selectTournament)
@@ -165,7 +176,8 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             selectedMatchId = center.selectedMatch?.matchId,
                             onMatchClick = { match ->
                                 MatchSessionStore.selectScheduleMatch(match.matchId)
-                                onClose()
+                                MatchDetailRepository.open(match)
+                                selectedDetailMatch = match
                             }
                         )
                         EventCenterTab.STANDINGS -> StandingsView(selectedStandings)
