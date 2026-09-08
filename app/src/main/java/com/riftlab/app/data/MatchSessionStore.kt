@@ -16,10 +16,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 object MatchSessionStore {
-    const val MATCH_ID = "2026-09-08-lgd-ig"
-
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
 
+    // Match-specific fallback is intentionally limited to lineups separately verified before the match.
+    // The generic schedule center never invents a starting five for other teams.
     private val verifiedLgdRoster = listOf(
         PlayerCard("TOP", "Burdol", "RANK 待接", "赛前已验证缓存"),
         PlayerCard("JUG", "Heng", "RANK 待接", "赛前已验证缓存"),
@@ -36,20 +36,20 @@ object MatchSessionStore {
         PlayerCard("SUP", "Meiko", "RANK 待接", "赛前已验证缓存")
     )
 
-    private val fallbackPreMatch = PreMatchInfo(
+    private val emptyPreMatch = PreMatchInfo(
         league = "LPL",
-        stage = "PLAYOFFS · LOWER BRACKET",
-        blue = "LGD",
-        red = "IG",
-        startTime = "17:00",
-        blueForm = "REAL DATA",
-        redForm = "REAL DATA",
-        blueRoster = verifiedLgdRoster,
-        redRoster = verifiedIgRoster,
-        rosterNote = "等待 Riot LoL Esports roster；Rank 使用独立数据源，当前不伪造。"
+        stage = "SCHEDULE CENTER",
+        blue = "—",
+        red = "—",
+        startTime = "--:--",
+        blueForm = "RIOT SCHEDULE",
+        redForm = "RIOT SCHEDULE",
+        blueRoster = emptyList(),
+        redRoster = emptyList(),
+        rosterNote = "正在同步 Riot LPL 赛程；不会用 Mock 首发或 Rank 填空。"
     )
 
-    private val _preMatch = MutableStateFlow(fallbackPreMatch)
+    private val _preMatch = MutableStateFlow(emptyPreMatch)
     val preMatch: PreMatchInfo get() = _preMatch.value
     val preMatchFlow: StateFlow<PreMatchInfo> = _preMatch.asStateFlow()
 
@@ -67,9 +67,7 @@ object MatchSessionStore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val scheduleSource = LolEsportsScheduleDataSource()
     private val teamSource = LolEsportsTeamDataSource()
-    private val liveDataSource = LolEsportsLiveDataSource(
-        preferredTeamCodes = setOf("LGD", "IG")
-    )
+    private val liveDataSource = LolEsportsLiveDataSource()
 
     private var liveJob: Job? = null
     private var scheduleJob: Job? = null
@@ -81,11 +79,14 @@ object MatchSessionStore {
     private val _targetMatch = MutableStateFlow<ScheduledEsportsMatch?>(null)
     val targetMatch: StateFlow<ScheduledEsportsMatch?> = _targetMatch.asStateFlow()
 
-    private val _scheduleStatus = MutableStateFlow("正在连接 Riot LoL Esports 赛程源…")
+    private val _scheduleStatus = MutableStateFlow("正在连接 Riot LoL Esports 赛程中心…")
     val scheduleStatus: StateFlow<String> = _scheduleStatus.asStateFlow()
 
-    private val _rosterStatus = MutableStateFlow("ROSTER · 等待赛程命中")
+    private val _rosterStatus = MutableStateFlow("ROSTER · 等待选中赛事")
     val rosterStatus: StateFlow<String> = _rosterStatus.asStateFlow()
+
+    private val _scheduleCenter = MutableStateFlow(ScheduleCenterState())
+    val scheduleCenter: StateFlow<ScheduleCenterState> = _scheduleCenter.asStateFlow()
 
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
 
@@ -93,8 +94,8 @@ object MatchSessionStore {
         LiveSnapshot(
             game = 1,
             elapsedSeconds = 0,
-            blue = "LGD",
-            red = "IG",
+            blue = "BLUE",
+            red = "RED",
             blueGold = 0,
             redGold = 0,
             blueKills = 0,
@@ -103,7 +104,7 @@ object MatchSessionStore {
             redTowers = 0,
             blueDragons = 0,
             redDragons = 0,
-            latestEvent = "Riot Live · 等待 17:00 LGD vs iG",
+            latestEvent = "Riot Live · 等待 LPL 实时比赛",
             source = "Riot LoL Esports Live"
         )
     )
@@ -121,7 +122,9 @@ object MatchSessionStore {
 
         if (liveJob?.isActive != true) {
             liveJob = scope.launch {
-                liveDataSource.observe(MATCH_ID).collect { snapshot ->
+                // Empty preference means: follow the LPL event that Riot actually marks live.
+                // Planned start time never gates discovery, so early starts are not missed.
+                liveDataSource.observe("").collect { snapshot ->
                     _live.value = snapshot
                 }
             }
@@ -134,33 +137,96 @@ object MatchSessionStore {
                         val current = _live.value
                         _live.value = current.copy(latestEvent = status.message)
                     }
+                    syncLiveStatusIntoSchedule(status)
                 }
             }
         }
     }
 
+    fun selectScheduleMatch(matchId: String) {
+        val match = _scheduleCenter.value.matches.firstOrNull {
+            it.matchId == matchId || it.eventId == matchId
+        } ?: return
+
+        _targetMatch.value = match
+        _scheduleCenter.value = _scheduleCenter.value.copy(selectedMatch = match)
+        scope.launch { refreshPreMatchFromTarget(match) }
+    }
+
     private suspend fun refreshScheduleAndRoster() {
-        _scheduleStatus.value = "正在同步 Riot LPL 赛程…"
+        _scheduleStatus.value = "正在同步 Riot LPL 分页赛程…"
         try {
             val matches = scheduleSource.fetchLeagueSchedule()
             _schedule.value = matches
-            val target = matches.firstOrNull(::isTonightTarget)
-            _targetMatch.value = target
 
-            if (target == null) {
-                _scheduleStatus.value = "Riot Schedule 已连接，但未找到 LGD vs IG 目标赛事"
-                _rosterStatus.value = "ROSTER · 使用赛前已验证缓存"
-                return
+            val currentBySchedule = matches.firstOrNull(::isLiveState)
+            val next = matches.firstOrNull { !isCompletedState(it) && !isLiveState(it) }
+            val oldSelectedId = _scheduleCenter.value.selectedMatch?.matchId
+            val selected = matches.firstOrNull { it.matchId == oldSelectedId }
+                ?: currentBySchedule
+                ?: next
+                ?: matches.lastOrNull()
+
+            val center = _scheduleCenter.value.copy(
+                matches = matches,
+                currentMatch = currentBySchedule ?: _scheduleCenter.value.currentMatch?.let { old ->
+                    matches.firstOrNull { it.matchId == old.matchId }
+                },
+                nextMatch = next,
+                selectedMatch = selected,
+                lastRefreshEpochMs = System.currentTimeMillis(),
+                statusMessage = buildScheduleStatus(matches, currentBySchedule, next)
+            )
+            _scheduleCenter.value = center
+            _targetMatch.value = selected
+            _scheduleStatus.value = center.statusMessage
+
+            if (selected != null) {
+                refreshPreMatchFromTarget(selected)
+            } else {
+                _preMatch.value = emptyPreMatch
+                _rosterStatus.value = "ROSTER · 当前分页没有可选赛事"
             }
-
-            val teams = target.teams.joinToString(" vs ") { it.code }
-            _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()}"
-            val rosterResult = refreshPreMatchFromTarget(target)
-            _scheduleStatus.value = "Riot Schedule · $teams · ${target.state.uppercase()} · ROSTER $rosterResult"
         } catch (t: Throwable) {
-            _scheduleStatus.value = "赛程源 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"
-            _rosterStatus.value = "ROSTER · 网络源不可用，使用赛前已验证缓存"
+            val message = "赛程中心 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"
+            _scheduleStatus.value = message
+            _scheduleCenter.value = _scheduleCenter.value.copy(statusMessage = message)
+            _rosterStatus.value = "ROSTER · 网络源不可用，保留上次已同步数据"
         }
+    }
+
+    private suspend fun syncLiveStatusIntoSchedule(status: LiveSourceStatus) {
+        if (status.eventId.isBlank()) return
+        if (status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return
+
+        val center = _scheduleCenter.value
+        val liveMatch = center.matches.firstOrNull {
+            it.eventId == status.eventId || it.matchId == status.eventId
+        } ?: return
+
+        val key = scheduleKey(liveMatch)
+        val detected = if (key in center.liveDetectedAtEpochMs) {
+            center.liveDetectedAtEpochMs
+        } else {
+            center.liveDetectedAtEpochMs + (key to System.currentTimeMillis())
+        }
+
+        val targetChanged = _targetMatch.value?.matchId != liveMatch.matchId
+        val next = center.matches.firstOrNull { match ->
+            match.matchId != liveMatch.matchId && !isCompletedState(match) && !isLiveState(match)
+        }
+
+        _scheduleCenter.value = center.copy(
+            currentMatch = liveMatch,
+            nextMatch = next,
+            selectedMatch = liveMatch,
+            liveDetectedAtEpochMs = detected,
+            statusMessage = buildScheduleStatus(center.matches, liveMatch, next)
+        )
+        _targetMatch.value = liveMatch
+        _scheduleStatus.value = _scheduleCenter.value.statusMessage
+
+        if (targetChanged) refreshPreMatchFromTarget(liveMatch)
     }
 
     private suspend fun refreshPreMatchFromTarget(target: ScheduledEsportsMatch): String {
@@ -177,36 +243,34 @@ object MatchSessionStore {
 
         val leftRiotRoster = leftDetails?.players.orEmpty().toPlayerCards()
         val rightRiotRoster = rightDetails?.players.orEmpty().toPlayerCards()
-
-        // getTeams is a team roster endpoint, not a match-specific starting-lineup endpoint.
-        // Only auto-promote it to the five displayed starters when every core role is unique.
-        // If the roster contains substitutes/role ambiguity, keep the separately verified five.
         val leftUniqueFive = leftRiotRoster.uniqueStartingFiveOrNull()
         val rightUniqueFive = rightRiotRoster.uniqueStartingFiveOrNull()
-        val leftRoster = leftUniqueFive ?: fallbackRoster(left.code)
-        val rightRoster = rightUniqueFive ?: fallbackRoster(right.code)
+        val leftFallback = fallbackRoster(left.code)
+        val rightFallback = fallbackRoster(right.code)
+        val leftRoster = leftUniqueFive ?: leftFallback
+        val rightRoster = rightUniqueFive ?: rightFallback
         val connectedCount = listOf(leftDetails != null, rightDetails != null).count { it }
         val autoStarterCount = listOf(leftUniqueFive != null, rightUniqueFive != null).count { it }
 
         _preMatch.value = PreMatchInfo(
             league = target.league.ifBlank { "LPL" },
-            stage = target.blockName.ifBlank { "PLAYOFFS" }.uppercase(),
+            stage = target.blockName.ifBlank { "LPL" }.uppercase(),
             blue = left.code.ifBlank { left.name },
             red = right.code.ifBlank { right.name },
             startTime = formatLocalStart(target.startTimeIso),
-            blueForm = "RIOT SCHEDULE",
-            redForm = "RIOT SCHEDULE",
+            blueForm = scheduleTeamForm(left),
+            redForm = scheduleTeamForm(right),
             blueRoster = leftRoster,
             redRoster = rightRoster,
             rosterNote = when {
                 connectedCount == 2 && autoStarterCount == 2 ->
                     "两队 Riot getTeams roster 已连接，五位置均唯一；当前显示 Riot roster 五人。Rank 将接独立 Ranked 数据源。"
                 connectedCount == 2 ->
-                    "两队 Riot getTeams roster 已连接；存在替补或位置歧义的一侧继续显示赛前已验证首发，避免把 team roster 误当本场首发。Rank 暂未接入。"
+                    "两队 Riot team roster 已连接；存在替补或位置歧义时不会冒充本场首发。只有单独核实过的阵容才允许走缓存。"
                 connectedCount == 1 ->
-                    "一侧 Riot roster 已连接，另一侧使用赛前已验证缓存；Rank 暂未接入。"
+                    "一侧 Riot roster 已连接；另一侧若没有单独核实的首发则保持空缺，不伪造。Rank 暂未接入。"
                 else ->
-                    "Riot Schedule 已命中，但 roster 暂不可用；当前使用赛前已验证首发缓存，Rank 暂未接入。"
+                    "Riot Schedule 已连接，但当前队伍 roster 暂不可用；没有独立核实的数据就保持空缺。Rank 暂未接入。"
             }
         )
         _rosterStatus.value = "ROSTER · RIOT GETTEAMS $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
@@ -216,7 +280,6 @@ object MatchSessionStore {
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
         if (team.slug.isNotBlank()) return team.slug
 
-        // Verified against the live persisted gateway in CI on 2026-09-08.
         val verified = when (team.code.uppercase()) {
             "LGD" -> "lgd-gaming"
             "IG" -> "invictus-gaming"
@@ -224,8 +287,6 @@ object MatchSessionStore {
         }
         if (verified != null) return verified
 
-        // Generic best-effort candidate for future teams. If Riot uses a non-obvious slug,
-        // getTeams will simply miss and the UI keeps its verified/cache fallback.
         return team.name
             .lowercase()
             .replace(Regex("[^a-z0-9]+"), "-")
@@ -265,10 +326,73 @@ object MatchSessionStore {
         else -> 99
     }
 
-    private fun isTonightTarget(match: ScheduledEsportsMatch): Boolean {
-        val codes = match.teams.map { it.code.uppercase() }.toSet()
-        return "LGD" in codes && "IG" in codes
+    private fun scheduleTeamForm(team: EsportsTeamRef): String =
+        if (team.recordWins > 0 || team.recordLosses > 0) {
+            "${team.recordWins}W-${team.recordLosses}L"
+        } else {
+            "RIOT SCHEDULE"
+        }
+
+    private fun buildScheduleStatus(
+        matches: List<ScheduledEsportsMatch>,
+        current: ScheduledEsportsMatch?,
+        next: ScheduledEsportsMatch?
+    ): String {
+        val completed = matches.count(::isCompletedState)
+        val currentText = current?.let { "LIVE ${teamsLabel(it)}" } ?: "NO LIVE"
+        val nextText = next?.let { "NEXT ${teamsLabel(it)} ${formatLocalDateTime(it.startTimeIso)}" } ?: "NO NEXT"
+        return "Riot Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
     }
+
+    private fun teamsLabel(match: ScheduledEsportsMatch): String =
+        match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }
+
+    private fun isLiveState(match: ScheduledEsportsMatch): Boolean {
+        val state = normalizeState(match.state)
+        return state.contains("progress") || state == "live"
+    }
+
+    private fun isCompletedState(match: ScheduledEsportsMatch): Boolean {
+        val state = normalizeState(match.state)
+        return state.contains("complete") || state == "finished"
+    }
+
+    fun schedulePhase(match: ScheduledEsportsMatch): ScheduleMatchPhase = when {
+        _scheduleCenter.value.currentMatch?.matchId == match.matchId -> ScheduleMatchPhase.LIVE
+        isLiveState(match) -> ScheduleMatchPhase.LIVE
+        isCompletedState(match) -> ScheduleMatchPhase.COMPLETED
+        else -> ScheduleMatchPhase.UPCOMING
+    }
+
+    fun scheduleScore(match: ScheduledEsportsMatch): String {
+        val left = match.teams.getOrNull(0)?.gameWins ?: 0
+        val right = match.teams.getOrNull(1)?.gameWins ?: 0
+        return if (left > 0 || right > 0 || isCompletedState(match)) "$left : $right" else "—"
+    }
+
+    fun scheduleDateKey(match: ScheduledEsportsMatch): String = runCatching {
+        DateTimeFormatter.ofPattern("yyyy-MM-dd")
+            .withZone(ZoneId.systemDefault())
+            .format(Instant.parse(match.startTimeIso))
+    }.getOrElse { "日期未知" }
+
+    fun scheduleTimingNote(match: ScheduledEsportsMatch): String {
+        val detectedAt = _scheduleCenter.value.liveDetectedAtEpochMs[scheduleKey(match)] ?: return "计划 ${formatLocalStart(match.startTimeIso)}"
+        val planned = runCatching { Instant.parse(match.startTimeIso).toEpochMilli() }.getOrNull()
+            ?: return "LIVE 已检测"
+        val deltaMs = planned - detectedAt
+        return if (deltaMs >= 60_000L) {
+            "计划 ${formatLocalStart(match.startTimeIso)} · 提前约 ${deltaMs / 60_000L} 分钟检测到 LIVE"
+        } else {
+            "计划 ${formatLocalStart(match.startTimeIso)} · LIVE 已检测"
+        }
+    }
+
+    private fun scheduleKey(match: ScheduledEsportsMatch): String =
+        match.eventId.ifBlank { match.matchId }
+
+    private fun normalizeState(value: String): String =
+        value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
 
     private fun formatLocalStart(iso: String): String {
         if (iso.isBlank()) return "--:--"
@@ -279,7 +403,16 @@ object MatchSessionStore {
         }.getOrElse { iso }
     }
 
-    /** Compatibility alias: there is no mock live feed anymore. */
+    private fun formatLocalDateTime(iso: String): String {
+        if (iso.isBlank()) return "--"
+        return runCatching {
+            DateTimeFormatter.ofPattern("MM-dd HH:mm")
+                .withZone(ZoneId.systemDefault())
+                .format(Instant.parse(iso))
+        }.getOrElse { iso }
+    }
+
+    /** Compatibility alias retained for older overlay/UI call sites. */
     fun ensureMockRunning() = ensureDataRunning()
 
     fun formatTime(seconds: Int): String = "%02d:%02d".format(seconds / 60, seconds % 60)
