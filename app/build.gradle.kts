@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.0.0-dev.19"
+        versionCode = 20
+        versionName = "1.0.0-dev.20"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.19: global team/match entity navigation + management/social profile surfaces.
+// dev.20: restore complete team identity/data resolution for every global team-detail entry point.
