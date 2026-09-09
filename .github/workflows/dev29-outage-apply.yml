@@ -1,0 +1,35 @@
+name: RiftLab dev29 Riot outage hotfix
+
+on:
+  push:
+    paths:
+      - 'tools/dev29_outage_patch.py'
+      - '.github/workflows/dev29-outage-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 tools/dev29_outage_patch.py
+      - name: Commit dev29 hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt \
+                  app/src/main/java/com/riftlab/app/data/LolEsportsStandingsClient.kt \
+                  app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt \
+                  app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt \
+                  app/src/main/java/com/riftlab/app/data/TeamDetailRepository.kt \
+                  app/src/main/java/com/riftlab/app/RiftLabApplication.kt \
+                  app/build.gradle.kts DEV_CHANGELOG.txt \
+                  .github/workflows/ota-direct.yml .github/workflows/android-build.yml
+          git commit -m "fix: survive Riot persisted gateway outages"
+          git pull --rebase origin main
+          git push
