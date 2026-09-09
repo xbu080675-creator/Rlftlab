@@ -1,0 +1,38 @@
+name: RiftLab dev22 one-shot migration
+
+on:
+  push:
+    paths:
+      - 'tools/dev22_patch.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply dev22 source migration
+        run: python tools/dev22_patch.py
+
+      - name: Remove one-shot migration files
+        run: |
+          rm -f tools/dev22_patch.py .github/workflows/dev22-apply.yml
+
+      - name: Commit migrated sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "feat: separate event and game live phases"
+          git push
