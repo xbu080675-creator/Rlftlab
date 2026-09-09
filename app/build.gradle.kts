@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 53
-        versionName = "1.0.0-dev.53"
+        versionCode = 54
+        versionName = "1.0.0-dev.54"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -96,3 +96,5 @@ dependencies {
 
 // dev.53: Bilibili official VOD lookup accepts reversed team order and retries negative search cache.
 // Final dev.53 trigger after validating KT vs T1 / T1 vs KT official VOD matching.
+
+// dev.54: global completed-series operator archive from OP.GG terminal data; unblock Riot/OP.GG history backfill game enumeration; labelled global MVP Point fallback.

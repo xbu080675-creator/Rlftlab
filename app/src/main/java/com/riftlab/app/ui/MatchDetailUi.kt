@@ -73,11 +73,17 @@ internal fun MatchDetailContent() {
     val phase = MatchSessionStore.schedulePhase(match)
     val series = state.series
     val live = state.liveGame
-    val gameNumbers = remember(series?.games, live?.game) {
+    val playedGamesFromScore = if (phase == ScheduleMatchPhase.COMPLETED) {
+        match.teams.take(2).sumOf { it.gameWins }.coerceAtMost(match.bestOf.takeIf { it > 0 } ?: 7)
+    } else 0
+    val gameNumbers = remember(series?.games, live?.game, state.drafts, state.gameMvps, playedGamesFromScore) {
         buildList {
             series?.games.orEmpty().map { it.game }.filter { it > 0 }.distinct().sorted().forEach(::add)
+            state.drafts.map { it.game }.filter { it > 0 && it !in this }.forEach(::add)
+            state.gameMvps.mapNotNull { it.game }.filter { it > 0 && it !in this }.forEach(::add)
+            if (playedGamesFromScore > 0) (1..playedGamesFromScore).filter { it !in this }.forEach(::add)
             live?.game?.takeIf { it > 0 && it !in this }?.let(::add)
-        }.sorted()
+        }.distinct().sorted()
     }
     var selectedGame by remember(state.key?.stableId) { mutableIntStateOf(0) }
     val selectedSnapshot = when {

@@ -163,6 +163,8 @@ object MatchDetailRepository {
             }
             val enrichedMatch = runCatching { enrichTeamImages(matchWithRiotAssets, opgg.teamImages) }
                 .getOrDefault(matchWithRiotAssets)
+            val opggSeries = opgg.series?.normalizeDetailRoles()?.let { alignSeriesToMatch(it, enrichedMatch) }
+            val detailSeries = resolved ?: opggSeries
 
             val officialGameMvps = awards.gameMvps.map { it.withDisplaySource(enrichedMatch) }
             val opggGameMvps = opgg.gameMvps.map { it.withDisplaySource(enrichedMatch) }
@@ -181,13 +183,13 @@ object MatchDetailRepository {
             val finalState = base.copy(
                 match = enrichedMatch,
                 loading = false,
-                series = resolved,
-                seriesMvp = awards.seriesMvp?.withDisplaySource(enrichedMatch),
+                series = detailSeries,
+                seriesMvp = (awards.seriesMvp ?: opgg.seriesMvp)?.withDisplaySource(enrichedMatch),
                 gameMvps = mergedGameMvps,
                 votes = mergedVotes,
                 drafts = decoratedDrafts,
                 status = when {
-                    resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${draftResult.status} · ${opgg.status}"
+                    detailSeries != null -> "已加载 ${detailSeries.games.size} 局终局数据 · ${awards.status} · ${draftResult.status} · ${opgg.status}"
                     !lplMatch -> "${matchWithRiotAssets.league} · Riot/OP.GG 全球赛后链路 · ${opgg.status} · 未调用 LPL BMatch/TJStats"
                     result.isFailure -> "比赛详情同步失败 · ${opgg.status}"
                     else -> "${resolver.status.value} · ${opgg.status}"

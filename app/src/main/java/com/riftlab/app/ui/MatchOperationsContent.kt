@@ -86,11 +86,21 @@ internal fun MatchOperationsContent() {
     }
 
     val finalSeries = completedSeries?.takeIf { series -> seriesMatches(series.teamA, series.teamB, match) }
-    val games = remember(record?.games, record?.finalGames, finalSeries?.games, live?.game) {
+        ?: detail.series?.takeIf { series -> seriesMatches(series.teamA, series.teamB, match) }
+    val playedGamesFromScore = if (phase == ScheduleMatchPhase.COMPLETED) {
+        match.teams.take(2).sumOf { it.gameWins }.coerceAtMost(match.bestOf.takeIf { it > 0 } ?: 7)
+    } else 0
+    val games = remember(
+        record?.games, record?.finalGames, finalSeries?.games, live?.game,
+        detail.drafts, detail.gameMvps, playedGamesFromScore
+    ) {
         buildList {
             record?.games?.keys.orEmpty().filter { it > 0 }.forEach(::add)
             record?.finalGames?.keys.orEmpty().filter { it > 0 && it !in this }.forEach(::add)
             finalSeries?.games.orEmpty().map { it.game }.filter { it > 0 && it !in this }.forEach(::add)
+            detail.drafts.map { it.game }.filter { it > 0 && it !in this }.forEach(::add)
+            detail.gameMvps.mapNotNull { it.game }.filter { it > 0 && it !in this }.forEach(::add)
+            if (playedGamesFromScore > 0) (1..playedGamesFromScore).filter { it !in this }.forEach(::add)
             live?.game?.takeIf { it > 0 && it !in this }?.let(::add)
         }.distinct().sorted()
     }

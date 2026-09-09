@@ -12,6 +12,8 @@ import java.time.ZonedDateTime
 import kotlin.math.roundToLong
 
 internal data class OpggMatchSupplement(
+    val series: CompletedSeriesSnapshot? = null,
+    val seriesMvp: OfficialMvpRecord? = null,
     val drafts: List<DraftPickRecord> = emptyList(),
     val gameMvps: List<OfficialMvpRecord> = emptyList(),
     val panels: List<OfficialVoteRecord> = emptyList(),
@@ -46,6 +48,7 @@ internal class OpggMatchSupplementProvider {
                 winner { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
                 teams {
                   side bans
+                  kills deaths assists towerKills inhibitorKills heraldKills dragonKills elderDrakeKills baronKills goldEarned
                   team { id name acronym imageUrl imageUrlDarkMode imageUrlLightMode }
                 }
                 players {
@@ -72,6 +75,9 @@ internal class OpggMatchSupplementProvider {
         val drafts = mutableListOf<DraftPickRecord>()
         val mvps = mutableListOf<OfficialMvpRecord>()
         val panels = mutableListOf<OfficialVoteRecord>()
+        val finals = mutableListOf<LiveSnapshot>()
+        val seriesMvpPoints = linkedMapOf<String, Double>()
+        val seriesMvpMeta = linkedMapOf<String, OfficialMvpRecord>()
         val maxSets = match.bestOf.takeIf { it > 0 } ?: 5
 
         for (set in 1..maxSets) {
@@ -82,6 +88,18 @@ internal class OpggMatchSupplementProvider {
             val teamCodeById = linkedMapOf<String, String>()
             val blueBans = mutableListOf<String>()
             val redBans = mutableListOf<String>()
+            var blueCode = ""
+            var redCode = ""
+            var blueGold = 0
+            var redGold = 0
+            var blueKills = 0
+            var redKills = 0
+            var blueTowers = 0
+            var redTowers = 0
+            var blueDragons = 0
+            var redDragons = 0
+            var blueBarons = 0
+            var redBarons = 0
             val teams = game.optJSONArray("teams") ?: JSONArray()
             for (i in 0 until teams.length()) {
                 val row = teams.optJSONObject(i) ?: continue
@@ -96,8 +114,24 @@ internal class OpggMatchSupplementProvider {
                 collectTeamImage(team, images)
                 val bans = jsonScalarList(row.optJSONArray("bans"))
                 when (side) {
-                    "blue" -> blueBans += bans
-                    "red" -> redBans += bans
+                    "blue" -> {
+                        blueBans += bans
+                        blueCode = code
+                        blueGold = row.optInt("goldEarned", 0)
+                        blueKills = row.optInt("kills", 0)
+                        blueTowers = row.optInt("towerKills", 0)
+                        blueDragons = row.optInt("dragonKills", 0) + row.optInt("elderDrakeKills", 0)
+                        blueBarons = row.optInt("baronKills", 0)
+                    }
+                    "red" -> {
+                        redBans += bans
+                        redCode = code
+                        redGold = row.optInt("goldEarned", 0)
+                        redKills = row.optInt("kills", 0)
+                        redTowers = row.optInt("towerKills", 0)
+                        redDragons = row.optInt("dragonKills", 0) + row.optInt("elderDrakeKills", 0)
+                        redBarons = row.optInt("baronKills", 0)
+                    }
                 }
             }
 
@@ -134,11 +168,21 @@ internal class OpggMatchSupplementProvider {
 
                 val point = number(row.opt("mvpPoint"))
                 if (point > 0.0) {
+                    val role = row.optString("position").ifBlank { player.optString("position") }
                     ratings += Rating(
                         name = playerName,
                         team = teamCode,
-                        role = row.optString("position").ifBlank { player.optString("position") },
+                        role = role,
                         point = point
+                    )
+                    val ratingKey = "${token(playerName)}|${token(teamCode)}"
+                    seriesMvpPoints[ratingKey] = (seriesMvpPoints[ratingKey] ?: 0.0) + point
+                    seriesMvpMeta[ratingKey] = OfficialMvpRecord(
+                        game = null,
+                        playerName = playerName,
+                        team = teamCode,
+                        role = role,
+                        source = "OP.GG · 系列赛 MVP Point 累计（第三方评分，非官方奖项）"
                     )
                 }
             }
@@ -177,15 +221,77 @@ internal class OpggMatchSupplementProvider {
                     source = "OP.GG · MVP Point（第三方评分，不是官方投票）"
                 )
             }
+
+            val elapsed = normalizeGameLengthSeconds(game.optLong("length", 0L))
+            val terminalMeaningful = blueGold > 0 || redGold > 0 || blueKills > 0 || redKills > 0 ||
+                blueTowers > 0 || redTowers > 0 || blueDragons > 0 || redDragons > 0 || blueBarons > 0 || redBarons > 0
+            if (game.optBoolean("finished", false) && blueCode.isNotBlank() && redCode.isNotBlank() && terminalMeaningful) {
+                finals += LiveSnapshot(
+                    game = set,
+                    elapsedSeconds = elapsed,
+                    blue = blueCode,
+                    red = redCode,
+                    blueGold = blueGold,
+                    redGold = redGold,
+                    blueKills = blueKills,
+                    redKills = redKills,
+                    blueTowers = blueTowers,
+                    redTowers = redTowers,
+                    blueDragons = blueDragons,
+                    redDragons = redDragons,
+                    latestEvent = "OP.GG 终局快照 · G$set",
+                    blueBarons = blueBarons,
+                    redBarons = redBarons,
+                    source = "OP.GG Esports · gameByMatch FINAL · third-party",
+                    gameId = "opgg:${game.opt("id")?.toString().orEmpty()}"
+                )
+            }
         }
 
+        val left = match.teams.getOrNull(0)
+        val right = match.teams.getOrNull(1)
+        val scoreA = left?.let { scoreForTeam(opggMatch, it) } ?: 0
+        val scoreB = right?.let { scoreForTeam(opggMatch, it) } ?: 0
+        val series = if (left != null && right != null && finals.isNotEmpty()) {
+            CompletedSeriesSnapshot(
+                matchKey = "OPGG:$matchId",
+                teamA = left.code.ifBlank { left.name },
+                teamB = right.code.ifBlank { right.name },
+                scoreA = scoreA.takeIf { it > 0 || scoreB > 0 } ?: left.gameWins,
+                scoreB = scoreB.takeIf { it > 0 || scoreA > 0 } ?: right.gameWins,
+                games = finals.sortedBy { it.game },
+                seriesFinished = opggMatch.optString("status").contains("finish", ignoreCase = true) ||
+                    scoreA > 0 || scoreB > 0,
+                source = "OP.GG Esports · gameByMatch FINAL · third-party"
+            )
+        } else null
+        val seriesMvp = seriesMvpPoints.maxByOrNull { it.value }?.key?.let(seriesMvpMeta::get)
+
         OpggMatchSupplement(
+            series = series,
+            seriesMvp = seriesMvp,
             drafts = drafts,
             gameMvps = mvps,
             panels = panels,
             teamImages = images,
-            status = "OP.GG · match=$matchId · BP ${drafts.size} 局 · MVP ${mvps.size} 局"
+            status = "OP.GG · match=$matchId · FINAL ${finals.size} 局 · BP ${drafts.size} 局 · MVP Point ${mvps.size} 局"
         )
+    }
+
+    private fun scoreForTeam(opggMatch: JSONObject, team: EsportsTeamRef): Int {
+        val home = opggMatch.optJSONObject("homeTeam")
+        val away = opggMatch.optJSONObject("awayTeam")
+        return when {
+            home != null && teamMatches(home, team) -> opggMatch.optInt("homeScore", team.gameWins)
+            away != null && teamMatches(away, team) -> opggMatch.optInt("awayScore", team.gameWins)
+            else -> team.gameWins
+        }
+    }
+
+    private fun normalizeGameLengthSeconds(raw: Long): Int = when {
+        raw <= 0L -> 0
+        raw > 100_000L -> (raw / 1000L).toInt()
+        else -> raw.toInt()
     }
 
     /** Latest actually-played five for one team, with role/name/image for Riot-roster gaps. */
