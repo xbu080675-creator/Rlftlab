@@ -21,7 +21,7 @@ internal class LolEsportsScheduleDataSource(
     private val client: LolEsportsApiClient = LolEsportsApiClient()
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
-        val matches = TeamAssetCatalog.enrichMatches(client.fetchLplSchedule().map(::verifySeriesCompletion))
+        val matches = TeamAssetCatalog.enrichMatches(client.fetchGlobalSchedule().map(::verifySeriesCompletion))
         LiveMatchTargetRegistry.update(chooseLiveWatchTarget(matches))
         return matches
     }
@@ -138,9 +138,9 @@ internal class LolEsportsLiveDataSource(
                         lockedFromSchedule = false
                         _status.value = LiveSourceStatus(
                             phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                            message = "正在等待 LPL 实时比赛…"
+                            message = "正在等待全球 LoL Esports 实时比赛…"
                         )
-                        currentEvent = client.findLiveLplEvent(preferredMatchId = matchId)
+                        currentEvent = client.findLiveEvent(preferredMatchId = matchId)
                     }
 
                     knownGames = emptyList()
@@ -185,7 +185,7 @@ internal class LolEsportsLiveDataSource(
                     )
                     delay(2_000)
                     if (!lockedFromSchedule) {
-                        currentEvent = client.findLiveLplEvent(preferredMatchId = matchId) ?: event
+                        currentEvent = client.findLiveEvent(preferredMatchId = matchId) ?: event
                     }
                     continue
                 }

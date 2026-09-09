@@ -14,6 +14,14 @@ import kotlin.math.max
 internal object LolEsportsConfig {
     const val API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"
     const val LPL_LEAGUE_ID = "98767991314006698"
+
+    // Tier-one regional + international competitions tracked by RiftLab. IDs are discovered
+    // dynamically from Riot getLeagues so league reshuffles do not require an APK update.
+    val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(
+        "worlds", "msi", "first-stand", "first_stand", "ewc",
+        "lpl", "lck", "lec", "lcs", "lcp",
+        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs"
+    )
     const val PERSISTED_BASE = "https://esports-api.lolesports.com/persisted/gw"
     const val LIVE_BASE = "https://feed.lolesports.com/livestats/v1"
 }
@@ -40,25 +48,26 @@ internal class LolEsportsApiClient {
      * Riot getSchedule is paged. A single response is only a moving window around "now",
      * so the schedule center follows both older/newer page tokens and de-duplicates events.
      */
-    suspend fun fetchLplSchedule(): List<ScheduledEsportsMatch> {
+    suspend fun fetchGlobalSchedule(): List<ScheduledEsportsMatch> {
+        val leagueIds = fetchTrackedLeagueIds()
         val pages = mutableListOf<JSONObject>()
         val visitedTokens = mutableSetOf<String>()
 
-        val center = fetchSchedulePage(null)
+        val center = fetchSchedulePage(null, leagueIds)
         pages += center
 
         var older = schedulePageToken(center, "older")
-        repeat(3) {
+        repeat(4) {
             if (older.isBlank() || !visitedTokens.add("older:$older")) return@repeat
-            val page = fetchSchedulePage(older)
+            val page = fetchSchedulePage(older, leagueIds)
             pages += page
             older = schedulePageToken(page, "older")
         }
 
         var newer = schedulePageToken(center, "newer")
-        repeat(3) {
+        repeat(4) {
             if (newer.isBlank() || !visitedTokens.add("newer:$newer")) return@repeat
-            val page = fetchSchedulePage(newer)
+            val page = fetchSchedulePage(newer, leagueIds)
             pages += page
             newer = schedulePageToken(page, "newer")
         }
@@ -70,10 +79,31 @@ internal class LolEsportsApiClient {
                 .thenBy { it.eventId })
     }
 
-    private suspend fun fetchSchedulePage(pageToken: String?): JSONObject {
+    // Compatibility alias for older call sites while the app migrates away from LPL-only naming.
+    suspend fun fetchLplSchedule(): List<ScheduledEsportsMatch> = fetchGlobalSchedule()
+
+    private suspend fun fetchTrackedLeagueIds(): List<String> {
+        return runCatching {
+            val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getLeagues?hl=en-US")
+            val leagues = root.optJSONObject("data")?.optJSONArray("leagues") ?: JSONArray()
+            buildList {
+                for (i in 0 until leagues.length()) {
+                    val league = leagues.optJSONObject(i) ?: continue
+                    val id = league.optString("id")
+                    val slug = league.optString("slug").lowercase()
+                    if (id.isNotBlank() && slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS) add(id)
+                }
+            }.distinct()
+        }.getOrDefault(emptyList()).ifEmpty { listOf(LolEsportsConfig.LPL_LEAGUE_ID) }
+    }
+
+    private suspend fun fetchSchedulePage(pageToken: String?, leagueIds: List<String>): JSONObject {
         val url = buildString {
             append("${LolEsportsConfig.PERSISTED_BASE}/getSchedule?hl=en-US")
-            append("&leagueId=${LolEsportsConfig.LPL_LEAGUE_ID}")
+            if (leagueIds.isNotEmpty()) {
+                append("&leagueId=")
+                append(URLEncoder.encode(leagueIds.joinToString(","), "UTF-8"))
+            }
             if (!pageToken.isNullOrBlank()) {
                 append("&pageToken=").append(URLEncoder.encode(pageToken, "UTF-8"))
             }
@@ -99,10 +129,6 @@ internal class LolEsportsApiClient {
                 if (event.optString("type") != "match") continue
 
                 val league = event.optJSONObject("league")
-                val leagueId = league?.optString("id").orEmpty()
-                val leagueSlug = league?.optString("slug").orEmpty()
-                if (leagueId.isNotBlank() && leagueId != LolEsportsConfig.LPL_LEAGUE_ID && leagueSlug != "lpl") continue
-
                 val match = event.optJSONObject("match") ?: continue
                 val teams = parseTeams(match.optJSONArray("teams"))
                 if (teams.size < 2) continue
@@ -113,7 +139,7 @@ internal class LolEsportsApiClient {
                     ScheduledEsportsMatch(
                         eventId = event.optString("id", match.optString("id")),
                         matchId = match.optString("id"),
-                        league = league?.optString("name", "LPL") ?: "LPL",
+                        league = league?.optString("name", "LoL Esports") ?: "LoL Esports",
                         blockName = event.optString("blockName", ""),
                         startTimeIso = event.optString("startTime"),
                         state = verifiedScheduleState(rawState, bestOf, teams),
@@ -211,7 +237,7 @@ internal class LolEsportsApiClient {
         )
     }
 
-    suspend fun findLiveLplEvent(
+    suspend fun findLiveEvent(
         preferredMatchId: String = "",
         preferredTeamCodes: Set<String> = emptySet()
     ): LiveEventRef? {
@@ -223,11 +249,6 @@ internal class LolEsportsApiClient {
         val candidates = buildList {
             for (i in 0 until events.length()) {
                 val event = events.optJSONObject(i) ?: continue
-                val league = event.optJSONObject("league")
-                val leagueId = league?.optString("id").orEmpty()
-                val leagueSlug = league?.optString("slug").orEmpty()
-                if (leagueId != LolEsportsConfig.LPL_LEAGUE_ID && leagueSlug != "lpl") continue
-
                 val match = event.optJSONObject("match") ?: continue
                 val teams = parseTeams(match.optJSONArray("teams"))
                 val eventId = event.optString("id")
@@ -260,6 +281,11 @@ internal class LolEsportsApiClient {
 
         return candidates.first()
     }
+
+    suspend fun findLiveLplEvent(
+        preferredMatchId: String = "",
+        preferredTeamCodes: Set<String> = emptySet()
+    ): LiveEventRef? = findLiveEvent(preferredMatchId, preferredTeamCodes)
 
     suspend fun fetchLiveGame(event: LiveEventRef): LiveGameRef? {
         val root = getJson(

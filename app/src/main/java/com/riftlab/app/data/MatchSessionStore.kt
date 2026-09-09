@@ -19,7 +19,7 @@ object MatchSessionStore {
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
 
     private val emptyPreMatch = PreMatchInfo(
-        league = "LPL",
+        league = "LoL Esports",
         stage = "SCHEDULE CENTER",
         blue = "—",
         red = "—",
@@ -28,7 +28,7 @@ object MatchSessionStore {
         redForm = "RIOT SCHEDULE",
         blueRoster = emptyList(),
         redRoster = emptyList(),
-        rosterNote = "正在同步 Riot LPL 赛程；不会用 Mock 首发或 Rank 填空。"
+        rosterNote = "正在同步 Riot 全球 LoL Esports 赛程；不会用 Mock 首发或 Rank 填空。"
     )
 
     private val _preMatch = MutableStateFlow(emptyPreMatch)
@@ -69,7 +69,7 @@ object MatchSessionStore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val scheduleSource = LolEsportsScheduleDataSource()
     private val teamSource = LolEsportsTeamDataSource()
-    private val liveDataSource = LplOfficialLiveDataSource()
+    private val liveDataSource = GlobalOfficialLiveDataSource()
     private val postMatchResolver = LplHistoricalPostMatchResolver()
 
     private var liveJob: Job? = null
@@ -113,7 +113,7 @@ object MatchSessionStore {
     )
 
     private val _live = MutableStateFlow(
-        emptyLiveSnapshot("LPL Official · 等待当前正在进行的小局")
+        emptyLiveSnapshot("LoL Esports · 等待当前正在进行的小局")
     )
     val live: StateFlow<LiveSnapshot> = _live.asStateFlow()
 
@@ -162,7 +162,7 @@ object MatchSessionStore {
     }
 
     private suspend fun refreshScheduleAndRoster() {
-        _scheduleStatus.value = "正在同步 Riot LPL 分页赛程…"
+        _scheduleStatus.value = "正在同步 Riot 全球赛事分页赛程…"
         try {
             val matches = scheduleSource.fetchLeagueSchedule()
             _schedule.value = matches
@@ -191,12 +191,12 @@ object MatchSessionStore {
             _scheduleStatus.value = center.statusMessage
 
             // Post-match recovery is independent from the live target. Always resolve the most
-            // recent completed LPL series from the schedule, so opening RiftLab after the match
+            // recent completed series from the schedule. LPL currently has an additional TJStats final resolver;
             // can still rebuild the complete final archive.
             val latestCompleted = matches
                 .filter(::isCompletedState)
                 .maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
-            if (latestCompleted != null) {
+            if (latestCompleted != null && latestCompleted.league.contains("LPL", ignoreCase = true)) {
                 scope.launch {
                     runCatching { postMatchResolver.refresh(latestCompleted) }
                 }
@@ -275,8 +275,8 @@ object MatchSessionStore {
         val autoStarterCount = listOf(leftUniqueFive != null, rightUniqueFive != null).count { it }
 
         _preMatch.value = PreMatchInfo(
-            league = target.league.ifBlank { "LPL" },
-            stage = target.blockName.ifBlank { "LPL" }.uppercase(),
+            league = target.league.ifBlank { "LoL Esports" },
+            stage = target.blockName.ifBlank { target.league.ifBlank { "LoL Esports" } }.uppercase(),
             blue = left.code.ifBlank { left.name },
             red = right.code.ifBlank { right.name },
             startTime = formatLocalStart(target.startTimeIso),

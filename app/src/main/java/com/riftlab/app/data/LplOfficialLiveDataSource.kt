@@ -23,13 +23,14 @@ import kotlinx.coroutines.launch
  * Dynamic frame feeds must beat terminal/current-frame-only fallbacks. That keeps economy/KDA/
  * objective values moving with game time and gives MatchLifecycleArchive real process data.
  */
-internal class LplOfficialLiveDataSource : LiveMatchDataSource {
+internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
     private data class Provider(
         val name: String,
         val priority: Int,
         val source: LiveMatchDataSource,
-        val status: StateFlow<LiveSourceStatus>
+        val status: StateFlow<LiveSourceStatus>,
+        val lplOnly: Boolean = false
     )
 
     private val commRealtime = LplCommRealtimeDataSource()
@@ -37,9 +38,9 @@ internal class LplOfficialLiveDataSource : LiveMatchDataSource {
     private val lplMatchDetail = LplCurrentGameLiveDataSource()
 
     private val providers = listOf(
-        Provider("LPL Comm Realtime", 0, commRealtime, commRealtime.status),
+        Provider("LPL Comm Realtime", 0, commRealtime, commRealtime.status, lplOnly = true),
         Provider("Riot LiveStats", 10, riotLiveStats, riotLiveStats.status),
-        Provider("LPL MatchDetail", 30, lplMatchDetail, lplMatchDetail.status)
+        Provider("LPL MatchDetail", 30, lplMatchDetail, lplMatchDetail.status, lplOnly = true)
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -79,6 +80,7 @@ internal class LplOfficialLiveDataSource : LiveMatchDataSource {
                         val now = System.currentTimeMillis()
                         val best = providers
                             .filter { candidate ->
+                                if (candidate.lplOnly && !currentTargetIsLpl()) return@filter false
                                 val status = providerStatuses[candidate.name]
                                 status?.phase == LiveSourcePhase.LIVE &&
                                     status.lastUpdateEpochMs > 0L &&
@@ -133,6 +135,7 @@ internal class LplOfficialLiveDataSource : LiveMatchDataSource {
     private fun chooseRouterStatusLocked(): LiveSourceStatus {
         val now = System.currentTimeMillis()
         val live = providers.firstOrNull { provider ->
+            if (provider.lplOnly && !currentTargetIsLpl()) return@firstOrNull false
             val s = providerStatuses[provider.name]
             s?.phase == LiveSourcePhase.LIVE &&
                 s.lastUpdateEpochMs > 0L &&
@@ -150,12 +153,20 @@ internal class LplOfficialLiveDataSource : LiveMatchDataSource {
             LiveSourcePhase.IDLE
         )
         for (phase in phaseOrder) {
-            val provider = providers.firstOrNull { providerStatuses[it.name]?.phase == phase } ?: continue
+            val provider = providers.firstOrNull { candidate ->
+                (!candidate.lplOnly || currentTargetIsLpl()) && providerStatuses[candidate.name]?.phase == phase
+            } ?: continue
             val s = providerStatuses.getValue(provider.name)
             return s.copy(message = "ROUTER · ${provider.name} · ${s.message}")
         }
 
         return LiveSourceStatus(LiveSourcePhase.IDLE, "Live Provider Router 等待数据源")
+    }
+
+    private fun currentTargetIsLpl(): Boolean {
+        val target = LiveMatchTargetRegistry.snapshot() ?: return false
+        val league = target.league.lowercase()
+        return league == "lpl" || league.contains("league of legends pro league")
     }
 
     companion object {
