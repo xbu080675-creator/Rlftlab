@@ -6,6 +6,7 @@ import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.riftlab.app.data.RiotPersistedMirror
 
 /**
  * One ImageLoader for the whole app.
@@ -15,6 +16,11 @@ import coil.memory.MemoryCache
  * network response in an evictable disk cache for later visits/offline reuse.
  */
 class RiftLabApplication : Application(), ImageLoaderFactory {
+    override fun onCreate() {
+        super.onCreate()
+        RiotPersistedMirror.initialize(this)
+    }
+
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
         .components { add(SvgDecoder.Factory()) }
         .memoryCache {

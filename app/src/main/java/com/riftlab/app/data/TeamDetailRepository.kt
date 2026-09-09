@@ -98,22 +98,11 @@ internal object TeamDetailRepository {
         )
         loadJob = scope.launch {
             val lookup = team.id.ifBlank { team.slug }
-            if (lookup.isBlank()) {
-                val resolved = runCatching { assetProvider.resolve(team.copy(imageUrl = "")) }
-                    .getOrDefault(cachedImage)
-                    .let(EsportsAssetCache::normalize)
-                if (resolved.isNotBlank()) EsportsAssetCache.putTeam(resolved, *aliases)
-                _state.value = TeamDetailState(
-                    team = team,
-                    imageUrl = resolved,
-                    loading = false,
-                    status = "战队资料暂不可用",
-                    errorMessage = "缺少 Riot team id/slug"
-                )
-                return@launch
+            val detailResult: Result<EsportsTeamDetails?> = if (lookup.isBlank()) {
+                Result.success(null)
+            } else {
+                runCatching { source.fetchTeam(lookup) }
             }
-
-            val detailResult = runCatching { source.fetchTeam(lookup) }
             val baseDetails = detailResult.getOrNull()
             val effectiveTeam = baseDetails?.let { detail ->
                 team.copy(
@@ -147,42 +136,42 @@ internal object TeamDetailRepository {
                     ?: cachedStarters
             } else cachedStarters
 
-            val dynamicSupplement = if (baseDetails != null) {
-                runCatching { dynamicProvider.fetch(effectiveTeam, baseDetails) }
-                    .getOrElse {
-                        TeamDynamicSupplement(
-                            profile = TeamProfileSupplement(status = "管理层动态目录同步失败 · ${it.message?.take(80).orEmpty()}"),
-                            staff = TeamStaffSupplement(status = "教练组动态目录同步失败"),
-                            sourceMode = "error"
-                        )
-                    }
-            } else {
-                TeamDynamicSupplement(
-                    profile = TeamProfileSupplement(status = "管理层动态目录等待 Riot roster"),
-                    staff = TeamStaffSupplement(status = "教练组动态目录等待 Riot roster"),
-                    sourceMode = "waiting"
-                )
-            }
+            val dynamicBase = baseDetails ?: EsportsTeamDetails(
+                id = effectiveTeam.id,
+                slug = effectiveTeam.slug,
+                code = effectiveTeam.code,
+                name = effectiveTeam.name,
+                imageUrl = effectiveTeam.imageUrl,
+                players = emptyList()
+            )
+            val dynamicSupplement = runCatching { dynamicProvider.fetch(effectiveTeam, dynamicBase) }
+                .getOrElse {
+                    TeamDynamicSupplement(
+                        profile = TeamProfileSupplement(status = "管理层动态目录同步失败 · ${it.message?.take(80).orEmpty()}"),
+                        staff = TeamStaffSupplement(status = "教练组动态目录同步失败"),
+                        sourceMode = "error"
+                    )
+                }
 
             val staffSupplement = dynamicSupplement.staff
             val profileSupplement = dynamicSupplement.profile
             val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
             val management = profileSupplement.management.ifEmpty { cached?.management.orEmpty() }
             val teamSocialLinks = profileSupplement.teamLinks.ifEmpty { cached?.socialLinks.orEmpty() }
-            val enrichedPlayers = baseDetails?.players?.map { player ->
+            val enrichedPlayers = dynamicBase.players.map { player ->
                 val links = profileSupplement.playerLinks[token(player.summonerName)]
                     .orEmpty()
                     .ifEmpty { cached?.players?.firstOrNull { token(it.summonerName) == token(player.summonerName) }?.socialLinks.orEmpty() }
                 if (links == player.socialLinks) player else player.copy(socialLinks = links)
             }.orEmpty()
 
-            val details = baseDetails?.copy(
+            val details = dynamicBase.copy(
                 players = enrichedPlayers,
                 staff = staff,
                 management = management,
                 socialLinks = teamSocialLinks
             )
-            if (details != null) cache[key] = details
+            cache[key] = details
             if (starters.size >= 5) starterCache[key] = starters
             historyCache[key] = dynamicSupplement.history
             if (image.isNotBlank()) {

@@ -331,26 +331,8 @@ internal class LolEsportsLiveDataSource(
         .replace("-", "")
         .contains("progress")
 
-    private suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 5_000
-            readTimeout = 5_000
-            setRequestProperty("x-api-key", LolEsportsConfig.API_KEY)
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "RiftLab/1.0 Android")
-        }
-        try {
-            val code = connection.responseCode
-            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw IOException("HTTP $code from LoL Esports: ${body.take(160)}")
-            if (body.isBlank()) throw IOException("Empty response from LoL Esports")
-            JSONObject(body)
-        } finally {
-            connection.disconnect()
-        }
-    }
+    private suspend fun getJson(url: String): JSONObject =
+        RiotResilientHttp.getJson(url, connectTimeoutMs = 5_000, readTimeoutMs = 5_000)
 
     private fun teamLabel(match: ScheduledEsportsMatch): String =
         match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }

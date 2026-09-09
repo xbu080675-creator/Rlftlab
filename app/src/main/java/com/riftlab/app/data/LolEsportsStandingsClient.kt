@@ -171,25 +171,6 @@ internal class LolEsportsStandingsClient {
         }
     }
 
-    private suspend fun getJson(url: String): JSONObject = withContext(Dispatchers.IO) {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 8_000
-            readTimeout = 8_000
-            setRequestProperty("x-api-key", LolEsportsConfig.API_KEY)
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "RiftLab/1.0 Android")
-        }
-        try {
-            val code = connection.responseCode
-            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) {
-                throw IOException("HTTP $code from LoL Esports standings: ${body.take(180)}")
-            }
-            JSONObject(body)
-        } finally {
-            connection.disconnect()
-        }
-    }
+    private suspend fun getJson(url: String): JSONObject =
+        RiotResilientHttp.getJson(url, connectTimeoutMs = 8_000, readTimeoutMs = 8_000)
 }

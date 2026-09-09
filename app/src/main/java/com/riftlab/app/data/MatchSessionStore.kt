@@ -368,7 +368,7 @@ object MatchSessionStore {
         val completed = matches.count(::isCompletedState)
         val currentText = current?.let { "${scheduleActivityLabel(it)} ${teamsLabel(it)}" } ?: "NO ACTIVE EVENT"
         val nextText = next?.let { "NEXT ${teamsLabel(it)} ${formatLocalDateTime(it.startTimeIso)}" } ?: "NO NEXT"
-        return "Riot Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
+        return "${RiotResilientHttp.sourceLabel()} · Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
     }
 
     private fun teamsLabel(match: ScheduledEsportsMatch): String =
