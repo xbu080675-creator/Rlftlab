@@ -91,4 +91,5 @@ dependencies {
 // dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.
 // Final dev.51 CI/OTA trigger after dual-source replay and YouTube session handling.
 
-// dev.52: global non-LPL management/coaching resolver plus stable hardware-accelerated inline YouTube embed rendering.
+// dev.52: Riot GCD-backed global management/coaching identification plus stable hardware-accelerated portrait YouTube embed rendering.
+// Final dev.52 trigger after GCD mirror population and role-label verification.
