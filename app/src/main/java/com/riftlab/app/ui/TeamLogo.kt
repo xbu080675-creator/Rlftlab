@@ -17,13 +17,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.compose.SubcomposeAsyncImageContent
 import com.riftlab.app.data.EsportsAssetCache
 
-/**
- * Team logo loader backed by the application-wide Coil ImageLoader.
- *
- * Artwork stays remote and is decoded to the actual composable size. The shared loader provides
- * memory + disk cache and SVG support, so dozens of score cards do not each allocate a private
- * loader/cache.
- */
+/** Shared team-logo loader with subtle per-club identity framing. */
 @Composable
 internal fun TeamLogo(
     imageUrl: String,
@@ -33,30 +27,31 @@ internal fun TeamLogo(
     val resolvedUrl = EsportsAssetCache.normalize(imageUrl)
         .ifBlank { EsportsAssetCache.team(code) }
     val shape = CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)
-    val isAl = RiftTeamSkins.isAL(code)
-    val alAccent = RiftTeamSkins.AL.palette.accent
+    val skin = RiftTeamSkins.resolveCode(code)
+    val dark = LocalRiftDarkMode.current
+    val palette = skin.palette(dark)
+    val hasClubSkin = skin.id != RiftSkinId.DEFAULT
 
     val fallback: @Composable () -> Unit = {
         Text(
             text = code.take(4).ifBlank { "—" },
-            color = if (isAl) alAccent else RiftMuted,
+            color = if (hasClubSkin) palette.accent else RiftMuted,
             fontSize = 8.sp,
             fontWeight = FontWeight.Bold
         )
     }
 
-    val framed = if (isAl) {
-        modifier
-            .background(RiftPanelAlt, shape)
-            .border(1.dp, alAccent.copy(alpha = 0.78f), shape)
-    } else {
-        modifier.background(RiftPanelAlt, shape)
-    }
+    val framed = modifier
+        .background(RiftPanelAlt, shape)
+        .then(
+            if (hasClubSkin) {
+                Modifier.border(1.dp, palette.accent.copy(alpha = if (dark) 0.72f else 0.48f), shape)
+            } else {
+                Modifier
+            }
+        )
 
-    Box(
-        framed,
-        contentAlignment = Alignment.Center
-    ) {
+    Box(framed, contentAlignment = Alignment.Center) {
         if (resolvedUrl.isBlank()) {
             fallback()
         } else {
