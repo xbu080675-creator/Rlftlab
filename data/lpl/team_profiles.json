@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-team-directory",
-  "updatedAt": "2026-09-09T02:25:00Z",
+  "updatedAt": "2026-09-09T03:00:00Z",
   "refreshPolicy": {
     "appTtlMinutes": 30,
     "sourceMonitorHours": 3,
@@ -10,7 +10,15 @@
   "teams": {
     "AL": {
       "verifiedAt": "2026-09-09",
-      "management": [],
+      "management": [
+        {
+          "name": "AG爱笑",
+          "role": "ESPORTS_GENERAL_MANAGER",
+          "displayRole": "电竞总经理 / 经理",
+          "realName": "",
+          "source": "AG爱笑认证微博；2026-08 公开记录仍以 AL 经理身份参与战队事务"
+        }
+      ],
       "staff": [
         {
           "name": "MingZhe",
@@ -43,8 +51,20 @@
           "realName": "Bo Renjie"
         }
       ],
-      "operators": [],
-      "sources": []
+      "operators": [
+        {
+          "name": "AG电子竞技俱乐部",
+          "role": "PARENT_ORG",
+          "source": "AL / Anyone’s Legend 为 All Gamers 旗下英雄联盟项目"
+        }
+      ],
+      "sources": [
+        {
+          "type": "VERIFIED_SOCIAL",
+          "label": "AG爱笑认证微博 · AG电子竞技俱乐部英雄联盟及无畏契约总经理",
+          "url": "https://weibo.com/u/6032776385"
+        }
+      ]
     },
     "BLG": {
       "verifiedAt": "2026-09-09",

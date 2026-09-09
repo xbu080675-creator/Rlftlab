@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T02:53:03Z",
+  "updatedAt": "2026-09-09T03:02:29Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -16,6 +16,8 @@
     "*|333": "p_8860ab7e64ed",
     "*|694": "p_ffe3022a88cf",
     "*|AARON": "p_31f8db771047",
+    "*|AG": "p_d13d5d74db4a",
+    "*|AG爱笑": "p_d13d5d74db4a",
     "*|ANING": "p_2fbca4feb73a",
     "*|ANJIE": "p_d8a8fab9b54e",
     "*|BENNY": "p_90770ef3f786",
@@ -121,7 +123,6 @@
     "*|SHUIJING": "p_51dd3cd81931",
     "*|SKY": "p_759b3e9f5c90",
     "*|SMALLORC": "p_335b5d2543bc",
-    "*|SONDAEYOUNG손대영": "p_57c5772c75be",
     "*|TABE": "p_67e0c3d88193",
     "*|TEACHERMA": "p_6ad542a4bd5e",
     "*|TSELIN": "p_80686f7e6a59",
@@ -198,6 +199,7 @@
     "*|李麒麟": "p_082ffa3b7fe9",
     "*|林涛": "p_3961c88383ad",
     "*|潘飞": "p_2b515c4c32b2",
+    "*|爱笑": "p_d13d5d74db4a",
     "*|爽全": "p_958f3756184e",
     "*|王一帆": "p_8ef4ac2a3d12",
     "*|王思聪": "p_71bb62f7a7f3",
@@ -213,6 +215,8 @@
     "*|郑浩楠": "p_44274eb98cc2",
     "*|郭皓": "p_281c0eef6f64",
     "*|陈爱宁": "p_2fbca4feb73a",
+    "AL|AG": "p_d13d5d74db4a",
+    "AL|AG爱笑": "p_d13d5d74db4a",
     "AL|BIGWEI": "p_89f13f7d0ed7",
     "AL|BORENJIE": "p_114c8955ba46",
     "AL|DESPA": "p_4c30bca85580",
@@ -226,6 +230,7 @@
     "AL|TEACHERMA": "p_6ad542a4bd5e",
     "AL|ZHANGYU": "p_33fbff666e7b",
     "AL|ZHOULIPENG": "p_4c30bca85580",
+    "AL|爱笑": "p_d13d5d74db4a",
     "BLG|BEN": "p_164438580ea1",
     "BLG|CHIEH": "p_18239c72b686",
     "BLG|DAENY": "p_7a7db024c3ab",
@@ -273,7 +278,7 @@
     "IG|KWONYOUNGJAE": "p_458c2e1aae9b",
     "IG|LEEJINYONG": "p_f6bc5b0eb7a6",
     "IG|SONDAEYOUNG": "p_6f2a8d6e11a2",
-    "IG|SONDAEYOUNG손대영": "p_57c5772c75be",
+    "IG|SONDAEYOUNG손대영": "p_6f2a8d6e11a2",
     "IG|WANGMINCHEN": "p_ce60a1acd047",
     "IG|WANGMINCHEN王敏晨": "p_ce60a1acd047",
     "IG|WANGSICONG": "p_71bb62f7a7f3",
@@ -1611,7 +1616,8 @@
       "realName": "Son Dae-young",
       "aliases": [
         "Kezman",
-        "Son Dae-young"
+        "Son Dae-young",
+        "Son Dae-young (손대영)"
       ],
       "avatar": {},
       "employments": [
@@ -2084,6 +2090,27 @@
           "startDate": "",
           "endDate": "",
           "source": ""
+        }
+      ]
+    },
+    "p_d13d5d74db4a": {
+      "displayName": "AG爱笑",
+      "realName": "",
+      "aliases": [
+        "AG爱笑",
+        "AG",
+        "爱笑"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "ESPORTS_GENERAL_MANAGER",
+          "displayRole": "电竞总经理 / 经理",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": "AG爱笑认证微博；2026-08 公开记录仍以 AL 经理身份参与战队事务"
         }
       ]
     }
