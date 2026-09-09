@@ -710,14 +710,15 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
         }
         Spacer(Modifier.height(8.dp))
         TeamMatchupVisual(
-            leftCode = teamCode(left),
+            leftCode = matchTeamLabel(match, left),
             leftImageUrl = left?.imageUrl.orEmpty(),
-            rightCode = teamCode(right),
+            rightCode = matchTeamLabel(match, right),
             rightImageUrl = right?.imageUrl.orEmpty(),
             centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
             centerSubtext = MatchSessionStore.scheduleTimingNote(match),
             logoSize = 44.dp,
-            centerFontSize = 18.sp
+            centerFontSize = 18.sp,
+            teamNameFontSize = 8.sp
         )
         if (match.blockName.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
@@ -1224,10 +1225,30 @@ private fun matchStartEpochMs(match: ScheduledEsportsMatch): Long = runCatching 
 }.getOrElse { Long.MAX_VALUE }
 
 private fun matchFullLabel(match: ScheduledEsportsMatch): String =
-    match.teams.take(2).joinToString(" vs ") { team -> team.name.ifBlank { teamCode(team) } }
+    match.teams.take(2).joinToString(" vs ") { matchTeamLabel(match, it) }
 
 private fun matchLabel(match: ScheduledEsportsMatch): String =
-    match.teams.take(2).joinToString(" vs ") { teamCode(it) }
+    match.teams.take(2).joinToString(" vs ") { matchTeamLabel(match, it) }
 
 private fun teamCode(team: EsportsTeamRef?): String =
     team?.code?.ifBlank { team.name }?.ifBlank { "—" } ?: "—"
+
+private fun matchTeamLabel(match: ScheduledEsportsMatch, team: EsportsTeamRef?): String {
+    val code = teamCode(team)
+    if (!isDevelopmentLeague(match)) return code
+    val name = team?.name?.trim().orEmpty()
+    return when {
+        code.equals("T1A", ignoreCase = true) -> "T1 Academy"
+        name.contains("Esports Academy", ignoreCase = true) -> name.replace(Regex("(?i)Esports\\s+Academy"), "Academy")
+        name.contains("Challengers", ignoreCase = true) -> name
+        name.contains("Academy", ignoreCase = true) -> name
+        name.contains("Youth", ignoreCase = true) -> name
+        name.isNotBlank() -> name
+        else -> code
+    }
+}
+
+private fun isDevelopmentLeague(match: ScheduledEsportsMatch): Boolean {
+    val identity = "${match.leagueSlug} ${match.league}".lowercase()
+    return identity.contains("challenger") || identity.contains("academy") || identity.contains("development") || identity.contains("youth") || identity.contains("lck-cl")
+}

@@ -188,6 +188,8 @@ private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
             setBackgroundColor(AndroidColor.BLACK)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
             settings.mediaPlaybackRequiresUserGesture = false
             settings.allowFileAccess = false
             settings.allowContentAccess = false
@@ -210,17 +212,15 @@ private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
     }
 
     LaunchedEffect(url, youtubeEmbed, webView) {
+        webView.stopLoading()
         if (youtubeEmbed) {
-            val safeUrl = url.replace("&", "&amp;").replace("\"", "&quot;")
-            val html = """
-                <!doctype html><html><head>
-                <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-                <style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}</style>
-                </head><body>
-                <iframe src="$safeUrl" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                </body></html>
-            """.trimIndent()
-            webView.loadDataWithBaseURL("https://lolesports.com/", html, "text/html", "UTF-8", null)
+            webView.loadUrl(
+                url,
+                mapOf(
+                    "Referer" to "https://lolesports.com/",
+                    "Origin" to "https://lolesports.com"
+                )
+            )
         } else {
             webView.loadUrl(url)
         }
