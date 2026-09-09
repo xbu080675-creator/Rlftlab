@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 
 object MatchSessionStore {
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
+    @Volatile private var subscribedLeagueKeys: Set<String> = setOf("LPL")
 
     private val emptyPreMatch = PreMatchInfo(
         league = "LoL Esports",
@@ -162,19 +163,55 @@ object MatchSessionStore {
         scope.launch { refreshPreMatchFromTarget(match) }
     }
 
+    fun updateLeagueSubscriptions(keys: Set<String>) {
+        val normalized = keys.map(::subscriptionLeagueToken).filter { it.isNotBlank() }.toSet().ifEmpty { setOf("LPL") }
+        if (normalized == subscribedLeagueKeys) return
+        subscribedLeagueKeys = normalized
+        scope.launch { applySubscribedHomepageTarget() }
+    }
+
+    private suspend fun applySubscribedHomepageTarget() {
+        val all = _schedule.value
+        if (all.isEmpty()) return
+        val home = all.filter(::matchesHomepageSubscription)
+        val current = home.firstOrNull(::isLiveState)
+        val next = findNextMatch(home, current?.matchId.orEmpty())
+        val target = current ?: next ?: home.maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
+        _targetMatch.value = target
+        LiveMatchTargetRegistry.update(target)
+        _scheduleCenter.value = _scheduleCenter.value.copy(
+            currentMatch = current,
+            nextMatch = next,
+            statusMessage = if (target == null) {
+                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+            } else {
+                buildScheduleStatus(all, current, next)
+            }
+        )
+        _scheduleStatus.value = _scheduleCenter.value.statusMessage
+        if (target != null) refreshPreMatchFromTarget(target) else {
+            _preMatch.value = emptyPreMatch
+            _rosterStatus.value = "ROSTER · 订阅赛区当前无可选赛事"
+        }
+    }
+
     private suspend fun refreshScheduleAndRoster() {
         _scheduleStatus.value = "正在同步 Riot 全球赛事分页赛程…"
         try {
             val matches = scheduleSource.fetchLeagueSchedule()
             _schedule.value = matches
 
-            val currentBySchedule = matches.firstOrNull(::isLiveState)
-            val next = findNextMatch(matches, currentBySchedule?.matchId.orEmpty())
+            val homepageMatches = matches.filter(::matchesHomepageSubscription)
+            val currentBySchedule = homepageMatches.firstOrNull(::isLiveState)
+            val next = findNextMatch(homepageMatches, currentBySchedule?.matchId.orEmpty())
             val oldSelectedId = _scheduleCenter.value.selectedMatch?.matchId
             val selected = matches.firstOrNull { it.matchId == oldSelectedId }
                 ?: currentBySchedule
                 ?: next
                 ?: matches.lastOrNull()
+            val homepageTarget = currentBySchedule
+                ?: next
+                ?: homepageMatches.maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
 
             val center = _scheduleCenter.value.copy(
                 matches = matches,
@@ -187,9 +224,11 @@ object MatchSessionStore {
                 statusMessage = buildScheduleStatus(matches, currentBySchedule, next)
             )
             _scheduleCenter.value = center
-            _targetMatch.value = selected
-            LiveMatchTargetRegistry.update(selected)
-            _scheduleStatus.value = center.statusMessage
+            _targetMatch.value = homepageTarget
+            LiveMatchTargetRegistry.update(homepageTarget)
+            _scheduleStatus.value = if (homepageTarget == null) {
+                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+            } else center.statusMessage
 
             // Post-match recovery is independent from the live target. Always resolve the most
             // recent completed series from the schedule. LPL currently has an additional TJStats final resolver;
@@ -203,11 +242,11 @@ object MatchSessionStore {
                 }
             }
 
-            if (selected != null) {
-                refreshPreMatchFromTarget(selected)
+            if (homepageTarget != null) {
+                refreshPreMatchFromTarget(homepageTarget)
             } else {
                 _preMatch.value = emptyPreMatch
-                _rosterStatus.value = "ROSTER · 当前分页没有可选赛事"
+                _rosterStatus.value = "ROSTER · 订阅赛区当前没有可选赛事"
             }
         } catch (t: Throwable) {
             val message = "赛程中心 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"
@@ -242,6 +281,7 @@ object MatchSessionStore {
         val liveMatch = center.matches.firstOrNull {
             it.eventId == resolvedEventId || it.matchId == resolvedEventId
         } ?: return
+        if (!matchesHomepageSubscription(liveMatch)) return
 
         val key = scheduleKey(liveMatch)
         val detected = if (
@@ -360,6 +400,37 @@ object MatchSessionStore {
         } else {
             "RIOT SCHEDULE"
         }
+
+    private fun matchesHomepageSubscription(match: ScheduledEsportsMatch): Boolean {
+        val key = canonicalLeagueKey(match)
+        return key.isNotBlank() && key in subscribedLeagueKeys
+    }
+
+    private fun canonicalLeagueKey(match: ScheduledEsportsMatch): String {
+        val raw = subscriptionLeagueToken(match.leagueSlug.ifBlank { match.league })
+        return when {
+            raw.contains("LCPWILDCARD") -> "LCPWILDCARD"
+            raw.contains("LCKCL") || raw.contains("LCKCHALLENGERS") -> "LCKCL"
+            raw.contains("LPLDEVELOPMENT") || raw == "LDL" -> "LDL"
+            raw.contains("LTA") || raw.contains("LCS") -> "LCS"
+            raw.contains("CBLOL") -> "CBLOL"
+            raw.contains("LPL") -> "LPL"
+            raw.contains("LCK") -> "LCK"
+            raw.contains("LEC") -> "LEC"
+            raw.contains("LCP") -> "LCP"
+            raw.contains("PCS") -> "PCS"
+            raw.contains("VCS") -> "VCS"
+            raw.contains("LJL") -> "LJL"
+            raw.contains("FLS") -> "FLS"
+            raw.contains("NLC") -> "NLC"
+            raw == "LIT" || raw.contains("LEAGUEITALIA") -> "LIT"
+            raw.contains("TCL") -> "TCL"
+            else -> raw
+        }
+    }
+
+    private fun subscriptionLeagueToken(value: String): String =
+        value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
     private fun findNextMatch(
         matches: List<ScheduledEsportsMatch>,

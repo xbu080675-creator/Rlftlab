@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.riftlab.app.data.MatchSessionStore
 
 internal data class LeagueSubscriptionOption(
     val key: String,
@@ -97,6 +98,7 @@ internal fun LeagueSubscriptionBar() {
     val context = LocalContext.current
     LaunchedEffect(context) { LeagueSubscriptionStore.ensureLoaded(context) }
     val subscribed by LeagueSubscriptionStore.subscribed.collectAsState()
+    LaunchedEffect(subscribed) { MatchSessionStore.updateLeagueSubscriptions(subscribed) }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth()) {

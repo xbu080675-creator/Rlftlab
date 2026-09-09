@@ -1,6 +1,10 @@
 package com.riftlab.app.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -399,9 +403,18 @@ private fun ReplayPlayerSurface(
     onRefreshSource: () -> Unit
 ) {
     val context = LocalContext.current
+    val hostActivity = remember(context) { context.replayActivity() }
     var fullscreen by remember(source.bvid, source.cid) { mutableStateOf(false) }
     var playbackError by remember(source.bvid, source.cid) { mutableStateOf<String?>(null) }
     var currentVideoSecond by remember(source.bvid, source.cid) { mutableIntStateOf(startSecond.coerceAtLeast(0)) }
+
+    DisposableEffect(fullscreen, hostActivity) {
+        val previous = hostActivity?.requestedOrientation
+        if (fullscreen) hostActivity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
+        onDispose {
+            if (fullscreen) hostActivity?.requestedOrientation = previous ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     val exoPlayer = remember(context, source.bvid, source.cid) {
         val httpFactory = DefaultHttpDataSource.Factory()
@@ -446,7 +459,7 @@ private fun ReplayPlayerSurface(
     LaunchedEffect(exoPlayer, source.resolvedAtEpochMs) {
         while (true) {
             currentVideoSecond = replayVideoSecond(exoPlayer, source)
-            delay(250)
+            delay(750)
         }
     }
 
@@ -649,3 +662,10 @@ private fun replayVideoSecond(player: ExoPlayer, source: BilibiliNativePlaybackS
 
 private fun formatReplayClock(seconds: Int): String =
     "%02d:%02d".format(seconds.coerceAtLeast(0) / 60, seconds.coerceAtLeast(0) % 60)
+
+
+private tailrec fun Context.replayActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.replayActivity()
+    else -> null
+}

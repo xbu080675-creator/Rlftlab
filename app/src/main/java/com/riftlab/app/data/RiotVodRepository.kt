@@ -19,10 +19,33 @@ internal data class RiotVodLink(
     val parameter: String,
     val offsetSeconds: Int = 0
 ) {
+    val isYoutube: Boolean
+        get() = provider.equals("youtube", ignoreCase = true) ||
+            parameter.contains("youtube.com", ignoreCase = true) ||
+            parameter.contains("youtu.be", ignoreCase = true)
+
+    val youtubeVideoId: String
+        get() {
+            if (!isYoutube) return ""
+            val raw = parameter.trim()
+            if (!raw.startsWith("http://") && !raw.startsWith("https://")) return raw.substringBefore('&').substringBefore('?')
+            return when {
+                raw.contains("youtu.be/", ignoreCase = true) -> raw.substringAfter("youtu.be/").substringBefore('?').substringBefore('&')
+                raw.contains("/embed/", ignoreCase = true) -> raw.substringAfter("/embed/").substringBefore('?').substringBefore('&')
+                raw.contains("v=", ignoreCase = true) -> raw.substringAfter("v=").substringBefore('&').substringBefore('#')
+                else -> ""
+            }
+        }
+
+    val embedUrl: String
+        get() = youtubeVideoId.takeIf { it.isNotBlank() }
+            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0" }
+            .orEmpty()
+
     val sourceUrl: String
         get() = when {
             parameter.startsWith("http://") || parameter.startsWith("https://") -> parameter
-            provider.equals("youtube", ignoreCase = true) -> "https://www.youtube.com/watch?v=$parameter"
+            isYoutube -> "https://www.youtube.com/watch?v=$parameter"
             else -> ""
         }
 }
@@ -89,7 +112,7 @@ internal object RiotVodRepository {
                     matchKey = key,
                     loading = false,
                     links = links,
-                    status = if (links.isEmpty()) "Riot EventDetails 暂未返回 VOD" else "Riot EventDetails · ${links.size} 条官方 VOD"
+                    status = if (links.isEmpty()) "Riot EventDetails 暂未返回 VOD" else "Riot EventDetails · ${links.size} 条官方 VOD · APP 内播放"
                 )
             } catch (t: Throwable) {
                 _state.value = RiotVodState(
@@ -105,11 +128,5 @@ internal object RiotVodRepository {
     fun riotVodPage(match: ScheduledEsportsMatch, game: Int): String {
         val key = keyFor(match)
         return if (key.isBlank()) "https://lolesports.com/en-US" else "https://lolesports.com/en-US/vod/$key/$game"
-    }
-
-    fun youtubeSearch(match: ScheduledEsportsMatch, game: Int): String {
-        val teams = match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }
-        val query = URLEncoder.encode("${match.league} $teams G$game VOD", "UTF-8")
-        return "https://www.youtube.com/results?search_query=$query"
     }
 }

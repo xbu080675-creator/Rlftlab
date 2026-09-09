@@ -97,6 +97,15 @@ internal class LolEsportsApiClient {
         val center = fetchSchedulePage(null, league.id)
         pages += center
 
+        val deepPaged = league.slug.lowercase().replace('_', '-') in setOf(
+            "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta-south", "lcp",
+            "worlds", "msi", "first-stand", "firststand", "ewc", "esports-world-cup",
+            "americas-cup", "emea-masters"
+        )
+        if (!deepPaged) {
+            return pages.flatMap { parseSchedulePage(it, league) }.distinctBy { it.eventId.ifBlank { it.matchId } }
+        }
+
         // One neighbour page in each direction is enough for the always-on phone refresh.
         // Historical deep collection belongs in the central mirror, not in every five-minute APK poll.
         var older = schedulePageToken(center, "older")

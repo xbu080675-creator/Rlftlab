@@ -101,7 +101,6 @@ private data class ScheduleCompetitionBucket(
 @Composable
 fun RiftLabRoot() {
     MatchSessionStore.ensureDataRunning()
-    StandingsCenterStore.ensureRunning()
     Box(Modifier.fillMaxSize()) {
         RiftLabApp()
         ScheduleCenterLauncher(
@@ -128,6 +127,7 @@ private fun ScheduleCenterLauncher(modifier: Modifier = Modifier) {
 
 @Composable
 private fun ScheduleCenterDialog(onClose: () -> Unit) {
+    LaunchedEffect(Unit) { StandingsCenterStore.ensureRunning() }
     val center by MatchSessionStore.scheduleCenter.collectAsState()
     val standingsCenter by StandingsCenterStore.state.collectAsState()
     val buckets = remember(center.matches, standingsCenter.tournaments) {

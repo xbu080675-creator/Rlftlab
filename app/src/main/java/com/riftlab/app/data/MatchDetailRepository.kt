@@ -129,8 +129,11 @@ object MatchDetailRepository {
                 return@launch
             }
 
-            val result = runCatching {
-                resolverMutex.withLock { resolver.resolve(matchWithRiotAssets) }
+            val lplMatch = isLplMatch(matchWithRiotAssets)
+            val result: Result<CompletedSeriesSnapshot?> = if (lplMatch) {
+                runCatching { resolverMutex.withLock { resolver.resolve(matchWithRiotAssets) } }
+            } else {
+                Result.success(null)
             }
             val rawResolved = result.getOrNull()?.normalizeDetailRoles()
             val resolved = rawResolved?.let { alignSeriesToMatch(it, matchWithRiotAssets) }
@@ -139,16 +142,20 @@ object MatchDetailRepository {
                 ?.removePrefix("TJ:")
                 .orEmpty()
 
-            val awards = if (bmid.isNotBlank()) {
-                runCatching { awardsProvider.fetch(bmid) }.getOrElse {
+            val awards = when {
+                !lplMatch -> OfficialAwardsResult(status = "MVP / POG · 非 LPL 不调用 LPL/TJStats 接口")
+                bmid.isNotBlank() -> runCatching { awardsProvider.fetch(bmid) }.getOrElse {
                     OfficialAwardsResult(status = "MVP / POG 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
                 }
-            } else {
-                OfficialAwardsResult(status = "MVP / POG 等待历史 bMatchId")
+                else -> OfficialAwardsResult(status = "MVP / POG 等待历史 bMatchId")
             }
 
-            val draftResult = runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
-                OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+            val draftResult = if (lplMatch) {
+                runCatching { draftProvider.fetch(bmid, resolved) }.getOrElse {
+                    OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+                }
+            } else {
+                OfficialDraftResult(status = "BP · 非 LPL 使用 Riot/OP.GG 可核实补充")
             }
 
             val opgg = runCatching { opggProvider.fetch(matchWithRiotAssets) }.getOrElse {
@@ -181,6 +188,7 @@ object MatchDetailRepository {
                 drafts = decoratedDrafts,
                 status = when {
                     resolved != null -> "已加载 ${resolved.games.size} 局终局数据 · ${awards.status} · ${draftResult.status} · ${opgg.status}"
+                    !lplMatch -> "${matchWithRiotAssets.league} · Riot/OP.GG 全球赛后链路 · ${opgg.status} · 未调用 LPL BMatch/TJStats"
                     result.isFailure -> "比赛详情同步失败 · ${opgg.status}"
                     else -> "${resolver.status.value} · ${opgg.status}"
                 },
@@ -200,6 +208,11 @@ object MatchDetailRepository {
         loadJob?.cancel()
         _state.value = MatchDetailState()
     }
+
+    private fun isLplMatch(match: ScheduledEsportsMatch): Boolean =
+        match.leagueSlug.equals("lpl", ignoreCase = true) ||
+            match.league.equals("LPL", ignoreCase = true) ||
+            match.league.contains("PRO LEAGUE", ignoreCase = true)
 
     private fun currentLiveFor(match: ScheduledEsportsMatch): LiveSnapshot? {
         val current = MatchSessionStore.scheduleCenter.value.currentMatch ?: return null

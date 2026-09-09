@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.0.0-dev.47"
+        versionCode = 48
+        versionName = "1.0.0-dev.48"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,5 +79,5 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.47: persistent league subscriptions, two-level global competition navigation, timezone labels, global Riot/YouTube VOD routing.
+// dev.48: subscription-driven homepage targeting, league-safe post-match routing, in-app official VOD playback with sensor fullscreen, startup/replay performance tuning.
 // dev.47 build/OTA verification trigger.
