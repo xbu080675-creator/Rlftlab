@@ -6,6 +6,7 @@ import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.riftlab.app.data.MatchTimelineCapture
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.RiotPersistedMirror
 
@@ -27,6 +28,7 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         appContext = applicationContext
         RiotPersistedMirror.initialize(this)
         MatchTimelineStore.initialize(this)
+        MatchTimelineCapture.start()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
