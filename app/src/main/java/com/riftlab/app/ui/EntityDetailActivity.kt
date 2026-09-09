@@ -44,7 +44,7 @@ import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
 
-private enum class MatchPane { DETAIL, TIMELINE }
+private enum class MatchPane { DETAIL, TIMELINE, VOD }
 
 class EntityDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -155,6 +155,7 @@ class EntityDetailActivity : ComponentActivity() {
 
             when {
                 activeMatch != null && matchPane == MatchPane.TIMELINE -> MatchTimelineContent()
+                activeMatch != null && matchPane == MatchPane.VOD -> MatchVodContent()
                 activeMatch != null -> MatchDetailContent()
                 activeTeam != null -> TeamDetailContent(
                     team = activeTeam!!,
@@ -182,7 +183,11 @@ private fun MatchPaneTabs(selected: MatchPane, onSelect: (MatchPane) -> Unit) {
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        listOf(MatchPane.DETAIL to "比赛详情", MatchPane.TIMELINE to "时间轴").forEach { (pane, label) ->
+        listOf(
+            MatchPane.DETAIL to "比赛详情",
+            MatchPane.TIMELINE to "时间轴",
+            MatchPane.VOD to "官方录像"
+        ).forEach { (pane, label) ->
             val active = pane == selected
             Text(
                 label,
