@@ -50,7 +50,8 @@ data class LiveLifecycleState(
  * Provider order is a policy, not a match special-case:
  * 1) Tencent/LPL comm-match-app realtime data plane (LPL only)
  * 2) Riot LoL Esports LiveStats window feed (global official continuous frames)
- * 3) TJStats matchDetail current/final-frame fallback (LPL only)
+ * 3) Cito API WSS / quota-aware REST fallback (global, only when a key is configured)
+ * 4) TJStats matchDetail current/final-frame fallback (LPL only)
  *
  * All eligible providers run in parallel. A provider that stalls cannot block the state machine;
  * after EVENT_LIVE has no meaningful frame for EVENT_TO_FRAME_TIMEOUT_MS, RiftLab enters
@@ -68,11 +69,13 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
     private val commRealtime = LplCommRealtimeDataSource()
     private val riotLiveStats = LolEsportsLiveDataSource()
+    private val citoLive = CitoLiveDataSource()
     private val lplMatchDetail = LplCurrentGameLiveDataSource()
 
     private val providers = listOf(
         Provider("LPL Comm Realtime", 0, commRealtime, commRealtime.status, lplOnly = true),
         Provider("Riot LiveStats", 10, riotLiveStats, riotLiveStats.status),
+        Provider("Cito API", 20, citoLive, citoLive.status),
         Provider("LPL MatchDetail", 30, lplMatchDetail, lplMatchDetail.status, lplOnly = true)
     )
 
