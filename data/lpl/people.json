@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T03:02:29Z",
+  "updatedAt": "2026-09-09T03:05:56Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -449,7 +449,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_f18f1372d791"
         }
       ]
     },
@@ -469,7 +470,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_f18f1372d791"
         }
       ]
     },
@@ -489,7 +491,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_86e10aa52abf"
         }
       ]
     },
@@ -509,7 +512,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_e0bb9bff7e34"
         }
       ]
     },
@@ -530,7 +534,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_e0bb9bff7e34"
         }
       ]
     },
@@ -550,7 +555,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_3365fade9259"
         }
       ],
       "avatarProbe": {
@@ -575,7 +581,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": "人民电竞 2024-12-06；2026-08-09 公开身份持续称 BLG 经理"
+          "source": "人民电竞 2024-12-06；2026-08-09 公开身份持续称 BLG 经理",
+          "stintId": "st_f1060b8c6f83"
         }
       ]
     },
@@ -597,7 +604,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": "2026 第二赛段 BLG 经理公开记录；截至当前未发现明确离任证据"
+          "source": "2026 第二赛段 BLG 经理公开记录；截至当前未发现明确离任证据",
+          "stintId": "st_4e98400cc74c"
         }
       ],
       "avatarProbe": {
@@ -623,7 +631,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_f8b5191eba10"
         }
       ]
     },
@@ -643,7 +652,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_64a0b0c88b12"
         }
       ]
     },
@@ -663,7 +673,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_214bf252c0f0"
         }
       ],
       "avatarProbe": {
@@ -687,7 +698,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_4b37a19eca7c"
         }
       ],
       "avatarProbe": {
@@ -711,7 +723,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_784e1f7c9a38"
         }
       ]
     },
@@ -733,7 +746,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_26bbbad69ec0"
         }
       ]
     },
@@ -755,7 +769,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_95e73552658e"
         }
       ]
     },
@@ -777,7 +792,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_38e5c40fba66"
         }
       ],
       "avatarProbe": {}
@@ -798,7 +814,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_d17d7fdb678f"
         }
       ]
     },
@@ -818,7 +835,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_ce789042f768"
         }
       ]
     },
@@ -837,7 +855,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_ce789042f768"
         }
       ]
     },
@@ -856,7 +875,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_76f7e12a1f54"
         }
       ]
     },
@@ -875,7 +895,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_76f7e12a1f54"
         }
       ]
     },
@@ -895,7 +916,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_66f34dadb487"
         }
       ]
     },
@@ -917,7 +939,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_c59585e27796"
         }
       ]
     },
@@ -939,7 +962,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_760d4fb028ce"
         }
       ]
     },
@@ -961,7 +985,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_7b994d734a96"
         }
       ]
     },
@@ -983,7 +1008,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_aa60762eb564"
         }
       ]
     },
@@ -1006,7 +1032,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_5eb756e43453"
         }
       ]
     },
@@ -1026,7 +1053,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_947201830c7a"
         }
       ]
     },
@@ -1046,7 +1074,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_b84786a150f9"
         }
       ]
     },
@@ -1066,7 +1095,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_b84786a150f9"
         }
       ]
     },
@@ -1086,7 +1116,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_b84786a150f9"
         }
       ]
     },
@@ -1106,7 +1137,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_0123ee083a81"
         }
       ],
       "avatarProbe": {
@@ -1131,7 +1163,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8c6000927129"
         },
         {
           "team": "LNG",
@@ -1140,9 +1173,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_1f31aa853ae9"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:51Z",
+        "attempts": 1
+      }
     },
     "p_a7d639342b82": {
       "displayName": "Zizheng",
@@ -1160,7 +1198,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8c6000927129"
         }
       ]
     },
@@ -1182,7 +1221,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_bb947c600c19"
         }
       ]
     },
@@ -1201,7 +1241,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_440ca3cbb69d"
         }
       ]
     },
@@ -1221,9 +1262,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_2b0ce47c2fd6"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:50Z",
+        "attempts": 1
+      }
     },
     "p_10ed13cd8db9": {
       "displayName": "Chelizi",
@@ -1241,7 +1287,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_2299802f2a16"
         }
       ],
       "avatarProbe": {
@@ -1267,7 +1314,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_0afaa2cc8582"
         }
       ]
     },
@@ -1289,9 +1337,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_c6a9c5c59b29"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:52Z",
+        "attempts": 1
+      }
     },
     "p_8ef4ac2a3d12": {
       "displayName": "Jasper",
@@ -1311,7 +1364,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_9e48ca0d5726"
         }
       ]
     },
@@ -1333,7 +1387,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_23ba113baa13"
         }
       ]
     },
@@ -1353,7 +1408,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_6a962ccc291e"
         }
       ],
       "avatarProbe": {
@@ -1377,7 +1433,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_96ef70ef1deb"
         }
       ]
     },
@@ -1398,7 +1455,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_7bdb8b831d44"
         }
       ]
     },
@@ -1420,9 +1478,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_30be67930539"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:55Z",
+        "attempts": 1
+      }
     },
     "p_a75f8ccb91e5": {
       "displayName": "Vlone",
@@ -1442,7 +1505,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_73c68ebb7f1a"
         }
       ]
     },
@@ -1462,7 +1526,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_980a60fe6562"
         }
       ]
     },
@@ -1482,7 +1547,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_7f2ff0357a0b"
         }
       ]
     },
@@ -1502,9 +1568,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_d4f6eabbc9be"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:54Z",
+        "attempts": 1
+      }
     },
     "p_44274eb98cc2": {
       "displayName": "facewind",
@@ -1524,7 +1595,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_4d878beb744b"
         }
       ]
     },
@@ -1546,7 +1618,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_a86b6a3cf9dd"
         }
       ]
     },
@@ -1587,7 +1660,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_a78b5318485f"
         }
       ]
     },
@@ -1607,7 +1681,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_79c42c754de9"
         }
       ]
     },
@@ -1628,7 +1703,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_65c58b9a9715"
         }
       ]
     },
@@ -1650,7 +1726,8 @@
           "current": false,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_090c8accb9c9"
         }
       ]
     },
@@ -1671,7 +1748,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_d2d9a092bac7"
         }
       ],
       "avatarProbe": {
@@ -1696,7 +1774,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_5bb17efe1e70"
         }
       ]
     },
@@ -1718,7 +1797,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_a2907706d1d5"
         }
       ]
     },
@@ -1740,7 +1820,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_11ccc21c06fc"
         }
       ]
     },
@@ -1760,7 +1841,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_850cfd77de37"
         }
       ]
     },
@@ -1782,9 +1864,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_3f19e44dc34d"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:54Z",
+        "attempts": 1
+      }
     },
     "p_47f521f14696": {
       "displayName": "Maizijian",
@@ -1802,7 +1889,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_9841a4f7025a"
         }
       ]
     },
@@ -1822,7 +1910,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_edb22f5608df"
         }
       ]
     },
@@ -1843,7 +1932,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_cf68c6edb8ac"
         }
       ]
     },
@@ -1863,7 +1953,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_a6e8e2400fe5"
         }
       ]
     },
@@ -1883,7 +1974,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_a6e8e2400fe5"
         }
       ]
     },
@@ -1903,7 +1995,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_d5019033edea"
         }
       ]
     },
@@ -1922,7 +2015,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_fff004e95889"
         }
       ]
     },
@@ -1944,7 +2038,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8d146bdeeb5f"
         }
       ]
     },
@@ -1966,7 +2061,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_eeb4ff98f49a"
         }
       ]
     },
@@ -1988,7 +2084,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_2c60ba0b56c1"
         }
       ]
     },
@@ -2010,7 +2107,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_e41540315740"
         }
       ]
     },
@@ -2030,7 +2128,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8aa991fcc11a"
         }
       ]
     },
@@ -2050,7 +2149,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8aa991fcc11a"
         }
       ]
     },
@@ -2070,9 +2170,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_8aa991fcc11a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:52Z",
+        "attempts": 1
+      }
     },
     "p_d8e0402e0972": {
       "displayName": "zhaozhao",
@@ -2089,7 +2194,8 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": ""
+          "source": "",
+          "stintId": "st_38e2117a1c82"
         }
       ]
     },
@@ -2110,9 +2216,14 @@
           "current": true,
           "startDate": "",
           "endDate": "",
-          "source": "AG爱笑认证微博；2026-08 公开记录仍以 AL 经理身份参与战队事务"
+          "source": "AG爱笑认证微博；2026-08 公开记录仍以 AL 经理身份参与战队事务",
+          "stintId": "st_1e01eed0b73f"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T03:05:53Z",
+        "attempts": 1
+      }
     }
   }
 }
