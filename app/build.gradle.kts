@@ -89,3 +89,4 @@ dependencies {
 // Final dev.50 trigger: schedule center opens at directory/subscribed league instead of auto-jumping to NSCL or another active competition.
 
 // dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.
+// Final dev.51 CI/OTA trigger after dual-source replay and YouTube session handling.
