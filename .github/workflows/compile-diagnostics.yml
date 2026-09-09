@@ -3,6 +3,10 @@ on:
   push:
     paths:
       - '.github/workflows/compile-diagnostics.yml'
+      - 'app/src/main/java/com/riftlab/app/RiftLabApplication.kt'
+      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt'
+      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleCapture.kt'
+      - 'app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt'
       - 'app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt'
       - 'app/src/main/java/com/riftlab/app/ui/EntityDetailActivity.kt'
       - 'app/src/main/java/com/riftlab/app/ui/MatchCenterDetailSurface.kt'
