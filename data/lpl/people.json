@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T03:05:56Z",
+  "updatedAt": "2026-09-09T08:13:22Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -473,7 +473,11 @@
           "source": "",
           "stintId": "st_f18f1372d791"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:19Z",
+        "attempts": 1
+      }
     },
     "p_7c32729bcbfc": {
       "displayName": "Pewpew",
@@ -878,7 +882,11 @@
           "source": "",
           "stintId": "st_76f7e12a1f54"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:20Z",
+        "attempts": 1
+      }
     },
     "p_b8e41f78d1c9": {
       "displayName": "Leo",
@@ -919,7 +927,11 @@
           "source": "",
           "stintId": "st_66f34dadb487"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:21Z",
+        "attempts": 1
+      }
     },
     "p_af21144ea1b2": {
       "displayName": "Choice",
@@ -942,7 +954,11 @@
           "source": "",
           "stintId": "st_c59585e27796"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:21Z",
+        "attempts": 1
+      }
     },
     "p_868dab6d3580": {
       "displayName": "LLH",
@@ -1224,7 +1240,11 @@
           "source": "",
           "stintId": "st_bb947c600c19"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:18Z",
+        "attempts": 1
+      }
     },
     "p_eeebad408688": {
       "displayName": "Justin Kenna",
@@ -1390,7 +1410,11 @@
           "source": "",
           "stintId": "st_23ba113baa13"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:20Z",
+        "attempts": 1
+      }
     },
     "p_04dbae4765c4": {
       "displayName": "Mni",
@@ -1550,7 +1574,11 @@
           "source": "",
           "stintId": "st_7f2ff0357a0b"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:18Z",
+        "attempts": 1
+      }
     },
     "p_d8a8fab9b54e": {
       "displayName": "An Jie",
@@ -2087,7 +2115,11 @@
           "source": "",
           "stintId": "st_2c60ba0b56c1"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T08:13:19Z",
+        "attempts": 1
+      }
     },
     "p_377c367d3fa3": {
       "displayName": "milk",
