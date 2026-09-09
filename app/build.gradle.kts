@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 52
-        versionName = "1.0.0-dev.52"
+        versionCode = 53
+        versionName = "1.0.0-dev.53"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -93,3 +93,5 @@ dependencies {
 
 // dev.52: Riot GCD-backed global management/coaching identification plus stable hardware-accelerated portrait YouTube embed rendering.
 // Final dev.52 trigger after GCD mirror population and role-label verification.
+
+// dev.53: Bilibili official VOD lookup accepts reversed team order and retries negative search cache.

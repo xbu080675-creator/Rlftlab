@@ -82,6 +82,7 @@ object BilibiliVodRepository {
     private const val API_BASE = "https://api.bilibili.com"
     private const val OFFICIAL_OWNER = "哔哩哔哩英雄联盟赛事"
     private const val REQUEST_GAP_MS = 260L
+    private const val NEGATIVE_CACHE_TTL_MS = 5L * 60L * 1000L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val cache = linkedMapOf<String, BilibiliVodState>()
@@ -102,8 +103,12 @@ object BilibiliVodRepository {
     fun open(match: ScheduledEsportsMatch, forceRefresh: Boolean = false) {
         val key = keyFor(match)
         val cached = cache[key]
-        if (!forceRefresh && cached != null) {
-            _state.value = cached
+        val cachedReusable = cached?.let { state ->
+            state.vod != null ||
+                (state.updatedAtEpochMs > 0L && System.currentTimeMillis() - state.updatedAtEpochMs < NEGATIVE_CACHE_TTL_MS)
+        } == true
+        if (!forceRefresh && cachedReusable) {
+            _state.value = cached!!
             return
         }
 
@@ -123,7 +128,7 @@ object BilibiliVodRepository {
                 status = when {
                     vod != null -> "B站官方录像 · 已匹配 ${vod.title} · ${vod.parts.size} 个小局页面"
                     result.isFailure -> "B站官方录像 · 解析失败"
-                    else -> "B站官方录像 · 暂未找到官方完整录像"
+                    else -> "B站官方录像 · 暂未找到官方完整录像 · 将自动重试"
                 },
                 errorMessage = result.exceptionOrNull()?.message,
                 updatedAtEpochMs = System.currentTimeMillis()
@@ -148,10 +153,21 @@ object BilibiliVodRepository {
             else -> match.league.take(18)
         }
 
+        // Bilibili titles do not preserve Riot schedule side ordering. For example the schedule
+        // can be T1 vs KT while the official upload is titled KT vs T1. Search both orders, then
+        // fall back to an unordered token query; candidate scoring itself remains order-independent.
+        val orderedPairs = listOf("$left vs $right", "$right vs $left")
+        val loosePair = "$left $right"
         val queries = buildList {
-            if (year > 0 && leagueToken.isNotBlank() && monthDay.isNotBlank()) add("$year$leagueToken $monthDay $left vs $right")
-            if (monthDay.isNotBlank()) add("$monthDay $left vs $right")
-            add("$left vs $right")
+            if (year > 0 && leagueToken.isNotBlank() && monthDay.isNotBlank()) {
+                orderedPairs.forEach { pair -> add("$year$leagueToken $monthDay $pair") }
+            }
+            if (monthDay.isNotBlank()) {
+                orderedPairs.forEach { pair -> add("$monthDay $pair") }
+                add("$monthDay $loosePair")
+            }
+            orderedPairs.forEach(::add)
+            add(loosePair)
         }.distinct()
 
         var best: SearchCandidate? = null
