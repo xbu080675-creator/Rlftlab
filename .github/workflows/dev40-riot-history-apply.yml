@@ -1,0 +1,106 @@
+name: Apply dev40 Riot LiveStats history wiring
+on:
+  push:
+    paths:
+      - '.github/workflows/dev40-riot-history-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Riot history wiring
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'missing pattern in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          resolver = 'app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt'
+          replace(
+              resolver,
+              '''        val byId = match.teams.associateBy { it.id }\n        val blueCode = byId[blueId]?.code?.ifBlank { null }\n            ?: match.teams.getOrNull(0)?.code?.ifBlank { match.teams.getOrNull(0)?.name }\n            ?: "BLUE"\n        val redCode = byId[redId]?.code?.ifBlank { null }\n            ?: match.teams.getOrNull(1)?.code?.ifBlank { match.teams.getOrNull(1)?.name }\n            ?: "RED"\n''',
+              '''        val blueCode = teamCode(match, blueId, 0, "BLUE")\n        val redCode = teamCode(match, redId, 1, "RED")\n'''
+          )
+          replace(
+              resolver,
+              '''    private fun parsePlayers(metadata: JSONObject, teamFrame: JSONObject): List<LivePlayerSnapshot> {\n''',
+              '''    private fun teamCode(match: ScheduledEsportsMatch, teamId: String, index: Int, fallback: String): String {\n        match.teams.firstOrNull { it.id == teamId }?.let { team ->\n            if (team.code.isNotBlank()) return team.code\n            if (team.name.isNotBlank()) return team.name\n        }\n        match.teams.getOrNull(index)?.let { team ->\n            if (team.code.isNotBlank()) return team.code\n            if (team.name.isNotBlank()) return team.name\n        }\n        return fallback\n    }\n\n    private fun parsePlayers(metadata: JSONObject, teamFrame: JSONObject): List<LivePlayerSnapshot> {\n'''
+          )
+          replace(
+              resolver,
+              '''    private fun unavailable(key: String, game: Int, message: String) {\n        MatchLifecycleArchive.records.value.values\n        publish(\n''',
+              '''    private fun unavailable(key: String, game: Int, message: String) {\n        publish(\n'''
+          )
+
+          ui = 'app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt'
+          replace(ui, 'import androidx.compose.runtime.Composable\n', 'import androidx.compose.runtime.Composable\nimport androidx.compose.runtime.LaunchedEffect\n')
+          replace(
+              ui,
+              'import com.riftlab.app.data.MatchSessionStore\n',
+              'import com.riftlab.app.data.MatchSessionStore\nimport com.riftlab.app.data.RiotHistoryBackfillState\nimport com.riftlab.app.data.RiotHistoryPhase\nimport com.riftlab.app.data.RiotLiveStatsHistoryResolver\n'
+          )
+          replace(
+              ui,
+              '''    val records by MatchLifecycleArchive.records.collectAsState()\n\n    val baseMatch = detail.match\n''',
+              '''    val records by MatchLifecycleArchive.records.collectAsState()\n    val riotHistory by RiotLiveStatsHistoryResolver.states.collectAsState()\n\n    val baseMatch = detail.match\n'''
+          )
+          replace(
+              ui,
+              '''    val currentSnapshot = live?.takeIf { it.game == selectedGame }\n        ?: frames.lastOrNull()?.snapshot\n        ?: finalSnapshot\n\n    val visibleStatus = when (phase) {\n''',
+              '''    val currentSnapshot = live?.takeIf { it.game == selectedGame }\n        ?: frames.lastOrNull()?.snapshot\n        ?: finalSnapshot\n    val backfill = riotHistory[RiotLiveStatsHistoryResolver.stateKey(match, selectedGame)]\n\n    LaunchedEffect(match.eventId, match.matchId, selectedGame, phase, frames.size) {\n        if (selectedGame > 0 && phase != ScheduleMatchPhase.UPCOMING && frames.size < 2) {\n            RiotLiveStatsHistoryResolver.ensure(match, selectedGame)\n        }\n    }\n\n    val visibleStatus = when (phase) {\n'''
+          )
+          replace(
+              ui,
+              '''        ScheduleMatchPhase.COMPLETED -> when {\n            frames.size >= 2 -> "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"\n            finalSnapshot != null -> "历史终局已归档 · 当前上游未提供这一局的连续过程帧"\n            finalSeries != null -> "历史系列赛终局已归档 · 正在等待所选小局终局数据"\n            else -> "正在恢复历史终局数据…"\n        }\n''',
+              '''        ScheduleMatchPhase.COMPLETED -> when {\n            frames.size >= 2 -> "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"\n            backfill?.phase == RiotHistoryPhase.LOADING -> backfill.message\n            backfill?.phase == RiotHistoryPhase.READY -> backfill.message\n            backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> backfill?.message.orEmpty()\n            finalSnapshot != null -> "历史终局已归档 · 正在从 Riot LiveStats 恢复 G$selectedGame 过程帧…"\n            finalSeries != null -> "历史系列赛终局已归档 · 正在等待所选小局终局数据"\n            else -> "正在恢复历史终局数据…"\n        }\n'''
+          )
+          replace(
+              ui,
+              '                item { GoldHistoryPanel(currentSnapshot, frames, phase) }\n',
+              '                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill) }\n'
+          )
+          replace(
+              ui,
+              '''private fun GoldHistoryPanel(\n    current: LiveSnapshot,\n    frames: List<MatchLifecycleFrame>,\n    phase: ScheduleMatchPhase\n) {\n''',
+              '''private fun GoldHistoryPanel(\n    current: LiveSnapshot,\n    frames: List<MatchLifecycleFrame>,\n    phase: ScheduleMatchPhase,\n    backfill: RiotHistoryBackfillState?\n) {\n'''
+          )
+          replace(
+              ui,
+              '''                        ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"\n                        ScheduleMatchPhase.COMPLETED -> "该历史小局当前只有终局快照，暂无连续经济帧；RiftLab 不会用终局数据伪造过程曲线。"\n                        ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"\n''',
+              '''                        ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"\n                        ScheduleMatchPhase.COMPLETED -> when (backfill?.phase) {\n                            RiotHistoryPhase.LOADING -> backfill.message\n                            RiotHistoryPhase.UNAVAILABLE, RiotHistoryPhase.ERROR -> "${backfill.message}；当前保留终局快照，不伪造过程曲线。"\n                            else -> "正在从 Riot LiveStats 恢复历史经济帧…"\n                        }\n                        ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"\n'''
+          )
+
+          gradle = 'app/build.gradle.kts'
+          replace(gradle, 'versionCode = 38\n        versionName = "1.0.0-dev.38"', 'versionCode = 40\n        versionName = "1.0.0-dev.40"')
+          p = Path(gradle)
+          text = p.read_text()
+          text = text.replace('// dev.38: persistent match lifecycle archive + dynamic operator telemetry across upcoming/live/final.', '// dev.40: Riot LiveStats 10-second window backfill + dynamic official-feed priority.')
+          p.write_text(text)
+
+          diag = '.github/workflows/compile-diagnostics.yml'
+          replace(
+              diag,
+              "      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleCapture.kt'\n",
+              "      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleCapture.kt'\n      - 'app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt'\n      - 'app/src/main/java/com/riftlab/app/data/LplOfficialLiveDataSource.kt'\n"
+          )
+          PY
+      - name: Remove one-shot workflow
+        run: git rm .github/workflows/dev40-riot-history-apply.yml
+      - name: Commit applied patch
+        shell: bash
+        run: |
+          git config user.name 'riftlab-dev-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app .github/workflows/compile-diagnostics.yml
+          git commit -m 'feat: wire Riot LiveStats history backfill into operator data'
+          git push
