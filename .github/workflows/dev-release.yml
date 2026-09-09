@@ -40,7 +40,15 @@ jobs:
           OUT="dist/RiftLab-${VERSION_NAME}.apk"
           if [ "$APK" != "$OUT" ]; then cp "$APK" "$OUT"; fi
           SHA=$(sha256sum "$OUT" | awk '{print $1}')
-          CHANGELOG=$(tr '\n' ' ' < DEV_CHANGELOG.txt | sed 's/[[:space:]]\+/ /g' | sed 's/^ //;s/ $//')
+          CHANGELOG=$(python3 - <<'PY'
+          from pathlib import Path
+          text = Path('DEV_CHANGELOG.txt').read_text(encoding='utf-8').strip()
+          first = text.split('\n\n', 1)[0].replace('\n', ' ').strip()
+          if len(first) > 520:
+              first = first[:519].rstrip() + '…'
+          print(first)
+          PY
+          )
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "apk=$OUT" >> "$GITHUB_OUTPUT"
