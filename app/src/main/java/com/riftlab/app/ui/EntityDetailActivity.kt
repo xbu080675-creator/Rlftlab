@@ -3,6 +3,8 @@ package com.riftlab.app.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -29,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.EsportsTeamRef
@@ -39,6 +43,8 @@ import com.riftlab.app.data.StandingsCenterStore
 import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
+
+private enum class MatchPane { DETAIL, TIMELINE }
 
 class EntityDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,6 +80,7 @@ class EntityDetailActivity : ComponentActivity() {
 
         var activeTeam by remember { mutableStateOf<EsportsTeamRef?>(null) }
         var activeMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
+        var matchPane by remember(activeMatch?.matchId) { mutableStateOf(MatchPane.DETAIL) }
 
         LaunchedEffect(
             initialMode,
@@ -140,7 +147,14 @@ class EntityDetailActivity : ComponentActivity() {
                 onClose = onClose
             )
             Spacer(Modifier.height(12.dp))
+
+            if (activeMatch != null) {
+                MatchPaneTabs(matchPane) { matchPane = it }
+                Spacer(Modifier.height(10.dp))
+            }
+
             when {
+                activeMatch != null && matchPane == MatchPane.TIMELINE -> MatchTimelineContent()
                 activeMatch != null -> MatchDetailContent()
                 activeTeam != null -> TeamDetailContent(
                     team = activeTeam!!,
@@ -154,6 +168,36 @@ class EntityDetailActivity : ComponentActivity() {
                     Text("正在同步详细数据…", color = RiftMuted, fontSize = 11.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MatchPaneTabs(selected: MatchPane, onSelect: (MatchPane) -> Unit) {
+    val shape = CutCornerShape(topEnd = 10.dp, bottomStart = 8.dp)
+    Row(
+        Modifier.fillMaxWidth()
+            .background(RiftPanelAlt, shape)
+            .border(1.dp, RiftLine.copy(alpha = 0.65f), shape)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        listOf(MatchPane.DETAIL to "比赛详情", MatchPane.TIMELINE to "时间轴").forEach { (pane, label) ->
+            val active = pane == selected
+            Text(
+                label,
+                color = if (active) RiftCyan else RiftMuted,
+                fontSize = 10.sp,
+                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1f)
+                    .background(
+                        if (active) RiftPanel else androidx.compose.ui.graphics.Color.Transparent,
+                        CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)
+                    )
+                    .clickable { onSelect(pane) }
+                    .padding(vertical = 9.dp)
+            )
         }
     }
 }
