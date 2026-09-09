@@ -1,5 +1,4 @@
 name: Compile Diagnostics
-# Diagnostic refresh: official VOD timeline integration.
 on:
   push:
     paths:
@@ -18,12 +17,13 @@ jobs:
       - name: Install SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
       - name: Compile and capture log
         shell: bash
         run: |
           set +e
-          chmod +x gradlew
-          ./gradlew :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee compile.log
+          gradle :app:assembleDebug --stacktrace --no-daemon 2>&1 | tee compile.log
           code=${PIPESTATUS[0]}
           echo "$code" > compile.exit
           exit 0
