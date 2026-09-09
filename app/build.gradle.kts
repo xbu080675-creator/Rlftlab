@@ -109,3 +109,4 @@ dependencies {
 // quota-aware REST live fallback, optional WSS transport, raw provider archive, and global postgame backfill.
 
 // dev.56: tournament rulebook + draw/slot governance, verified LPL qualifier correction, and non-overwriting official confirmations.
+// Final dev.56 build/OTA trigger after governance UI integration.
