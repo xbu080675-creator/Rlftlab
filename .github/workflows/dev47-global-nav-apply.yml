@@ -1,0 +1,665 @@
+name: Apply RiftLab dev.47 global navigation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/dev47-global-nav-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply dev.47 source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt <<'EOF'
+          package com.riftlab.app.ui
+
+          import android.content.Context
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.clickable
+          import androidx.compose.foundation.layout.Arrangement
+          import androidx.compose.foundation.layout.Column
+          import androidx.compose.foundation.layout.Row
+          import androidx.compose.foundation.layout.Spacer
+          import androidx.compose.foundation.layout.fillMaxWidth
+          import androidx.compose.foundation.layout.height
+          import androidx.compose.foundation.layout.padding
+          import androidx.compose.foundation.lazy.LazyRow
+          import androidx.compose.foundation.lazy.items
+          import androidx.compose.foundation.shape.CutCornerShape
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.LaunchedEffect
+          import androidx.compose.runtime.collectAsState
+          import androidx.compose.runtime.getValue
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.platform.LocalContext
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import kotlinx.coroutines.flow.MutableStateFlow
+          import kotlinx.coroutines.flow.StateFlow
+          import kotlinx.coroutines.flow.asStateFlow
+
+          internal data class LeagueSubscriptionOption(
+              val key: String,
+              val label: String
+          )
+
+          internal val LeagueSubscriptionOptions = listOf(
+              LeagueSubscriptionOption("LPL", "LPL"),
+              LeagueSubscriptionOption("LCK", "LCK"),
+              LeagueSubscriptionOption("LEC", "LEC"),
+              LeagueSubscriptionOption("LCS", "LCS"),
+              LeagueSubscriptionOption("LCP", "LCP"),
+              LeagueSubscriptionOption("PCS", "PCS"),
+              LeagueSubscriptionOption("VCS", "VCS"),
+              LeagueSubscriptionOption("LJL", "LJL"),
+              LeagueSubscriptionOption("CBLOL", "CBLOL"),
+              LeagueSubscriptionOption("FLS", "FLS"),
+              LeagueSubscriptionOption("LCKCL", "LCK CL"),
+              LeagueSubscriptionOption("LCPWILDCARD", "LCP Wild Card"),
+              LeagueSubscriptionOption("LDL", "LDL"),
+              LeagueSubscriptionOption("NLC", "NLC"),
+              LeagueSubscriptionOption("LIT", "LIT"),
+              LeagueSubscriptionOption("TCL", "TCL")
+          )
+
+          internal fun leagueSubscriptionKey(value: String): String =
+              value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
+
+          internal object LeagueSubscriptionStore {
+              private const val PREFS = "riftlab_league_subscriptions"
+              private const val KEY = "subscribed"
+              private val _subscribed = MutableStateFlow(setOf("LPL"))
+              val subscribed: StateFlow<Set<String>> = _subscribed.asStateFlow()
+              private var loaded = false
+
+              fun ensureLoaded(context: Context) {
+                  if (loaded) return
+                  val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                  val stored = prefs.getStringSet(KEY, null)
+                      ?.map(::leagueSubscriptionKey)
+                      ?.filter { it.isNotBlank() }
+                      ?.toSet()
+                      .orEmpty()
+                  _subscribed.value = stored.ifEmpty { setOf("LPL") }
+                  loaded = true
+              }
+
+              fun toggle(context: Context, key: String) {
+                  ensureLoaded(context)
+                  val normalized = leagueSubscriptionKey(key)
+                  val next = _subscribed.value.toMutableSet()
+                  if (normalized in next) {
+                      if (next.size == 1) return
+                      next.remove(normalized)
+                  } else {
+                      next.add(normalized)
+                  }
+                  _subscribed.value = next
+                  context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                      .edit()
+                      .putStringSet(KEY, next)
+                      .apply()
+              }
+          }
+
+          @Composable
+          internal fun LeagueSubscriptionBar() {
+              val context = LocalContext.current
+              LaunchedEffect(context) { LeagueSubscriptionStore.ensureLoaded(context) }
+              val subscribed by LeagueSubscriptionStore.subscribed.collectAsState()
+
+              Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
+                  Row(Modifier.fillMaxWidth()) {
+                      Text("赛区订阅", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.weight(1f))
+                      Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 8.sp)
+                  }
+                  Spacer(Modifier.height(6.dp))
+                  LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                      items(LeagueSubscriptionOptions, key = { it.key }) { option ->
+                          val selected = option.key in subscribed
+                          val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+                          Text(
+                              if (selected) "★ ${option.label}" else option.label,
+                              color = if (selected) RiftCyan else RiftMuted,
+                              fontSize = 9.sp,
+                              fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                              modifier = Modifier
+                                  .clickable { LeagueSubscriptionStore.toggle(context, option.key) }
+                                  .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+                                  .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.45f) else RiftLine, shape)
+                                  .padding(horizontal = 10.dp, vertical = 7.dp)
+                          )
+                      }
+                  }
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/riftlab/app/data/RiotVodRepository.kt <<'EOF'
+          package com.riftlab.app.data
+
+          import kotlinx.coroutines.CoroutineScope
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.Job
+          import kotlinx.coroutines.SupervisorJob
+          import kotlinx.coroutines.flow.MutableStateFlow
+          import kotlinx.coroutines.flow.StateFlow
+          import kotlinx.coroutines.flow.asStateFlow
+          import kotlinx.coroutines.launch
+          import org.json.JSONArray
+          import java.net.URLEncoder
+
+          internal data class RiotVodLink(
+              val game: Int,
+              val gameId: String,
+              val provider: String,
+              val locale: String,
+              val parameter: String,
+              val offsetSeconds: Int = 0
+          ) {
+              val sourceUrl: String
+                  get() = when {
+                      parameter.startsWith("http://") || parameter.startsWith("https://") -> parameter
+                      provider.equals("youtube", ignoreCase = true) -> "https://www.youtube.com/watch?v=$parameter"
+                      else -> ""
+                  }
+          }
+
+          internal data class RiotVodState(
+              val matchKey: String = "",
+              val loading: Boolean = false,
+              val links: List<RiotVodLink> = emptyList(),
+              val status: String = "Riot VOD 尚未加载",
+              val errorMessage: String? = null
+          )
+
+          /** Official overseas/global VOD metadata from Riot getEventDetails. */
+          internal object RiotVodRepository {
+              private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+              private val _state = MutableStateFlow(RiotVodState())
+              val state: StateFlow<RiotVodState> = _state.asStateFlow()
+              private var job: Job? = null
+
+              fun keyFor(match: ScheduledEsportsMatch): String = match.eventId.ifBlank { match.matchId }
+
+              fun open(match: ScheduledEsportsMatch) {
+                  val key = keyFor(match)
+                  if (key.isBlank()) return
+                  if (_state.value.matchKey == key && (_state.value.loading || _state.value.links.isNotEmpty())) return
+                  job?.cancel()
+                  _state.value = RiotVodState(matchKey = key, loading = true, status = "正在读取 Riot 官方 VOD 元数据…")
+                  job = scope.launch {
+                      try {
+                          val encoded = URLEncoder.encode(key, "UTF-8")
+                          val root = RiotResilientHttp.getJson(
+                              "${LolEsportsConfig.PERSISTED_BASE}/getEventDetails?hl=en-US&id=$encoded",
+                              connectTimeoutMs = 8_000,
+                              readTimeoutMs = 10_000
+                          )
+                          val games = root.optJSONObject("data")
+                              ?.optJSONObject("event")
+                              ?.optJSONObject("match")
+                              ?.optJSONArray("games") ?: JSONArray()
+                          val links = buildList {
+                              for (i in 0 until games.length()) {
+                                  val game = games.optJSONObject(i) ?: continue
+                                  val number = game.optInt("number", i + 1)
+                                  val gameId = game.optString("id")
+                                  val vods = game.optJSONArray("vods") ?: JSONArray()
+                                  for (j in 0 until vods.length()) {
+                                      val vod = vods.optJSONObject(j) ?: continue
+                                      val parameter = vod.optString("parameter")
+                                      if (parameter.isBlank()) continue
+                                      add(
+                                          RiotVodLink(
+                                              game = number,
+                                              gameId = gameId,
+                                              provider = vod.optString("provider").ifBlank { "youtube" },
+                                              locale = vod.optString("locale").ifBlank { "und" },
+                                              parameter = parameter,
+                                              offsetSeconds = vod.optInt("offset", 0)
+                                          )
+                                      )
+                                  }
+                              }
+                          }.distinctBy { "${it.game}|${it.provider}|${it.locale}|${it.parameter}" }
+                          _state.value = RiotVodState(
+                              matchKey = key,
+                              loading = false,
+                              links = links,
+                              status = if (links.isEmpty()) "Riot EventDetails 暂未返回 VOD" else "Riot EventDetails · ${links.size} 条官方 VOD"
+                          )
+                      } catch (t: Throwable) {
+                          _state.value = RiotVodState(
+                              matchKey = key,
+                              loading = false,
+                              status = "Riot VOD 暂不可用",
+                              errorMessage = t.message?.take(140) ?: t::class.java.simpleName
+                          )
+                      }
+                  }
+              }
+
+              fun riotVodPage(match: ScheduledEsportsMatch, game: Int): String {
+                  val key = keyFor(match)
+                  return if (key.isBlank()) "https://lolesports.com/en-US" else "https://lolesports.com/en-US/vod/$key/$game"
+              }
+
+              fun youtubeSearch(match: ScheduledEsportsMatch, game: Int): String {
+                  val teams = match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }
+                  val query = URLEncoder.encode("${match.league} $teams G$game VOD", "UTF-8")
+                  return "https://www.youtube.com/results?search_query=$query"
+              }
+          }
+          EOF
+
+          cat > app/src/main/java/com/riftlab/app/ui/GlobalReplayContent.kt <<'EOF'
+          package com.riftlab.app.ui
+
+          import android.content.Intent
+          import android.net.Uri
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.clickable
+          import androidx.compose.foundation.layout.Box
+          import androidx.compose.foundation.layout.Column
+          import androidx.compose.foundation.layout.Row
+          import androidx.compose.foundation.layout.Spacer
+          import androidx.compose.foundation.layout.fillMaxSize
+          import androidx.compose.foundation.layout.fillMaxWidth
+          import androidx.compose.foundation.layout.height
+          import androidx.compose.foundation.layout.padding
+          import androidx.compose.foundation.layout.width
+          import androidx.compose.foundation.lazy.LazyRow
+          import androidx.compose.foundation.lazy.items
+          import androidx.compose.foundation.shape.CutCornerShape
+          import androidx.compose.material3.Text
+          import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.LaunchedEffect
+          import androidx.compose.runtime.collectAsState
+          import androidx.compose.runtime.getValue
+          import androidx.compose.runtime.remember
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.platform.LocalContext
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
+          import com.riftlab.app.data.RiotVodRepository
+          import com.riftlab.app.data.ScheduledEsportsMatch
+
+          internal fun isLplReplayMatch(match: ScheduledEsportsMatch): Boolean =
+              match.leagueSlug.equals("lpl", ignoreCase = true) ||
+                  match.league.equals("LPL", ignoreCase = true) ||
+                  match.league.contains("PRO LEAGUE", ignoreCase = true)
+
+          @Composable
+          internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
+              val context = LocalContext.current
+              val state by RiotVodRepository.state.collectAsState()
+              val key = RiotVodRepository.keyFor(match)
+              LaunchedEffect(key) { RiotVodRepository.open(match) }
+              val links = state.links.takeIf { state.matchKey == key }.orEmpty()
+              val playedGames = remember(match, links) {
+                  val scoreGames = match.teams.sumOf { it.gameWins }.takeIf { it > 0 } ?: 0
+                  val vodGames = links.map { it.game }.filter { it > 0 }.distinct().sorted()
+                  when {
+                      vodGames.isNotEmpty() -> vodGames
+                      scoreGames > 0 -> (1..scoreGames).toList()
+                      else -> listOf(1)
+                  }
+              }
+
+              Column(Modifier.fillMaxSize()) {
+                  val shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
+                  Column(
+                      Modifier.fillMaxWidth()
+                          .background(RiftPanel, shape)
+                          .border(1.dp, RiftCyan.copy(alpha = 0.35f), shape)
+                          .padding(12.dp)
+                  ) {
+                      Text("GLOBAL OFFICIAL REPLAY / 海外官方回放", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                      Spacer(Modifier.height(4.dp))
+                      Text(
+                          "海外赛区与国际赛事只走 Riot LoL Esports / YouTube 官方 VOD，不请求、不解析 Bilibili。",
+                          color = RiftMuted,
+                          fontSize = 9.sp,
+                          lineHeight = 14.sp
+                      )
+                      Spacer(Modifier.height(5.dp))
+                      Text(
+                          if (state.matchKey == key) state.status else "正在切换 Riot VOD…",
+                          color = RiftText,
+                          fontSize = 9.sp,
+                          fontWeight = FontWeight.Medium
+                      )
+                  }
+
+                  Spacer(Modifier.height(8.dp))
+                  LazyRow {
+                      items(playedGames, key = { it }) { game ->
+                          val youtube = links.firstOrNull { it.game == game && it.provider.equals("youtube", true) }
+                          Column(
+                              Modifier.width(188.dp)
+                                  .padding(end = 8.dp)
+                                  .background(RiftPanelAlt, shape)
+                                  .border(1.dp, RiftLine, shape)
+                                  .padding(10.dp)
+                          ) {
+                              Text("G$game", color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                              Text(
+                                  youtube?.let { "YouTube · ${it.locale}" } ?: "Riot VOD · 等待/搜索官方源",
+                                  color = RiftMuted,
+                                  fontSize = 8.sp,
+                                  modifier = Modifier.padding(top = 2.dp, bottom = 7.dp)
+                              )
+                              Row {
+                                  Text(
+                                      if (youtube != null) "YouTube ›" else "YouTube 搜索 ›",
+                                      color = RiftCyan,
+                                      fontSize = 9.sp,
+                                      fontWeight = FontWeight.Bold,
+                                      modifier = Modifier.clickable {
+                                          openReplayUrl(context, youtube?.sourceUrl?.takeIf { it.isNotBlank() }
+                                              ?: RiotVodRepository.youtubeSearch(match, game))
+                                      }.padding(vertical = 5.dp)
+                                  )
+                                  Spacer(Modifier.weight(1f))
+                                  Text(
+                                      "LoL Esports ›",
+                                      color = RiftCyan,
+                                      fontSize = 9.sp,
+                                      fontWeight = FontWeight.Bold,
+                                      modifier = Modifier.clickable {
+                                          openReplayUrl(context, RiotVodRepository.riotVodPage(match, game))
+                                      }.padding(vertical = 5.dp)
+                                  )
+                              }
+                          }
+                      }
+                  }
+
+                  Spacer(Modifier.height(8.dp))
+                  Box(Modifier.weight(1f).fillMaxWidth()) {
+                      MatchTimelineContent()
+                  }
+              }
+          }
+
+          private fun openReplayUrl(context: android.content.Context, url: String) {
+              runCatching {
+                  context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+              }
+          }
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'marker not found in {path}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Home: persistent subscriptions sit directly under the PRE/LIVE/POST tabs.
+          replace_once(
+              'app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt',
+              '                PhaseTabs(phase) { phase = it }\n                AnimatedContent(',
+              '                PhaseTabs(phase) { phase = it }\n                LeagueSubscriptionBar()\n                AnimatedContent('
+          )
+          replace_once(
+              'app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt',
+              '                    Text(match.startTimeIso, color = RiftMuted, fontSize = 10.sp)',
+              '                    Text(MatchSessionStore.scheduleDateTimeLabel(match), color = RiftMuted, fontSize = 10.sp)'
+          )
+
+          # Never invoke Bilibili mapping for non-LPL completed matches.
+          replay = Path('app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt')
+          text = replay.read_text(encoding='utf-8')
+          marker = '''    if (!completed) {\n        MatchTimelineContent()\n        return\n    }\n\n    val key = BilibiliVodRepository.keyFor(match)'''
+          replacement = '''    if (!completed) {\n        MatchTimelineContent()\n        return\n    }\n\n    if (!isLplReplayMatch(match)) {\n        GlobalOfficialReplayContent(match)\n        return\n    }\n\n    val key = BilibiliVodRepository.keyFor(match)'''
+          if marker not in text:
+              raise SystemExit('MatchReplayContent marker missing')
+          replay.write_text(text.replace(marker, replacement, 1), encoding='utf-8')
+
+          # Explicit local timezone on every scheduled time label.
+          store = Path('app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt')
+          text = store.read_text(encoding='utf-8')
+          old = '''    private fun formatLocalStart(iso: String): String {\n        if (iso.isBlank()) return "--:--"\n        return runCatching {\n            DateTimeFormatter.ofPattern("HH:mm")\n                .withZone(ZoneId.systemDefault())\n                .format(Instant.parse(iso))\n        }.getOrElse { iso }\n    }\n\n    private fun formatLocalDateTime(iso: String): String {\n        if (iso.isBlank()) return "--"\n        return runCatching {\n            DateTimeFormatter.ofPattern("MM-dd HH:mm")\n                .withZone(ZoneId.systemDefault())\n                .format(Instant.parse(iso))\n        }.getOrElse { iso }\n    }'''
+          new = '''    fun scheduleDateTimeLabel(match: ScheduledEsportsMatch): String = formatLocalDateTime(match.startTimeIso)\n\n    private fun formatLocalStart(iso: String): String {\n        if (iso.isBlank()) return "--:--"\n        return runCatching {\n            val instant = Instant.parse(iso)\n            val zone = ZoneId.systemDefault()\n            val clock = DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(instant)\n            "$clock · ${zoneOffsetLabel(zone, instant)}"\n        }.getOrElse { iso }\n    }\n\n    private fun formatLocalDateTime(iso: String): String {\n        if (iso.isBlank()) return "--"\n        return runCatching {\n            val instant = Instant.parse(iso)\n            val zone = ZoneId.systemDefault()\n            val clock = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(zone).format(instant)\n            "$clock · ${zoneOffsetLabel(zone, instant)}"\n        }.getOrElse { iso }\n    }\n\n    private fun zoneOffsetLabel(zone: ZoneId, instant: Instant): String {\n        val totalMinutes = zone.rules.getOffset(instant).totalSeconds / 60\n        val sign = if (totalMinutes >= 0) "+" else "-"\n        val absolute = kotlin.math.abs(totalMinutes)\n        val hours = absolute / 60\n        val minutes = absolute % 60\n        return if (minutes == 0) "UTC$sign$hours" else "UTC$sign%02d:%02d".format(hours, minutes)\n    }'''
+          if old not in text:
+              raise SystemExit('MatchSessionStore timezone block missing')
+          store.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Broaden Riot league discovery to the official regional/development leagues visible in LoL Esports.
+          api = Path('app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt')
+          text = api.read_text(encoding='utf-8')
+          old = '''    val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(\n        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup",\n        "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",\n        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs"\n    )'''
+          new = '''    val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(\n        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup", "americas-cup", "emea-masters",\n        "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",\n        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs", "fls",\n        "lck-cl", "lck_challengers", "lcp-wild-card", "lpl-development-league", "ldl",\n        "greek-legends-league", "lit", "nlc", "esports-balkan-league", "tcl", "hitpoint-masters", "rift-legends", "nacl"\n    )\n    val GLOBAL_TRACKED_LEAGUE_NAMES = setOf(\n        "americas cup", "emea masters", "fls", "lck cl", "lck challengers", "lcp wild card",\n        "lpl development league", "greek legends league", "lit", "nlc", "esports balkan league",\n        "tcl", "hitpoint masters", "rift legends", "nacl"\n    )'''
+          if old not in text:
+              raise SystemExit('LolEsportsConfig slug block missing')
+          text = text.replace(old, new, 1)
+          old2 = '''                    val tracked = slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||\n                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS'''
+          new2 = '''                    val normalizedName = league.optString("name").trim().lowercase()\n                    val tracked = slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||\n                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||\n                        LolEsportsConfig.GLOBAL_TRACKED_LEAGUE_NAMES.any { trackedName ->\n                            normalizedName == trackedName || normalizedName.contains(trackedName)\n                        }'''
+          if old2 not in text:
+              raise SystemExit('tracked condition missing')
+          api.write_text(text.replace(old2, new2, 1), encoding='utf-8')
+
+          # OP.GG lineup fallback now carries role/name/image, not only a Set<String>.
+          opgg = Path('app/src/main/java/com/riftlab/app/data/OpggMatchSupplementProvider.kt')
+          text = opgg.read_text(encoding='utf-8')
+          pattern = re.compile(r'''    /\*\* Latest actually-played five for one team\. Used only to distinguish current starters from active substitutes\. \*/\n    suspend fun fetchLatestLineup\(.*?\n    private fun findMatch''', re.S)
+          replacement = '''    /** Latest actually-played five for one team, with role/name/image for Riot-roster gaps. */\n    suspend fun fetchLatestLineupPlayers(match: ScheduledEsportsMatch, team: EsportsTeamRef): List<EsportsPlayerRef> =\n        withContext(Dispatchers.IO) {\n            val opggMatch = findMatch(match) ?: return@withContext emptyList()\n            val matchId = opggMatch.opt("id")?.toString().orEmpty()\n            if (matchId.isBlank()) return@withContext emptyList()\n            val maxSets = match.bestOf.takeIf { it > 0 } ?: 5\n            for (set in maxSets downTo 1) {\n                val game = runCatching { fetchGame(matchId, set) }.getOrNull() ?: continue\n                if (game.length() == 0) continue\n                val players = game.optJSONArray("players") ?: continue\n                val found = linkedMapOf<String, EsportsPlayerRef>()\n                for (i in 0 until players.length()) {\n                    val row = players.optJSONObject(i) ?: continue\n                    val rowTeam = row.optJSONObject("team") ?: JSONObject()\n                    if (!teamMatches(rowTeam, team)) continue\n                    val player = row.optJSONObject("player") ?: JSONObject()\n                    val name = player.optString("nickName").ifBlank { row.optString("nickName") }\n                    if (name.isBlank()) continue\n                    val role = normalizeLineupRole(row.optString("position").ifBlank { player.optString("position") })\n                    val image = normalizeAssetUrl(player.optString("imageUrl"))\n                    if (image.isNotBlank()) EsportsAssetCache.putPlayer(name, team.code, image)\n                    found[token(name)] = EsportsPlayerRef(\n                        id = player.opt("id")?.toString().orEmpty(),\n                        summonerName = name,\n                        role = role,\n                        imageUrl = image\n                    )\n                }\n                if (found.size >= 5) {\n                    return@withContext found.values.sortedBy { lineupRoleOrder(it.role) }.take(7)\n                }\n            }\n            emptyList()\n        }\n\n    suspend fun fetchLatestLineup(match: ScheduledEsportsMatch, team: EsportsTeamRef): Set<String> =\n        fetchLatestLineupPlayers(match, team).map { it.summonerName }.filter { it.isNotBlank() }.toSet()\n\n    private fun normalizeLineupRole(value: String): String = when (value.lowercase()) {\n        "top" -> "TOP"\n        "jungle", "jun" -> "JUG"\n        "mid", "middle" -> "MID"\n        "bottom", "bot", "adc" -> "BOT"\n        "support", "sup" -> "SUP"\n        else -> value.uppercase().ifBlank { "—" }\n    }\n\n    private fun lineupRoleOrder(role: String): Int = when (role.uppercase()) {\n        "TOP" -> 0\n        "JUG", "JUNGLE" -> 1\n        "MID" -> 2\n        "BOT", "ADC", "BOTTOM" -> 3\n        "SUP", "SUPPORT" -> 4\n        else -> 99\n    }\n\n    private fun findMatch'''
+          text2, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'OPGG lineup block replace count={count}')
+          opgg.write_text(text2, encoding='utf-8')
+
+          # Team detail: if Riot exposes identity/logo but no current players, hydrate the latest verified five from OP.GG.
+          team = Path('app/src/main/java/com/riftlab/app/data/TeamDetailRepository.kt')
+          text = team.read_text(encoding='utf-8')
+          old = '''            val starters = if (latestMatch != null && baseDetails != null) {\n                runCatching { lineupProvider.fetchLatestLineup(latestMatch, effectiveTeam) }\n                    .getOrDefault(emptySet())\n                    .takeIf { it.size >= 5 }\n                    ?: cachedStarters\n            } else cachedStarters\n\n            val dynamicBase = baseDetails ?: EsportsTeamDetails(\n                id = effectiveTeam.id,\n                slug = effectiveTeam.slug,\n                code = effectiveTeam.code,\n                name = effectiveTeam.name,\n                imageUrl = effectiveTeam.imageUrl,\n                players = emptyList()\n            )'''
+          new = '''            val opggLineup = if (latestMatch != null) {\n                runCatching { lineupProvider.fetchLatestLineupPlayers(latestMatch, effectiveTeam) }\n                    .getOrDefault(emptyList())\n            } else emptyList()\n            val starters = opggLineup.map { it.summonerName }.filter { it.isNotBlank() }.toSet()\n                .takeIf { it.size >= 5 } ?: cachedStarters\n            val riotPlayers = baseDetails?.players.orEmpty()\n            val fallbackPlayers = when {\n                riotPlayers.size >= 5 -> riotPlayers\n                opggLineup.size >= 5 -> opggLineup\n                else -> (riotPlayers + opggLineup)\n                    .distinctBy { token(it.summonerName) }\n                    .sortedBy { listOf("TOP", "JUG", "MID", "BOT", "SUP").indexOf(it.role).let { order -> if (order < 0) 99 else order } }\n            }\n\n            val dynamicBase = (baseDetails ?: EsportsTeamDetails(\n                id = effectiveTeam.id,\n                slug = effectiveTeam.slug,\n                code = effectiveTeam.code,\n                name = effectiveTeam.name,\n                imageUrl = effectiveTeam.imageUrl,\n                players = emptyList()\n            )).copy(players = fallbackPlayers)'''
+          if old not in text:
+              raise SystemExit('TeamDetailRepository lineup block missing')
+          team.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Schedule Center: first-level League / International, second-level region/event menus.
+          sched = Path('app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt')
+          text = sched.read_text(encoding='utf-8')
+          text = text.replace('import androidx.compose.foundation.lazy.LazyColumn\n', 'import androidx.compose.foundation.lazy.LazyColumn\nimport androidx.compose.foundation.lazy.LazyRow\n', 1)
+          text = text.replace(
+              'private enum class ScheduleDirectorySection(val label: String) {\n    REGIONAL("各大赛区"),\n    WORLDS("全球总决赛"),\n    INTERNATIONAL("国际赛事")\n}',
+              'private enum class ScheduleDirectorySection(val label: String) {\n    REGIONAL("联赛"),\n    WORLDS("全球总决赛"),\n    INTERNATIONAL("国际赛")\n}\n\nprivate enum class InternationalCompetitionMenu(val label: String) {\n    FIRST_STAND("全球先锋赛"),\n    MSI("季中冠军赛"),\n    AMERICAS_CUP("美洲杯"),\n    WORLDS("全球总决赛"),\n    EWC("EWC"),\n    EMEA_MASTERS("EMEA 大师赛")\n}',
+              1
+          )
+          text = text.replace(
+              '"${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateKey(match)}"',
+              '"${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateTimeLabel(match)}"',
+              1
+          )
+          text = text.replace('"各大赛区 / 全球总决赛 / 国际赛事"', '"联赛 / 国际赛 · 赛区订阅已同步"', 1)
+          text = text.replace(
+              'scheduleMatches = selectedBucket.matches,\n                                onTeamClick = { team ->',
+              'scheduleMatches = leagueWideTeamMatches(selectedBucket, center.matches),\n                                onTeamClick = { team ->',
+              1
+          )
+
+          pattern = re.compile(r'''@Composable\nprivate fun CompetitionDirectory\(.*?\n\}\n\n@Composable\nprivate fun DirectorySectionHeader''', re.S)
+          new_func = r'''@Composable
+          private fun CompetitionDirectory(
+              buckets: List<ScheduleCompetitionBucket>,
+              currentMatchId: String?,
+              nextMatchId: String?,
+              onSelect: (ScheduleCompetitionBucket) -> Unit
+          ) {
+              val subscribed by LeagueSubscriptionStore.subscribed.collectAsState()
+              val internationalBuckets = buckets.filter { internationalCompetitionKind(it) != null }
+              val regional = buckets.filter { internationalCompetitionKind(it) == null }
+                  .groupBy(::bucketLeagueLabel)
+                  .toList()
+                  .sortedWith(
+                      compareBy<Pair<String, List<ScheduleCompetitionBucket>>> {
+                          if (leagueSubscriptionKey(it.first) in subscribed) 0 else 1
+                      }.thenBy { regionalLeagueOrder(it.first) }.thenBy { it.first }
+                  )
+              val activeBucket = buckets.firstOrNull { bucket ->
+                  bucket.matches.any { it.matchId == currentMatchId || it.matchId == nextMatchId }
+              }
+              val activeIntl = activeBucket?.let(::internationalCompetitionKind)
+              var rootIndex by remember(buckets, currentMatchId, nextMatchId) {
+                  mutableIntStateOf(if (activeIntl != null) 1 else 0)
+              }
+              val preferredLeague = activeBucket?.takeIf { internationalCompetitionKind(it) == null }?.let(::bucketLeagueLabel)
+                  ?: regional.firstOrNull { leagueSubscriptionKey(it.first) in subscribed }?.first
+                  ?: regional.firstOrNull()?.first.orEmpty()
+              var selectedLeague by remember(regional.map { it.first }, subscribed, preferredLeague) {
+                  mutableStateOf(preferredLeague)
+              }
+              var selectedInternational by remember(activeIntl) {
+                  mutableStateOf(activeIntl ?: InternationalCompetitionMenu.WORLDS)
+              }
+
+              Column(Modifier.fillMaxSize()) {
+                  Row(
+                      Modifier.fillMaxWidth()
+                          .background(RiftPanelAlt, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+                          .padding(4.dp),
+                      horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                      listOf("联赛", "国际赛").forEachIndexed { index, label ->
+                          Box(
+                              Modifier.weight(1f)
+                                  .clickable { rootIndex = index }
+                                  .background(if (rootIndex == index) RiftPanel else androidx.compose.ui.graphics.Color.Transparent, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
+                                  .padding(vertical = 11.dp),
+                              contentAlignment = Alignment.Center
+                          ) {
+                              Text(label, color = if (rootIndex == index) RiftCyan else RiftMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                          }
+                      }
+                  }
+                  Spacer(Modifier.height(9.dp))
+
+                  if (rootIndex == 0) {
+                      if (regional.isEmpty()) {
+                          EmptyData("等待 Riot 联赛赛程数据")
+                          return@Column
+                      }
+                      LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                          items(regional, key = { it.first }) { (league, _) ->
+                              val selected = league == selectedLeague
+                              val subscribedLeague = leagueSubscriptionKey(league) in subscribed
+                              val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+                              Text(
+                                  if (subscribedLeague) "★ $league" else league,
+                                  color = if (selected) RiftCyan else RiftMuted,
+                                  fontSize = 9.sp,
+                                  fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                  modifier = Modifier.clickable { selectedLeague = league }
+                                      .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+                                      .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.45f) else RiftLine, shape)
+                                      .padding(horizontal = 11.dp, vertical = 8.dp)
+                              )
+                          }
+                      }
+                      Spacer(Modifier.height(9.dp))
+                      val selectedBuckets = regional.firstOrNull { it.first == selectedLeague }?.second.orEmpty()
+                      LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                          items(selectedBuckets.sortedByDescending { it.firstEpochMs }, key = { it.key }) { bucket ->
+                              CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+                          }
+                      }
+                  } else {
+                      LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                          items(InternationalCompetitionMenu.entries, key = { it.name }) { menu ->
+                              val selected = menu == selectedInternational
+                              val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+                              Text(
+                                  menu.label,
+                                  color = if (selected) RiftCyan else RiftMuted,
+                                  fontSize = 9.sp,
+                                  fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                  modifier = Modifier.clickable { selectedInternational = menu }
+                                      .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+                                      .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.45f) else RiftLine, shape)
+                                      .padding(horizontal = 11.dp, vertical = 8.dp)
+                              )
+                          }
+                      }
+                      Spacer(Modifier.height(9.dp))
+                      val selectedBuckets = internationalBuckets.filter { internationalCompetitionKind(it) == selectedInternational }
+                      if (selectedBuckets.isEmpty()) {
+                          EmptyData("${selectedInternational.label} · 当前分页暂无赛程，保留固定入口")
+                      } else {
+                          LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                              items(selectedBuckets.sortedByDescending { it.firstEpochMs }, key = { it.key }) { bucket ->
+                                  CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+                              }
+                          }
+                      }
+                  }
+              }
+          }
+
+          @Composable
+          private fun DirectorySectionHeader'''
+          text2, count = pattern.subn(new_func, text, count=1)
+          if count != 1:
+              raise SystemExit(f'CompetitionDirectory replace count={count}')
+          text = text2
+
+          # Extend classification + global team scope helper.
+          marker = 'private fun bucketSection(bucket: ScheduleCompetitionBucket): ScheduleDirectorySection {'
+          helper = '''private fun internationalCompetitionKind(bucket: ScheduleCompetitionBucket): InternationalCompetitionMenu? {\n    val sample = bucket.matches.firstOrNull()\n    val identity = listOf(\n        bucket.tournament?.leagueSlug.orEmpty(), bucket.tournament?.leagueName.orEmpty(),\n        sample?.leagueSlug.orEmpty(), sample?.league.orEmpty(), bucket.title\n    ).joinToString(" ").lowercase()\n    return when {\n        identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> InternationalCompetitionMenu.FIRST_STAND\n        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.MSI\n        identity.contains("americas cup") || identity.contains("america cup") -> InternationalCompetitionMenu.AMERICAS_CUP\n        identity.contains("worlds") || identity.contains("world championship") || identity.contains("全球总决赛") -> InternationalCompetitionMenu.WORLDS\n        identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.EWC\n        identity.contains("emea masters") -> InternationalCompetitionMenu.EMEA_MASTERS\n        else -> null\n    }\n}\n\nprivate fun leagueWideTeamMatches(bucket: ScheduleCompetitionBucket, allMatches: List<ScheduledEsportsMatch>): List<ScheduledEsportsMatch> {\n    if (internationalCompetitionKind(bucket) != null) return bucket.matches\n    val sample = bucket.matches.firstOrNull() ?: return bucket.matches\n    return allMatches.filter { match ->\n        when {\n            sample.leagueId.isNotBlank() && match.leagueId.isNotBlank() -> sample.leagueId == match.leagueId\n            sample.leagueSlug.isNotBlank() && match.leagueSlug.isNotBlank() -> normalizeLeagueToken(sample.leagueSlug) == normalizeLeagueToken(match.leagueSlug)\n            else -> normalizeLeagueToken(sample.league) == normalizeLeagueToken(match.league)\n        }\n    }.ifEmpty { bucket.matches }\n}\n\n'''
+          if marker not in text:
+              raise SystemExit('bucketSection marker missing')
+          text = text.replace(marker, helper + marker, 1)
+          # Make legacy section classification agree with the new hierarchy.
+          old_section = '''    return when {\n        identity.contains("worlds") || identity.contains("world championship") || identity.contains("全球总决赛") ->\n            ScheduleDirectorySection.WORLDS\n        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) ||\n            identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") ||\n            identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) ->\n            ScheduleDirectorySection.INTERNATIONAL\n        else -> ScheduleDirectorySection.REGIONAL\n    }'''
+          new_section = '''    return when (internationalCompetitionKind(bucket)) {\n        InternationalCompetitionMenu.WORLDS -> ScheduleDirectorySection.WORLDS\n        null -> ScheduleDirectorySection.REGIONAL\n        else -> ScheduleDirectorySection.INTERNATIONAL\n    }'''
+          if old_section in text:
+              text = text.replace(old_section, new_section, 1)
+          # Non-LPL tabs must never display the hard-coded LPL championship points table.
+          old_points = '''private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {\n    val seasonYear = bucket.matches.mapNotNull(::matchStartDate).firstOrNull()?.year\n    if (seasonYear != LplChampionshipPoints2026.season) {'''
+          new_points = '''private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {\n    val seasonYear = bucket.matches.mapNotNull(::matchStartDate).firstOrNull()?.year\n    if (!bucketLeagueLabel(bucket).equals("LPL", ignoreCase = true)) {\n        EmptyData("${bucketLeagueLabel(bucket)} 年度积分尚未接入；不会显示 LPL 数据作为替代。")\n        return\n    }\n    if (seasonYear != LplChampionshipPoints2026.season) {'''
+          if old_points not in text:
+              raise SystemExit('ChampionshipPointsView marker missing')
+          text = text.replace(old_points, new_points, 1)
+          sched.write_text(text, encoding='utf-8')
+
+          # Version + changelog.
+          gradle = Path('app/build.gradle.kts')
+          text = gradle.read_text(encoding='utf-8')
+          text = text.replace('versionCode = 46', 'versionCode = 47', 1)
+          text = text.replace('versionName = "1.0.0-dev.46"', 'versionName = "1.0.0-dev.47"', 1)
+          text = re.sub(r'// dev\.46:.*$', '// dev.47: persistent league subscriptions, two-level global competition navigation, timezone labels, global Riot/YouTube VOD routing.', text, count=1, flags=re.M)
+          gradle.write_text(text, encoding='utf-8')
+
+          changelog = Path('DEV_CHANGELOG.txt')
+          old = changelog.read_text(encoding='utf-8') if changelog.exists() else ''
+          entry = '''dev.47：重做全球赛事入口层级：首页新增常驻“赛区订阅”，订阅持久保存并在赛事中心优先排序；赛事中心一级改为“联赛 / 国际赛”，联赛二级先选赛区再看赛程，国际赛二级固定提供“全球先锋赛 / 季中冠军赛 / 美洲杯 / 全球总决赛 / EWC / EMEA 大师赛”。Riot 联赛发现范围扩展到 FLS、LCK CL、LCP Wild Card、LDL、NLC、LIT、TCL、EMEA Masters、Esports Balkan League、Hitpoint Masters、Rift Legends、Americas Cup 等官方目录项目，战队页同时用整个赛区当前赛程补全参赛队；当 Riot team identity 有但 roster 为空时，用 OP.GG 最近正式比赛的可核实五人和位置补齐，不猜人。海外/国际赛事回放彻底与 Bilibili 解耦：非 LPL 比赛不再触发 B站解析，改读 Riot getEventDetails 的官方 VOD 元数据，优先直达 YouTube，并始终提供 LoL Esports 官方 VOD 页；LPL 继续保留 B站官方赛事源。所有赛程时间改为“本机当地时间 + UTC 时区偏移”显式标注，避免跨赛区时间歧义。'''
+          changelog.write_text(entry + ('\n\n' + old.lstrip() if old.strip() else '\n'), encoding='utf-8')
+          PY
+
+          git rm .github/workflows/dev47-global-nav-apply.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app DEV_CHANGELOG.txt .github/workflows/dev47-global-nav-apply.yml
+          git commit -m "feat: add subscriptions and global competition navigation"
+          git push origin main
