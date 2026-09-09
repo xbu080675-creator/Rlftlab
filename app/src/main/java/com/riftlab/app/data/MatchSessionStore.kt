@@ -92,6 +92,7 @@ object MatchSessionStore {
     val scheduleCenter: StateFlow<ScheduleCenterState> = _scheduleCenter.asStateFlow()
 
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
+    val liveLifecycle: StateFlow<LiveLifecycleState> = liveDataSource.lifecycle
     val postSourceStatus: StateFlow<String> = postMatchResolver.status
 
     private fun emptyLiveSnapshot(message: String): LiveSnapshot = LiveSnapshot(
@@ -217,9 +218,25 @@ object MatchSessionStore {
     }
 
     private suspend fun syncLiveStatusIntoSchedule(status: LiveSourceStatus) {
-        val resolvedEventId = status.eventId.ifBlank { LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty() }
+        val lifecycle = liveDataSource.lifecycle.value
+        val resolvedEventId = lifecycle.eventId.ifBlank {
+            status.eventId.ifBlank { LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty() }
+        }
         if (resolvedEventId.isBlank()) return
-        if (status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return
+
+        // EVENT_LIVE/PRE_GAME/DRAFT/GAME_LOADING are real event states even without a game frame.
+        // This is the key fix for the old IG-day deadlock: currentMatch no longer depends on one
+        // provider successfully resolving a gameId first.
+        val eventActive = lifecycle.stage in setOf(
+            LiveLifecycleStage.EVENT_LIVE,
+            LiveLifecycleStage.PRE_GAME,
+            LiveLifecycleStage.DRAFT,
+            LiveLifecycleStage.GAME_LOADING,
+            LiveLifecycleStage.GAME_LIVE,
+            LiveLifecycleStage.BETWEEN_GAMES,
+            LiveLifecycleStage.DEGRADED
+        )
+        if (!eventActive && status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return
 
         val center = _scheduleCenter.value
         val liveMatch = center.matches.firstOrNull {
@@ -228,7 +245,7 @@ object MatchSessionStore {
 
         val key = scheduleKey(liveMatch)
         val detected = if (
-            status.phase == LiveSourcePhase.LIVE &&
+            lifecycle.stage == LiveLifecycleStage.GAME_LIVE &&
             key !in center.liveDetectedAtEpochMs
         ) {
             center.liveDetectedAtEpochMs + (key to System.currentTimeMillis())
@@ -407,6 +424,16 @@ object MatchSessionStore {
             )
 
         if (statusTargetsMatch) {
+            when (liveDataSource.lifecycle.value.stage) {
+                LiveLifecycleStage.GAME_LIVE -> return ScheduleActivityState.GAME_LIVE
+                LiveLifecycleStage.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES
+                LiveLifecycleStage.EVENT_LIVE,
+                LiveLifecycleStage.PRE_GAME,
+                LiveLifecycleStage.DRAFT,
+                LiveLifecycleStage.GAME_LOADING,
+                LiveLifecycleStage.DEGRADED -> return ScheduleActivityState.EVENT_LIVE
+                else -> Unit
+            }
             when (status.phase) {
                 LiveSourcePhase.LIVE -> return ScheduleActivityState.GAME_LIVE
                 LiveSourcePhase.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES
@@ -440,7 +467,7 @@ object MatchSessionStore {
 
     fun scheduleTimingNote(match: ScheduledEsportsMatch): String = when (scheduleActivity(match)) {
         ScheduleActivityState.UPCOMING -> "计划 ${formatLocalStart(match.startTimeIso)}"
-        ScheduleActivityState.EVENT_LIVE -> "赛事已开始 · 等待小局数据"
+        ScheduleActivityState.EVENT_LIVE -> liveDataSource.lifecycle.value.message.ifBlank { "赛事已开始 · 等待小局数据" }
         ScheduleActivityState.BETWEEN_GAMES -> "局间 · 等待下一小局"
         ScheduleActivityState.COMPLETED -> "已结束"
         ScheduleActivityState.GAME_LIVE -> {
