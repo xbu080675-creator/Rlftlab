@@ -232,7 +232,7 @@ replace(
 ''')
 replace(
     "app/build.gradle.kts",
-'''// dev.28: canonical people entities, sourced staff avatars, and employment timelines.
+'''// dev.28: canonical people entities, sourced staff avatars, employment timelines, and remote-first people directory.
 ''',
 '''// dev.29: resilient Riot persisted mirror and non-blocking team dynamic data fallback.
 ''')
