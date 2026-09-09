@@ -23,6 +23,7 @@ import javax.crypto.spec.GCMParameterSpec
 internal object ProviderCredentialStore {
     private const val PREFS = "riftlab_provider_credentials"
     private const val KEY_TACHIO = "tachio_api_key_v1"
+    private const val KEY_CITO = "cito_api_key_v1"
     private const val KEYSTORE_ALIAS = "riftlab_provider_credentials_aes_v1"
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -34,23 +35,49 @@ internal object ProviderCredentialStore {
     private val _tachioConfigured = MutableStateFlow(readTachioApiKey() != null)
     val tachioConfigured: StateFlow<Boolean> = _tachioConfigured.asStateFlow()
 
-    fun readTachioApiKey(): String? = decrypt(prefs.getString(KEY_TACHIO, null))
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
+    private val _citoConfigured = MutableStateFlow(readCitoApiKey() != null)
+    val citoConfigured: StateFlow<Boolean> = _citoConfigured.asStateFlow()
+
+    fun readTachioApiKey(): String? = readCredential(KEY_TACHIO)
 
     fun saveTachioApiKey(value: String) {
-        val normalized = value.trim()
-        if (normalized.isEmpty()) {
-            clearTachioApiKey()
-            return
-        }
-        prefs.edit().putString(KEY_TACHIO, encrypt(normalized)).apply()
-        _tachioConfigured.value = true
+        saveCredential(KEY_TACHIO, value) { _tachioConfigured.value = it }
     }
 
     fun clearTachioApiKey() {
-        prefs.edit().remove(KEY_TACHIO).apply()
+        clearCredential(KEY_TACHIO)
         _tachioConfigured.value = false
+    }
+
+    /** Cito API key used by REST and paid LoL WebSocket transport. */
+    fun readCitoApiKey(): String? = readCredential(KEY_CITO)
+
+    fun saveCitoApiKey(value: String) {
+        saveCredential(KEY_CITO, value) { _citoConfigured.value = it }
+    }
+
+    fun clearCitoApiKey() {
+        clearCredential(KEY_CITO)
+        _citoConfigured.value = false
+    }
+
+    private fun readCredential(key: String): String? = decrypt(prefs.getString(key, null))
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+
+    private fun saveCredential(key: String, value: String, onConfigured: (Boolean) -> Unit) {
+        val normalized = value.trim()
+        if (normalized.isEmpty()) {
+            clearCredential(key)
+            onConfigured(false)
+            return
+        }
+        prefs.edit().putString(key, encrypt(normalized)).apply()
+        onConfigured(true)
+    }
+
+    private fun clearCredential(key: String) {
+        prefs.edit().remove(key).apply()
     }
 
     private fun encrypt(plainText: String): String {
