@@ -181,7 +181,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
 
                 Spacer(Modifier.height(12.dp))
                 when {
-                    selectedDetailMatch != null -> MatchDetailContent()
+                    selectedDetailMatch != null -> MatchCenterDetailSurface(selectedDetailMatch!!)
                     selectedTeam != null -> TeamDetailContent(
                         team = selectedTeam!!,
                         matches = selectedBucket?.matches ?: center.matches,

@@ -2,10 +2,6 @@ package com.riftlab.app.ui
 
 import android.content.Intent
 import android.net.Uri
-import android.webkit.CookieManager
-import android.webkit.WebChromeClient
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,22 +26,34 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.PlayerView
 import com.riftlab.app.data.BilibiliMatchVod
+import com.riftlab.app.data.BilibiliNativePlaybackResolver
+import com.riftlab.app.data.BilibiliNativePlaybackSource
 import com.riftlab.app.data.BilibiliVodPart
 import com.riftlab.app.data.BilibiliVodRepository
 import com.riftlab.app.data.MatchDetailRepository
+import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.ScheduleMatchPhase
 
 @Composable
 internal fun MatchVodContent() {
@@ -53,9 +61,10 @@ internal fun MatchVodContent() {
     val match = detail.match
     val vodState by BilibiliVodRepository.state.collectAsState()
     val key = match?.let(BilibiliVodRepository::keyFor).orEmpty()
+    val completed = match?.let { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED } == true
 
-    LaunchedEffect(key) {
-        if (match != null && key.isNotBlank()) BilibiliVodRepository.open(match)
+    LaunchedEffect(key, completed) {
+        if (match != null && completed && key.isNotBlank()) BilibiliVodRepository.open(match)
     }
 
     if (match == null) {
@@ -88,17 +97,19 @@ internal fun MatchVodContent() {
                     .padding(14.dp)
             ) {
                 Text("OFFICIAL MATCH VOD", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text("官方录像 / B站", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("官方录像 / RiftLab 原生播放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    "RiftLab 只解析官方稿件的 BVID、分P与章节元数据；视频仍由哔哩哔哩官方托管并在官方播放器中播放，不保存整场录像。",
+                    "RiftLab 只保存官方稿件的 BVID、CID、分P和事件锚点。播放时临时解析当前可用播放地址，由原生 Media3 播放器直接从 B站 CDN 串流；不下载、不保存整场录像，也不再套 WebView 播放页。",
                     color = RiftMuted,
                     fontSize = 9.sp
                 )
             }
         }
 
-        if (!stateMatches || vodState.loading) {
+        if (!completed) {
+            item { VodStatusPanel("官方录像只在比赛结束后建立历史映射；当前比赛尚未结束。") }
+        } else if (!stateMatches || vodState.loading) {
             item { VodStatusPanel(if (stateMatches) vodState.status else "B站官方录像 · 正在建立比赛映射…") }
         } else if (vod == null) {
             item { VodStatusPanel(vodState.status + vodState.errorMessage?.let { " · ${it.take(120)}" }.orEmpty()) }
@@ -112,7 +123,7 @@ internal fun MatchVodContent() {
                 }
             }
             if (part != null) {
-                item { BilibiliEmbeddedPlayer(vod, part, startSecond = seekSecond) }
+                item { RiftNativeVodPlayer(vod, part, startSecond = seekSecond) }
                 item {
                     VodChapterList(part) { second ->
                         seekSecond = second
@@ -144,16 +155,16 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
                 Text("OFFICIAL VOD TIMELINE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text("G${part.game} · B站官方录像历史回放", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-            Text("VOD", color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("NATIVE", color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "本机没有当时的连续实时快照，因此这里用官方录像章节补历史事件锚点。视频时间与事件均来自官方稿件；不会从终局比分伪造经济过程。",
+            "本机没有当时的连续实时快照时，用官方录像章节补历史事件锚点。拖动时间轴或点击事件会直接 seek RiftLab 原生播放器；不会从终局比分伪造经济过程。",
             color = RiftMuted,
             fontSize = 9.sp
         )
         Spacer(Modifier.height(10.dp))
-        BilibiliEmbeddedPlayer(vod, part, startSecond = seekVideoSecond)
+        RiftNativeVodPlayer(vod, part, startSecond = seekVideoSecond)
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
@@ -170,7 +181,7 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
             valueRange = 0f..duration.toFloat()
         )
         Text(
-            "拖动后松手即可让官方播放器跳到对应录像位置。",
+            "拖动后松手即可跳到对应官方录像位置。",
             color = RiftMuted,
             fontSize = 8.sp,
             modifier = Modifier.fillMaxWidth(),
@@ -227,7 +238,7 @@ private fun VodSourceHeader(vod: BilibiliMatchVod) {
         Text("UP · ${vod.ownerName} · ${vod.bvid}", color = RiftMuted, fontSize = 9.sp)
         Spacer(Modifier.height(6.dp))
         Text(
-            "在哔哩哔哩打开 ›",
+            "在哔哩哔哩打开原稿 ›",
             color = RiftCyan,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
@@ -307,51 +318,222 @@ private fun VodChapterList(part: BilibiliVodPart, onSeek: (Int) -> Unit) {
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
-private fun BilibiliEmbeddedPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart, startSecond: Int) {
+private fun RiftNativeVodPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart, startSecond: Int) {
     val context = LocalContext.current
-    val backgroundArgb = RiftBg.toArgb()
-    val line = RiftLine
-    val url = remember(vod.bvid, part.cid, part.page, startSecond) { vod.playerUrl(part, startSecond) }
-    val webView = remember(vod.bvid, part.cid, backgroundArgb) {
-        WebView(context).apply {
-            setBackgroundColor(backgroundArgb)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = true
-            settings.userAgentString =
-                "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36"
-            webViewClient = WebViewClient()
-            webChromeClient = WebChromeClient()
-            CookieManager.getInstance().setAcceptCookie(true)
-            CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+    var refreshNonce by remember(vod.bvid, part.cid) { mutableIntStateOf(0) }
+    var loading by remember(vod.bvid, part.cid) { mutableStateOf(true) }
+    var source by remember(vod.bvid, part.cid) { mutableStateOf<BilibiliNativePlaybackSource?>(null) }
+    var sourceError by remember(vod.bvid, part.cid) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(vod.bvid, part.cid, refreshNonce) {
+        loading = true
+        sourceError = null
+        val result = runCatching {
+            BilibiliNativePlaybackResolver.resolve(
+                vod = vod,
+                part = part,
+                forceRefresh = refreshNonce > 0
+            )
         }
+        source = result.getOrNull()
+        sourceError = result.exceptionOrNull()?.message
+        loading = false
     }
-    DisposableEffect(webView) {
-        onDispose {
-            webView.stopLoading()
-            webView.destroy()
-        }
-    }
-    val playerShape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
-    AndroidView(
-        factory = { webView },
-        modifier = Modifier.fillMaxWidth()
-            .aspectRatio(16f / 9f)
-            .background(Color.Black, playerShape)
-            .border(1.dp, line, playerShape),
-        update = { view ->
-            if (view.url != url) {
-                view.loadUrl(
-                    url,
-                    mapOf(
-                        "Referer" to "https://www.bilibili.com/",
-                        "Origin" to "https://www.bilibili.com"
-                    )
+
+    when {
+        loading -> NativePlayerStatus("正在获取 B站当前播放源…")
+        source == null -> {
+            Column(
+                Modifier.fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .background(Color.Black, shape)
+                    .border(1.dp, RiftLine, shape)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("原生播放源暂不可用", color = RiftText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    sourceError?.take(180) ?: "B站没有返回可用播放描述。",
+                    color = RiftMuted,
+                    fontSize = 9.sp
                 )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        "重新获取 ›",
+                        color = RiftCyan,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { refreshNonce += 1 }
+                    )
+                    Text(
+                        "打开官方原稿 ›",
+                        color = RiftMuted,
+                        fontSize = 10.sp,
+                        modifier = Modifier.clickable {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("${vod.sourceUrl}?p=${part.page}")
+                                    )
+                                )
+                            }
+                        }
+                    )
+                }
             }
         }
-    )
+        else -> NativePlayerSurface(
+            source = source!!,
+            startSecond = startSecond,
+            onRefreshSource = { refreshNonce += 1 }
+        )
+    }
+}
+
+@OptIn(UnstableApi::class)
+@Composable
+private fun NativePlayerSurface(
+    source: BilibiliNativePlaybackSource,
+    startSecond: Int,
+    onRefreshSource: () -> Unit
+) {
+    val context = LocalContext.current
+    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+    var playbackError by remember(source.bvid, source.cid) { mutableStateOf<String?>(null) }
+
+    val exoPlayer = remember(context, source.bvid, source.cid) {
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent(BilibiliNativePlaybackResolver.USER_AGENT)
+            .setDefaultRequestProperties(
+                mapOf(
+                    "Referer" to "https://www.bilibili.com/",
+                    "Origin" to "https://www.bilibili.com"
+                )
+            )
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+            .build()
+            .apply {
+                repeatMode = Player.REPEAT_MODE_OFF
+                playWhenReady = false
+            }
+    }
+
+    DisposableEffect(exoPlayer) {
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                playbackError = error.errorCodeName
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose {
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
+        }
+    }
+
+    LaunchedEffect(source.resolvedAtEpochMs) {
+        playbackError = null
+        val items = source.segments.map { MediaItem.fromUri(it.primaryUrl) }
+        exoPlayer.setMediaItems(items, true)
+        exoPlayer.prepare()
+        seekNativePlayer(exoPlayer, source, startSecond)
+    }
+
+    LaunchedEffect(startSecond) {
+        seekNativePlayer(exoPlayer, source, startSecond)
+    }
+
+    Column {
+        val playerForView = exoPlayer
+        AndroidView(
+            factory = { viewContext ->
+                PlayerView(viewContext).apply {
+                    player = playerForView
+                    useController = true
+                    controllerAutoShow = true
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .background(Color.Black, shape)
+                .border(1.dp, RiftLine, shape),
+            update = { view ->
+                if (view.player !== playerForView) view.player = playerForView
+            }
+        )
+        if (playbackError != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "播放失败 · $playbackError",
+                    color = RiftMuted,
+                    fontSize = 8.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    "刷新播放源 ›",
+                    color = RiftCyan,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable(onClick = onRefreshSource)
+                )
+            }
+        } else {
+            Text(
+                "NATIVE · QN ${source.quality} · ${source.format.uppercase()} · ${source.segments.size} 段",
+                color = RiftMuted,
+                fontSize = 8.sp,
+                modifier = Modifier.padding(top = 5.dp)
+            )
+        }
+    }
+}
+
+private fun seekNativePlayer(
+    player: ExoPlayer,
+    source: BilibiliNativePlaybackSource,
+    videoSecond: Int
+) {
+    if (source.segments.isEmpty()) return
+    var remainingMs = videoSecond.coerceAtLeast(0) * 1000L
+    if (source.segments.size == 1) {
+        player.seekTo(remainingMs)
+        return
+    }
+
+    source.segments.forEachIndexed { index, segment ->
+        val duration = segment.durationMs
+        if (duration <= 0L || remainingMs < duration || index == source.segments.lastIndex) {
+            player.seekTo(index, remainingMs.coerceAtLeast(0L))
+            return
+        }
+        remainingMs -= duration
+    }
+}
+
+@Composable
+private fun NativePlayerStatus(text: String) {
+    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+    Box(
+        Modifier.fillMaxWidth()
+            .aspectRatio(16f / 9f)
+            .background(Color.Black, shape)
+            .border(1.dp, RiftLine, shape)
+            .padding(14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = RiftMuted, fontSize = 10.sp)
+    }
 }
 
 @Composable

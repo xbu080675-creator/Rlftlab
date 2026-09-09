@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 35
-        versionName = "1.0.0-dev.35"
+        versionCode = 36
+        versionName = "1.0.0-dev.36"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -67,6 +67,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Native match-VOD playback. Video bytes are streamed from the upstream CDN and are not cached
+    // as RiftLab-owned media files.
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("androidx.media3:media3-ui:1.11.0")
+
     // Riot/league team assets may be PNG, WebP, SVG or redirected CDN resources.
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
@@ -74,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.35: official Bilibili match VOD resolver/player + chapter-backed historical timeline fallback.
+// dev.36: native Bilibili VOD playback + completed-match history tabs across the event center.
