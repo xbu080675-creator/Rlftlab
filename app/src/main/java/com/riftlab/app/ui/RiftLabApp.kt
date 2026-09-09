@@ -89,6 +89,7 @@ fun RiftLabApp() {
                 if (updateCenterOpen) UpdateCenterDialog(onClose = { updateCenterOpen = false })
                 if (sourceSettingsOpen) RealtimeSourceSettingsDialog(onClose = { sourceSettingsOpen = false })
                 PhaseTabs(phase) { phase = it }
+                LeagueSubscriptionBar()
                 AnimatedContent(
                     targetState = Phase.entries[phase],
                     transitionSpec = {
@@ -201,7 +202,7 @@ private fun PreScreen() {
                         fontSize = 11.sp
                     )
                     Text("EVENT ${match.eventId}", color = RiftMuted, fontSize = 10.sp)
-                    Text(match.startTimeIso, color = RiftMuted, fontSize = 10.sp)
+                    Text(MatchSessionStore.scheduleDateTimeLabel(match), color = RiftMuted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.height(6.dp))
                 Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)

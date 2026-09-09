@@ -99,6 +99,11 @@ internal fun MatchReplayContent() {
         return
     }
 
+    if (!isLplReplayMatch(match)) {
+        GlobalOfficialReplayContent(match)
+        return
+    }
+
     val key = BilibiliVodRepository.keyFor(match)
     LaunchedEffect(key) {
         if (key.isNotBlank()) BilibiliVodRepository.open(match)

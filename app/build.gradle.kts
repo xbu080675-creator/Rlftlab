@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 46
-        versionName = "1.0.0-dev.46"
+        versionCode = 47
+        versionName = "1.0.0-dev.47"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.46: global LoL schedule partition, multi-region team data fixes, and OTA republish trigger.
+// dev.47: persistent league subscriptions, two-level global competition navigation, timezone labels, global Riot/YouTube VOD routing.

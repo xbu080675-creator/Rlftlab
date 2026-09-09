@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CutCornerShape
@@ -74,9 +75,18 @@ private enum class EventCenterTab(val label: String) {
 }
 
 private enum class ScheduleDirectorySection(val label: String) {
-    REGIONAL("各大赛区"),
+    REGIONAL("联赛"),
     WORLDS("全球总决赛"),
-    INTERNATIONAL("国际赛事")
+    INTERNATIONAL("国际赛")
+}
+
+private enum class InternationalCompetitionMenu(val label: String) {
+    FIRST_STAND("全球先锋赛"),
+    MSI("季中冠军赛"),
+    AMERICAS_CUP("美洲杯"),
+    WORLDS("全球总决赛"),
+    EWC("EWC"),
+    EMEA_MASTERS("EMEA 大师赛")
 }
 
 private data class ScheduleCompetitionBucket(
@@ -160,11 +170,11 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                         ?: selectedBucket?.title
                         ?: "英雄联盟赛事",
                     subtitle = selectedDetailMatch?.let { match ->
-                        "${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateKey(match)}"
+                        "${match.blockName.ifBlank { match.league }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateTimeLabel(match)}"
                     } ?: selectedTeam?.let { team ->
                         "战队资料 · ${team.name.ifBlank { teamCode(team) }}"
                     } ?: if (selectedBucket == null) {
-                        "各大赛区 / 全球总决赛 / 国际赛事"
+                        "联赛 / 国际赛 · 赛区订阅已同步"
                     } else {
                         competitionRange(selectedBucket.matches)
                     },
@@ -236,7 +246,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             )
                             EventCenterTab.TEAMS -> TeamsView(
                                 standings = selectedStandings,
-                                scheduleMatches = selectedBucket.matches,
+                                scheduleMatches = leagueWideTeamMatches(selectedBucket, center.matches),
                                 onTeamClick = { team ->
                                     TeamDetailRepository.open(team, center.matches)
                                     selectedTeam = team
@@ -366,33 +376,110 @@ private fun CompetitionDirectory(
     nextMatchId: String?,
     onSelect: (ScheduleCompetitionBucket) -> Unit
 ) {
-    val regional = buckets.filter { bucketSection(it) == ScheduleDirectorySection.REGIONAL }
+    val subscribed by LeagueSubscriptionStore.subscribed.collectAsState()
+    val internationalBuckets = buckets.filter { internationalCompetitionKind(it) != null }
+    val regional = buckets.filter { internationalCompetitionKind(it) == null }
         .groupBy(::bucketLeagueLabel)
         .toList()
-        .sortedBy { regionalLeagueOrder(it.first) }
-    val worlds = buckets.filter { bucketSection(it) == ScheduleDirectorySection.WORLDS }
-    val international = buckets.filter { bucketSection(it) == ScheduleDirectorySection.INTERNATIONAL }
+        .sortedWith(
+            compareBy<Pair<String, List<ScheduleCompetitionBucket>>> {
+                if (leagueSubscriptionKey(it.first) in subscribed) 0 else 1
+            }.thenBy { regionalLeagueOrder(it.first) }.thenBy { it.first }
+        )
+    val activeBucket = buckets.firstOrNull { bucket ->
+        bucket.matches.any { it.matchId == currentMatchId || it.matchId == nextMatchId }
+    }
+    val activeIntl = activeBucket?.let(::internationalCompetitionKind)
+    var rootIndex by remember(buckets, currentMatchId, nextMatchId) {
+        mutableIntStateOf(if (activeIntl != null) 1 else 0)
+    }
+    val preferredLeague = activeBucket?.takeIf { internationalCompetitionKind(it) == null }?.let(::bucketLeagueLabel)
+        ?: regional.firstOrNull { leagueSubscriptionKey(it.first) in subscribed }?.first
+        ?: regional.firstOrNull()?.first.orEmpty()
+    var selectedLeague by remember(regional.map { it.first }, subscribed, preferredLeague) {
+        mutableStateOf(preferredLeague)
+    }
+    var selectedInternational by remember(activeIntl) {
+        mutableStateOf(activeIntl ?: InternationalCompetitionMenu.WORLDS)
+    }
 
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (regional.isNotEmpty()) {
-            item("section-regional") { DirectorySectionHeader(ScheduleDirectorySection.REGIONAL.label) }
-            regional.forEach { (league, leagueBuckets) ->
-                item("league-$league") { DirectoryLeagueHeader(league) }
-                items(leagueBuckets.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
-                    CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(RiftPanelAlt, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            listOf("联赛", "国际赛").forEachIndexed { index, label ->
+                Box(
+                    Modifier.weight(1f)
+                        .clickable { rootIndex = index }
+                        .background(if (rootIndex == index) RiftPanel else androidx.compose.ui.graphics.Color.Transparent, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = if (rootIndex == index) RiftCyan else RiftMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
-        if (worlds.isNotEmpty()) {
-            item("section-worlds") { DirectorySectionHeader(ScheduleDirectorySection.WORLDS.label) }
-            items(worlds.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
-                CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+        Spacer(Modifier.height(9.dp))
+
+        if (rootIndex == 0) {
+            if (regional.isEmpty()) {
+                EmptyData("等待 Riot 联赛赛程数据")
+                return@Column
             }
-        }
-        if (international.isNotEmpty()) {
-            item("section-international") { DirectorySectionHeader(ScheduleDirectorySection.INTERNATIONAL.label) }
-            items(international.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
-                CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(regional, key = { it.first }) { (league, _) ->
+                    val selected = league == selectedLeague
+                    val subscribedLeague = leagueSubscriptionKey(league) in subscribed
+                    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+                    Text(
+                        if (subscribedLeague) "★ $league" else league,
+                        color = if (selected) RiftCyan else RiftMuted,
+                        fontSize = 9.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        modifier = Modifier.clickable { selectedLeague = league }
+                            .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+                            .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.45f) else RiftLine, shape)
+                            .padding(horizontal = 11.dp, vertical = 8.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            val selectedBuckets = regional.firstOrNull { it.first == selectedLeague }?.second.orEmpty()
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(selectedBuckets.sortedByDescending { it.firstEpochMs }, key = { it.key }) { bucket ->
+                    CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+                }
+            }
+        } else {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(InternationalCompetitionMenu.entries, key = { it.name }) { menu ->
+                    val selected = menu == selectedInternational
+                    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+                    Text(
+                        menu.label,
+                        color = if (selected) RiftCyan else RiftMuted,
+                        fontSize = 9.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        modifier = Modifier.clickable { selectedInternational = menu }
+                            .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+                            .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.45f) else RiftLine, shape)
+                            .padding(horizontal = 11.dp, vertical = 8.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            val selectedBuckets = internationalBuckets.filter { internationalCompetitionKind(it) == selectedInternational }
+            if (selectedBuckets.isEmpty()) {
+                EmptyData("${selectedInternational.label} · 当前分页暂无赛程，保留固定入口")
+            } else {
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(selectedBuckets.sortedByDescending { it.firstEpochMs }, key = { it.key }) { bucket ->
+                        CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+                    }
+                }
             }
         }
     }
@@ -462,6 +549,35 @@ private fun CompetitionDirectoryCard(
     }
 }
 
+private fun internationalCompetitionKind(bucket: ScheduleCompetitionBucket): InternationalCompetitionMenu? {
+    val sample = bucket.matches.firstOrNull()
+    val identity = listOf(
+        bucket.tournament?.leagueSlug.orEmpty(), bucket.tournament?.leagueName.orEmpty(),
+        sample?.leagueSlug.orEmpty(), sample?.league.orEmpty(), bucket.title
+    ).joinToString(" ").lowercase()
+    return when {
+        identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> InternationalCompetitionMenu.FIRST_STAND
+        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.MSI
+        identity.contains("americas cup") || identity.contains("america cup") -> InternationalCompetitionMenu.AMERICAS_CUP
+        identity.contains("worlds") || identity.contains("world championship") || identity.contains("全球总决赛") -> InternationalCompetitionMenu.WORLDS
+        identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.EWC
+        identity.contains("emea masters") -> InternationalCompetitionMenu.EMEA_MASTERS
+        else -> null
+    }
+}
+
+private fun leagueWideTeamMatches(bucket: ScheduleCompetitionBucket, allMatches: List<ScheduledEsportsMatch>): List<ScheduledEsportsMatch> {
+    if (internationalCompetitionKind(bucket) != null) return bucket.matches
+    val sample = bucket.matches.firstOrNull() ?: return bucket.matches
+    return allMatches.filter { match ->
+        when {
+            sample.leagueId.isNotBlank() && match.leagueId.isNotBlank() -> sample.leagueId == match.leagueId
+            sample.leagueSlug.isNotBlank() && match.leagueSlug.isNotBlank() -> normalizeLeagueToken(sample.leagueSlug) == normalizeLeagueToken(match.leagueSlug)
+            else -> normalizeLeagueToken(sample.league) == normalizeLeagueToken(match.league)
+        }
+    }.ifEmpty { bucket.matches }
+}
+
 private fun bucketSection(bucket: ScheduleCompetitionBucket): ScheduleDirectorySection {
     val sample = bucket.matches.firstOrNull()
     val identity = listOf(
@@ -471,14 +587,10 @@ private fun bucketSection(bucket: ScheduleCompetitionBucket): ScheduleDirectoryS
         sample?.league.orEmpty(),
         bucket.title
     ).joinToString(" ").lowercase()
-    return when {
-        identity.contains("worlds") || identity.contains("world championship") || identity.contains("全球总决赛") ->
-            ScheduleDirectorySection.WORLDS
-        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) ||
-            identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") ||
-            identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) ->
-            ScheduleDirectorySection.INTERNATIONAL
-        else -> ScheduleDirectorySection.REGIONAL
+    return when (internationalCompetitionKind(bucket)) {
+        InternationalCompetitionMenu.WORLDS -> ScheduleDirectorySection.WORLDS
+        null -> ScheduleDirectorySection.REGIONAL
+        else -> ScheduleDirectorySection.INTERNATIONAL
     }
 }
 
@@ -708,6 +820,10 @@ private fun androidx.compose.foundation.layout.RowScope.TableText(
 @Composable
 private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
     val seasonYear = bucket.matches.mapNotNull(::matchStartDate).firstOrNull()?.year
+    if (!bucketLeagueLabel(bucket).equals("LPL", ignoreCase = true)) {
+        EmptyData("${bucketLeagueLabel(bucket)} 年度积分尚未接入；不会显示 LPL 数据作为替代。")
+        return
+    }
     if (seasonYear != LplChampionshipPoints2026.season) {
         EmptyData("${seasonYear ?: "该"} 赛季年度积分尚未接入；不会显示 2026 数据作为替代。")
         return

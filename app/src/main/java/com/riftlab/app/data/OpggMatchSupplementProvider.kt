@@ -188,30 +188,62 @@ internal class OpggMatchSupplementProvider {
         )
     }
 
-    /** Latest actually-played five for one team. Used only to distinguish current starters from active substitutes. */
-    suspend fun fetchLatestLineup(match: ScheduledEsportsMatch, team: EsportsTeamRef): Set<String> =
+    /** Latest actually-played five for one team, with role/name/image for Riot-roster gaps. */
+    suspend fun fetchLatestLineupPlayers(match: ScheduledEsportsMatch, team: EsportsTeamRef): List<EsportsPlayerRef> =
         withContext(Dispatchers.IO) {
-            val opggMatch = findMatch(match) ?: return@withContext emptySet()
+            val opggMatch = findMatch(match) ?: return@withContext emptyList()
             val matchId = opggMatch.opt("id")?.toString().orEmpty()
-            if (matchId.isBlank()) return@withContext emptySet()
+            if (matchId.isBlank()) return@withContext emptyList()
             val maxSets = match.bestOf.takeIf { it > 0 } ?: 5
             for (set in maxSets downTo 1) {
                 val game = runCatching { fetchGame(matchId, set) }.getOrNull() ?: continue
                 if (game.length() == 0) continue
                 val players = game.optJSONArray("players") ?: continue
-                val names = linkedSetOf<String>()
+                val found = linkedMapOf<String, EsportsPlayerRef>()
                 for (i in 0 until players.length()) {
                     val row = players.optJSONObject(i) ?: continue
                     val rowTeam = row.optJSONObject("team") ?: JSONObject()
                     if (!teamMatches(rowTeam, team)) continue
                     val player = row.optJSONObject("player") ?: JSONObject()
                     val name = player.optString("nickName").ifBlank { row.optString("nickName") }
-                    if (name.isNotBlank()) names += name
+                    if (name.isBlank()) continue
+                    val role = normalizeLineupRole(row.optString("position").ifBlank { player.optString("position") })
+                    val image = normalizeAssetUrl(player.optString("imageUrl"))
+                    if (image.isNotBlank()) EsportsAssetCache.putPlayer(name, team.code, image)
+                    found[token(name)] = EsportsPlayerRef(
+                        id = player.opt("id")?.toString().orEmpty(),
+                        summonerName = name,
+                        role = role,
+                        imageUrl = image
+                    )
                 }
-                if (names.size >= 5) return@withContext names
+                if (found.size >= 5) {
+                    return@withContext found.values.sortedBy { lineupRoleOrder(it.role) }.take(7)
+                }
             }
-            emptySet()
+            emptyList()
         }
+
+    suspend fun fetchLatestLineup(match: ScheduledEsportsMatch, team: EsportsTeamRef): Set<String> =
+        fetchLatestLineupPlayers(match, team).map { it.summonerName }.filter { it.isNotBlank() }.toSet()
+
+    private fun normalizeLineupRole(value: String): String = when (value.lowercase()) {
+        "top" -> "TOP"
+        "jungle", "jun" -> "JUG"
+        "mid", "middle" -> "MID"
+        "bottom", "bot", "adc" -> "BOT"
+        "support", "sup" -> "SUP"
+        else -> value.uppercase().ifBlank { "—" }
+    }
+
+    private fun lineupRoleOrder(role: String): Int = when (role.uppercase()) {
+        "TOP" -> 0
+        "JUG", "JUNGLE" -> 1
+        "MID" -> 2
+        "BOT", "ADC", "BOTTOM" -> 3
+        "SUP", "SUPPORT" -> 4
+        else -> 99
+    }
 
     private fun findMatch(target: ScheduledEsportsMatch): JSONObject? {
         val instant = runCatching { Instant.parse(target.startTimeIso) }.getOrNull()

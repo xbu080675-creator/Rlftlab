@@ -497,22 +497,35 @@ object MatchSessionStore {
     private fun plannedStartEpochMs(match: ScheduledEsportsMatch): Long? =
         runCatching { Instant.parse(match.startTimeIso).toEpochMilli() }.getOrNull()
 
+    fun scheduleDateTimeLabel(match: ScheduledEsportsMatch): String = formatLocalDateTime(match.startTimeIso)
+
     private fun formatLocalStart(iso: String): String {
         if (iso.isBlank()) return "--:--"
         return runCatching {
-            DateTimeFormatter.ofPattern("HH:mm")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.parse(iso))
+            val instant = Instant.parse(iso)
+            val zone = ZoneId.systemDefault()
+            val clock = DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(instant)
+            "$clock · ${zoneOffsetLabel(zone, instant)}"
         }.getOrElse { iso }
     }
 
     private fun formatLocalDateTime(iso: String): String {
         if (iso.isBlank()) return "--"
         return runCatching {
-            DateTimeFormatter.ofPattern("MM-dd HH:mm")
-                .withZone(ZoneId.systemDefault())
-                .format(Instant.parse(iso))
+            val instant = Instant.parse(iso)
+            val zone = ZoneId.systemDefault()
+            val clock = DateTimeFormatter.ofPattern("MM-dd HH:mm").withZone(zone).format(instant)
+            "$clock · ${zoneOffsetLabel(zone, instant)}"
         }.getOrElse { iso }
+    }
+
+    private fun zoneOffsetLabel(zone: ZoneId, instant: Instant): String {
+        val totalMinutes = zone.rules.getOffset(instant).totalSeconds / 60
+        val sign = if (totalMinutes >= 0) "+" else "-"
+        val absolute = kotlin.math.abs(totalMinutes)
+        val hours = absolute / 60
+        val minutes = absolute % 60
+        return if (minutes == 0) "UTC$sign$hours" else "UTC$sign%02d:%02d".format(hours, minutes)
     }
 
     private fun formatGold(value: Int): String =

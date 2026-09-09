@@ -133,21 +133,29 @@ internal object TeamDetailRepository {
                 .filter { matchEpoch(it) in 1..now }
                 .maxByOrNull(::matchEpoch)
 
-            val starters = if (latestMatch != null && baseDetails != null) {
-                runCatching { lineupProvider.fetchLatestLineup(latestMatch, effectiveTeam) }
-                    .getOrDefault(emptySet())
-                    .takeIf { it.size >= 5 }
-                    ?: cachedStarters
-            } else cachedStarters
+            val opggLineup = if (latestMatch != null) {
+                runCatching { lineupProvider.fetchLatestLineupPlayers(latestMatch, effectiveTeam) }
+                    .getOrDefault(emptyList())
+            } else emptyList()
+            val starters = opggLineup.map { it.summonerName }.filter { it.isNotBlank() }.toSet()
+                .takeIf { it.size >= 5 } ?: cachedStarters
+            val riotPlayers = baseDetails?.players.orEmpty()
+            val fallbackPlayers = when {
+                riotPlayers.size >= 5 -> riotPlayers
+                opggLineup.size >= 5 -> opggLineup
+                else -> (riotPlayers + opggLineup)
+                    .distinctBy { token(it.summonerName) }
+                    .sortedBy { listOf("TOP", "JUG", "MID", "BOT", "SUP").indexOf(it.role).let { order -> if (order < 0) 99 else order } }
+            }
 
-            val dynamicBase = baseDetails ?: EsportsTeamDetails(
+            val dynamicBase = (baseDetails ?: EsportsTeamDetails(
                 id = effectiveTeam.id,
                 slug = effectiveTeam.slug,
                 code = effectiveTeam.code,
                 name = effectiveTeam.name,
                 imageUrl = effectiveTeam.imageUrl,
                 players = emptyList()
-            )
+            )).copy(players = fallbackPlayers)
             val dynamicSupplement = runCatching { dynamicProvider.fetch(effectiveTeam, dynamicBase) }
                 .getOrElse {
                     TeamDynamicSupplement(

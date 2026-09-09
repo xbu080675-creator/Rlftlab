@@ -23,9 +23,16 @@ internal object LolEsportsConfig {
     // Tier-one regional + international competitions tracked by RiftLab. IDs are discovered
     // dynamically from Riot getLeagues so league reshuffles do not require an APK update.
     val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(
-        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup",
+        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup", "americas-cup", "emea-masters",
         "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",
-        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs"
+        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs", "fls",
+        "lck-cl", "lck_challengers", "lcp-wild-card", "lpl-development-league", "ldl",
+        "greek-legends-league", "lit", "nlc", "esports-balkan-league", "tcl", "hitpoint-masters", "rift-legends", "nacl"
+    )
+    val GLOBAL_TRACKED_LEAGUE_NAMES = setOf(
+        "americas cup", "emea masters", "fls", "lck cl", "lck challengers", "lcp wild card",
+        "lpl development league", "greek legends league", "lit", "nlc", "esports balkan league",
+        "tcl", "hitpoint masters", "rift legends", "nacl"
     )
     const val PERSISTED_BASE = "https://esports-api.lolesports.com/persisted/gw"
     const val LIVE_BASE = "https://feed.lolesports.com/livestats/v1"
@@ -119,8 +126,12 @@ internal class LolEsportsApiClient {
                     val id = league.optString("id")
                     val slug = league.optString("slug").lowercase()
                     val normalized = slug.replace('_', '-')
+                    val normalizedName = league.optString("name").trim().lowercase()
                     val tracked = slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||
-                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS
+                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||
+                        LolEsportsConfig.GLOBAL_TRACKED_LEAGUE_NAMES.any { trackedName ->
+                            normalizedName == trackedName || normalizedName.contains(trackedName)
+                        }
                     if (id.isNotBlank() && tracked) {
                         add(
                             TrackedLeagueRef(
