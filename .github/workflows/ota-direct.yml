@@ -32,13 +32,15 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-      - name: Bundle Riot mirror seed
+      - name: Bundle resilient data seeds
         shell: bash
         run: |
-          if [ -f data/lpl/riot_persisted_mirror.json ]; then
-            mkdir -p app/src/main/assets
-            cp data/lpl/riot_persisted_mirror.json app/src/main/assets/riot_persisted_mirror.json
-          fi
+          mkdir -p app/src/main/assets
+          for name in riot_persisted_mirror.json team_profiles.json people.json team_archive.json; do
+            if [ -f "data/lpl/$name" ]; then
+              cp "data/lpl/$name" "app/src/main/assets/$name"
+            fi
+          done
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
@@ -90,8 +92,6 @@ jobs:
 
           if gh release view dev-latest >/dev/null 2>&1; then
             RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/dev-latest" --jq .id)
-            # The Android updater intentionally accepts one APK. Remove stale APK
-            # assets first so it can never pick a previous build with a new SHA.
             gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate \
               --jq '.[] | select(.name | endswith(".apk")) | .id' | \
               while read -r AID; do
