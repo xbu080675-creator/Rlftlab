@@ -105,9 +105,9 @@ def parse_tab(region, rows, teams):
 
     for row in rows[header_i + 1:]:
         if not any(str(x).strip() for x in row):
-            # The KR sheet has no Role column. Riot separates each team's player rows from its
-            # coaching-staff rows with a blank line; a later team change resets this flag.
-            if region == "KR" and current_team:
+            # Several Riot GCD tabs have no Role column. In those tabs Riot visually separates a
+            # team's contracted players from its contracted coaching staff with a blank row.
+            if role_i < 0 and current_team:
                 staff_section = True
             continue
 
@@ -122,14 +122,16 @@ def parse_tab(region, rows, teams):
         legal_name = " ".join(x for x in (cell(row, first_i), cell(row, last_i)) if x).strip()
         raw_role = cell(row, role_i)
         role = normalize_role(raw_role)
+        contact = cell(row, contact_i)
 
-        # Published GCD tabs include a short team code in a trailing helper column even where the
-        # header is blank. Keep it as an alias when it looks like a tricode/short code.
+        # In Riot's published layout the helper team code sits after Team Contact Information on
+        # the first row of each team block. Do not scan arbitrary cells (family names/residency can
+        # otherwise be mistaken for tricodes).
         short = ""
-        for value in reversed(row):
-            value = value.strip()
-            if value and value not in {team_name, summoner, legal_name} and 2 <= len(value) <= 8 and "@" not in value:
-                if value.upper() == value or value.isalnum():
+        if contact and contact_i >= 0:
+            for value in row[contact_i + 1:]:
+                value = value.strip()
+                if 2 <= len(value) <= 8 and "@" not in value and value.replace("-", "").isalnum():
                     short = value
                     break
 
@@ -143,12 +145,11 @@ def parse_tab(region, rows, teams):
         node["aliases"] = sorted({x for x in node.get("aliases", []) + [team_name, short] if x})
         node["regions"] = sorted(set(node.get("regions", []) + [region]))
 
-        contact = cell(row, contact_i)
         if contact and "@" in contact:
             add_unique(
                 node["management"],
                 {
-                    "name": f"{short or team_name} 官方战队联系人",
+                    "name": f"{short or node.get('short') or team_name} 官方战队联系人",
                     "realName": contact,
                     "role": "TEAM_CONTACT",
                     "source": SOURCE,
@@ -157,11 +158,11 @@ def parse_tab(region, rows, teams):
             parsed_contacts += 1
 
         is_staff = bool(role)
-        if region == "KR" and role_i < 0:
+        if role_i < 0:
             is_staff = staff_section and bool(summoner)
             if is_staff:
-                # KR GCD intentionally has no Role column. Preserve only the fact Riot registers
-                # the person as coaching staff; do not guess Head/Assistant Coach.
+                # No role is published on this regional tab. Keep the authoritative classification
+                # as coaching staff and do not invent Head/Assistant Coach hierarchy.
                 role = "COACHING_STAFF"
 
         if not is_staff or not summoner:
