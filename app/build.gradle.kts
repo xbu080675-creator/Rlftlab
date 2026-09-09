@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.45: Cito API credential slot + official LoL REST/WSS transport contract for future paid live provider.
+// dev.46: global LoL schedule partition, multi-region team data fixes, and OTA republish trigger.
