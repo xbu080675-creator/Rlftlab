@@ -612,8 +612,15 @@ private fun bucketLeagueLabel(bucket: ScheduleCompetitionBucket): String {
         slug == "lla" -> "LLA"
         slug == "lrn" -> "LRN"
         slug == "lrs" -> "LRS"
+        slug == "fls" -> "FLS"
+        slug.contains("lck") && (slug.contains("challenger") || slug.contains("cl")) -> "LCK Challengers"
+        slug.contains("lcp") && slug.contains("wild") -> "LCP Wild Card"
+        slug.contains("development") || slug == "ldl" -> "LDL"
+        slug == "nlc" -> "NLC"
+        slug == "lit" -> "LIT"
+        slug == "tcl" -> "TCL"
         name.isNotBlank() -> name
-        else -> "其他赛区"
+        else -> slug.uppercase().ifBlank { "LoL Esports" }
     }
 }
 
@@ -1238,12 +1245,8 @@ private fun matchTeamLabel(match: ScheduledEsportsMatch, team: EsportsTeamRef?):
     if (!isDevelopmentLeague(match)) return code
     val name = team?.name?.trim().orEmpty()
     return when {
-        code.equals("T1A", ignoreCase = true) -> "T1 Academy"
-        name.contains("Esports Academy", ignoreCase = true) -> name.replace(Regex("(?i)Esports\\s+Academy"), "Academy")
-        name.contains("Challengers", ignoreCase = true) -> name
-        name.contains("Academy", ignoreCase = true) -> name
-        name.contains("Youth", ignoreCase = true) -> name
         name.isNotBlank() -> name
+        code.equals("T1A", ignoreCase = true) -> "T1 Esports Academy"
         else -> code
     }
 }
