@@ -223,7 +223,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 }
                             )
                             EventCenterTab.STANDINGS -> StandingsView(selectedStandings)
-                            EventCenterTab.POINTS -> ChampionshipPointsView()
+                            EventCenterTab.POINTS -> ChampionshipPointsView(selectedBucket)
                             EventCenterTab.BRACKET -> BracketView(
                                 standings = selectedStandings,
                                 scheduleMatches = selectedBucket.matches
@@ -583,7 +583,12 @@ private fun androidx.compose.foundation.layout.RowScope.TableText(
 }
 
 @Composable
-private fun ChampionshipPointsView() {
+private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
+    val seasonYear = bucket.matches.mapNotNull(::matchStartDate).firstOrNull()?.year
+    if (seasonYear != LplChampionshipPoints2026.season) {
+        EmptyData("${seasonYear ?: "该"} 赛季年度积分尚未接入；不会显示 2026 数据作为替代。")
+        return
+    }
     val rows = LplChampionshipPoints2026.rows
     Column(Modifier.fillMaxSize()) {
         Column(
