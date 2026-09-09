@@ -1,0 +1,28 @@
+name: Inspect Riot GCD
+
+on:
+  push:
+    paths:
+      - '.github/workflows/inspect-riot-gcd.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect public Riot GCD tabs and KR sample
+        run: |
+          python3 - <<'PY'
+          import re, urllib.request
+          base='https://docs.google.com/spreadsheets/u/1/d/1Y7k5kQ2AegbuyiGwEPsa62e883FYVtHqr6UVut9RC4o/pubhtml'
+          req=urllib.request.Request(base,headers={'User-Agent':'Mozilla/5.0'})
+          html=urllib.request.urlopen(req,timeout=20).read().decode('utf-8','replace')
+          print('html bytes',len(html))
+          for m in re.finditer(r'gid=(\d+)[^>]{0,300}',html):
+              snippet=re.sub('<[^>]+>',' ',m.group(0))
+              print('TAB',snippet[:320])
+          url='https://docs.google.com/spreadsheets/u/1/d/1Y7k5kQ2AegbuyiGwEPsa62e883FYVtHqr6UVut9RC4o/pub?gid=905624073&single=true&output=csv'
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+          data=urllib.request.urlopen(req,timeout=20).read().decode('utf-8-sig','replace')
+          print('KR CSV bytes',len(data))
+          for i,line in enumerate(data.splitlines()[:45],1): print(f'{i:02}: {line[:1000]}')
+          PY
