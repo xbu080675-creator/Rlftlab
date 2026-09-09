@@ -99,3 +99,4 @@ dependencies {
 
 // dev.54: global completed-series operator archive from OP.GG terminal data; unblock Riot/OP.GG history backfill game enumeration; labelled global MVP Point fallback.
 // Final dev.54 CI/OTA trigger after global final-series and operator-history routing changes.
+// Final dev.54 verified-awards trigger: global MVP mirror wiring included in this build.
