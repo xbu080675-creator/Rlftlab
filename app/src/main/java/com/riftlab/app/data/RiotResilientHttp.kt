@@ -1,6 +1,8 @@
 package com.riftlab.app.data
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -21,8 +23,12 @@ internal object RiotResilientHttp {
     @Volatile private var persistedMirrorActive = false
     @Volatile private var mirrorUpdatedAt = ""
 
-    suspend fun getJson(url: String, connectTimeoutMs: Int = 8_000, readTimeoutMs: Int = 8_000): JSONObject {
-        return try {
+    suspend fun getJson(
+        url: String,
+        connectTimeoutMs: Int = 8_000,
+        readTimeoutMs: Int = 8_000
+    ): JSONObject = withContext(Dispatchers.IO) {
+        try {
             val root = directGet(url, connectTimeoutMs, readTimeoutMs)
             if (url.startsWith(LolEsportsConfig.PERSISTED_BASE)) {
                 persistedMirrorActive = false
@@ -45,7 +51,11 @@ internal object RiotResilientHttp {
     }
 
     fun sourceLabel(): String = if (persistedMirrorActive) {
-        val stamp = mirrorUpdatedAt.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
+        val stamp = mirrorUpdatedAt
+            .takeIf { it.isNotBlank() }
+            ?.substringBefore('T')
+            ?.let { " · $it" }
+            .orEmpty()
         "RiftLab Riot Mirror$stamp"
     } else {
         "Riot LoL Esports"
@@ -135,7 +145,7 @@ internal object RiotPersistedMirror {
 
         val network = sequenceOf(::fetchFromGitHubContents, { fetchPlain(RAW) }, { fetchPlain(JSDELIVR) })
             .mapNotNull { loader -> runCatching { loader() }.getOrNull() }
-            .firstOrNull { validate(it) }
+            .firstOrNull(::validate)
         if (network != null) {
             cachedRoot = network
             cachedAt = now
@@ -159,10 +169,10 @@ internal object RiotPersistedMirror {
         return cachedRoot
     }
 
+    /** A schedule-only mirror is still valuable; team Dynamic Data can operate independently. */
     private fun validate(root: JSONObject): Boolean =
         root.optInt("schemaVersion", 0) == 1 &&
-            root.optJSONArray("schedulePages")?.length()?.let { it > 0 } == true &&
-            root.optJSONObject("teamDetails")?.length()?.let { it > 0 } == true
+            root.optJSONArray("schedulePages")?.length()?.let { it > 0 } == true
 
     private fun fetchFromGitHubContents(): JSONObject {
         val wrapper = fetchJson(GITHUB_CONTENTS)
