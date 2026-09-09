@@ -34,11 +34,12 @@ internal fun TeamLogo(
         .ifBlank { EsportsAssetCache.team(code) }
     val shape = CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)
     val isAl = RiftTeamSkins.isAL(code)
+    val alAccent = RiftTeamSkins.AL.palette.accent
 
     val fallback: @Composable () -> Unit = {
         Text(
             text = code.take(4).ifBlank { "—" },
-            color = if (isAl) RiftCyan else RiftMuted,
+            color = if (isAl) alAccent else RiftMuted,
             fontSize = 8.sp,
             fontWeight = FontWeight.Bold
         )
@@ -47,7 +48,7 @@ internal fun TeamLogo(
     val framed = if (isAl) {
         modifier
             .background(RiftPanelAlt, shape)
-            .border(1.dp, RiftCyan.copy(alpha = 0.72f), shape)
+            .border(1.dp, alAccent.copy(alpha = 0.78f), shape)
     } else {
         modifier.background(RiftPanelAlt, shape)
     }
