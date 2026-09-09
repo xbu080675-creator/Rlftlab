@@ -1,6 +1,11 @@
 package com.riftlab.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -11,9 +16,44 @@ import java.net.URLEncoder
 
 internal class LolEsportsStandingsClient {
 
-    suspend fun fetchLplTournaments(): List<EsportsTournamentRef> {
+    private val leagueClient = LolEsportsApiClient()
+    private var tournamentCache: List<EsportsTournamentRef> = emptyList()
+    private var tournamentCacheAtEpochMs: Long = 0L
+
+    suspend fun fetchGlobalTournaments(): List<EsportsTournamentRef> {
+        val now = System.currentTimeMillis()
+        if (tournamentCache.isNotEmpty() && now - tournamentCacheAtEpochMs < 6 * 60 * 60 * 1000L) {
+            return tournamentCache
+        }
+
+        val leagues = leagueClient.fetchTrackedLeagues()
+        val semaphore = Semaphore(4)
+        val result = coroutineScope {
+            leagues.map { league ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        runCatching { fetchTournamentsForLeague(league) }.getOrDefault(emptyList())
+                    }
+                }
+            }.awaitAll().flatten()
+        }.distinctBy { it.id }.sortedBy { it.startDate }
+
+        if (result.isNotEmpty()) {
+            tournamentCache = result
+            tournamentCacheAtEpochMs = now
+        }
+        return result.ifEmpty { tournamentCache }
+    }
+
+    suspend fun fetchLplTournaments(): List<EsportsTournamentRef> =
+        fetchGlobalTournaments().filter {
+            it.leagueSlug.equals("lpl", ignoreCase = true) || it.leagueId == LolEsportsConfig.LPL_LEAGUE_ID
+        }
+
+    private suspend fun fetchTournamentsForLeague(leagueRef: TrackedLeagueRef): List<EsportsTournamentRef> {
+        val encodedLeagueId = URLEncoder.encode(leagueRef.id, "UTF-8")
         val root = getJson(
-            "${LolEsportsConfig.PERSISTED_BASE}/getTournamentsForLeague?hl=en-US&leagueId=${LolEsportsConfig.LPL_LEAGUE_ID}"
+            "${LolEsportsConfig.PERSISTED_BASE}/getTournamentsForLeague?hl=en-US&leagueId=$encodedLeagueId"
         )
         val leagues = root.optJSONObject("data")?.optJSONArray("leagues") ?: JSONArray()
         val result = buildList {
@@ -29,7 +69,10 @@ internal class LolEsportsStandingsClient {
                             id = id,
                             slug = tournament.optString("slug"),
                             startDate = tournament.optString("startDate"),
-                            endDate = tournament.optString("endDate")
+                            endDate = tournament.optString("endDate"),
+                            leagueId = leagueRef.id,
+                            leagueSlug = league.optString("slug").ifBlank { leagueRef.slug },
+                            leagueName = league.optString("name").ifBlank { leagueRef.name }
                         )
                     )
                 }

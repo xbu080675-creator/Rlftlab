@@ -28,7 +28,9 @@ data class ScheduledEsportsMatch(
     val startTimeIso: String,
     val state: String,
     val bestOf: Int,
-    val teams: List<EsportsTeamRef>
+    val teams: List<EsportsTeamRef>,
+    val leagueId: String = "",
+    val leagueSlug: String = ""
 )
 
 data class EsportsTeamRef(
@@ -47,7 +49,10 @@ data class EsportsTournamentRef(
     val id: String,
     val slug: String,
     val startDate: String,
-    val endDate: String
+    val endDate: String,
+    val leagueId: String = "",
+    val leagueSlug: String = "",
+    val leagueName: String = ""
 )
 
 data class StandingTeam(

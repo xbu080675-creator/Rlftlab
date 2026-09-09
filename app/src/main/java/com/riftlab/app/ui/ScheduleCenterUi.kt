@@ -73,6 +73,12 @@ private enum class EventCenterTab(val label: String) {
     TEAMS("战队")
 }
 
+private enum class ScheduleDirectorySection(val label: String) {
+    REGIONAL("各大赛区"),
+    WORLDS("全球总决赛"),
+    INTERNATIONAL("国际赛事")
+}
+
 private data class ScheduleCompetitionBucket(
     val key: String,
     val title: String,
@@ -158,7 +164,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                     } ?: selectedTeam?.let { team ->
                         "战队资料 · ${team.name.ifBlank { teamCode(team) }}"
                     } ?: if (selectedBucket == null) {
-                        "按官方 Tournament 整理"
+                        "各大赛区 / 全球总决赛 / 国际赛事"
                     } else {
                         competitionRange(selectedBucket.matches)
                     },
@@ -360,43 +366,160 @@ private fun CompetitionDirectory(
     nextMatchId: String?,
     onSelect: (ScheduleCompetitionBucket) -> Unit
 ) {
+    val regional = buckets.filter { bucketSection(it) == ScheduleDirectorySection.REGIONAL }
+        .groupBy(::bucketLeagueLabel)
+        .toList()
+        .sortedBy { regionalLeagueOrder(it.first) }
+    val worlds = buckets.filter { bucketSection(it) == ScheduleDirectorySection.WORLDS }
+    val international = buckets.filter { bucketSection(it) == ScheduleDirectorySection.INTERNATIONAL }
+
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(buckets, key = { it.key }) { bucket ->
-            val currentMatch = bucket.matches.firstOrNull { it.matchId == currentMatchId }
-            val hasCurrent = currentMatch != null
-            val hasNext = bucket.matches.any { it.matchId == nextMatchId }
-            val completed = bucket.matches.count { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED }
-            Column(
-                Modifier.fillMaxWidth()
-                    .clickable { onSelect(bucket) }
-                    .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-                    .border(1.dp, if (hasCurrent) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-                    .padding(horizontal = 14.dp, vertical = 13.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(bucket.title, color = if (hasCurrent) RiftCyan else RiftText, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(competitionRange(bucket.matches), color = RiftMuted, fontSize = 10.sp)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        when {
-                            hasCurrent -> Text(
-                                currentMatch?.let { scheduleActivityText(MatchSessionStore.scheduleActivity(it)) } ?: "进行中",
-                                color = RiftCyan,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            hasNext -> Text("NEXT", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                        Text("${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 9.sp)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.ChevronRight, null, tint = RiftMuted)
+        if (regional.isNotEmpty()) {
+            item("section-regional") { DirectorySectionHeader(ScheduleDirectorySection.REGIONAL.label) }
+            regional.forEach { (league, leagueBuckets) ->
+                item("league-$league") { DirectoryLeagueHeader(league) }
+                items(leagueBuckets.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
+                    CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
                 }
             }
         }
+        if (worlds.isNotEmpty()) {
+            item("section-worlds") { DirectorySectionHeader(ScheduleDirectorySection.WORLDS.label) }
+            items(worlds.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
+                CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+            }
+        }
+        if (international.isNotEmpty()) {
+            item("section-international") { DirectorySectionHeader(ScheduleDirectorySection.INTERNATIONAL.label) }
+            items(international.sortedBy { it.firstEpochMs }, key = { it.key }) { bucket ->
+                CompetitionDirectoryCard(bucket, currentMatchId, nextMatchId) { onSelect(bucket) }
+            }
+        }
     }
+}
+
+@Composable
+private fun DirectorySectionHeader(title: String) {
+    Text(
+        title,
+        color = RiftCyan,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+    )
+}
+
+@Composable
+private fun DirectoryLeagueHeader(league: String) {
+    Text(
+        league,
+        color = RiftText,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 5.dp, start = 4.dp)
+    )
+}
+
+@Composable
+private fun CompetitionDirectoryCard(
+    bucket: ScheduleCompetitionBucket,
+    currentMatchId: String?,
+    nextMatchId: String?,
+    onClick: () -> Unit
+) {
+    val currentMatch = bucket.matches.firstOrNull { it.matchId == currentMatchId }
+    val hasCurrent = currentMatch != null
+    val hasNext = bucket.matches.any { it.matchId == nextMatchId }
+    val completed = bucket.matches.count { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED }
+    Column(
+        Modifier.fillMaxWidth()
+            .clickable(onClick = onClick)
+            .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+            .border(1.dp, if (hasCurrent) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+            .padding(horizontal = 14.dp, vertical = 13.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(bucket.title, color = if (hasCurrent) RiftCyan else RiftText, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text(competitionRange(bucket.matches), color = RiftMuted, fontSize = 10.sp)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                when {
+                    hasCurrent -> Text(
+                        currentMatch?.let { scheduleActivityText(MatchSessionStore.scheduleActivity(it)) } ?: "进行中",
+                        color = RiftCyan,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    hasNext -> Text("NEXT", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Text("${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 9.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Default.ChevronRight, null, tint = RiftMuted)
+        }
+    }
+}
+
+private fun bucketSection(bucket: ScheduleCompetitionBucket): ScheduleDirectorySection {
+    val sample = bucket.matches.firstOrNull()
+    val identity = listOf(
+        bucket.tournament?.leagueSlug.orEmpty(),
+        bucket.tournament?.leagueName.orEmpty(),
+        sample?.leagueSlug.orEmpty(),
+        sample?.league.orEmpty(),
+        bucket.title
+    ).joinToString(" ").lowercase()
+    return when {
+        identity.contains("worlds") || identity.contains("world championship") || identity.contains("全球总决赛") ->
+            ScheduleDirectorySection.WORLDS
+        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) ||
+            identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") ||
+            identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) ->
+            ScheduleDirectorySection.INTERNATIONAL
+        else -> ScheduleDirectorySection.REGIONAL
+    }
+}
+
+private fun bucketLeagueLabel(bucket: ScheduleCompetitionBucket): String {
+    val sample = bucket.matches.firstOrNull()
+    val slug = bucket.tournament?.leagueSlug.orEmpty().ifBlank { sample?.leagueSlug.orEmpty() }.lowercase()
+    val name = bucket.tournament?.leagueName.orEmpty().ifBlank { sample?.league.orEmpty() }
+    return when {
+        slug == "lpl" -> "LPL"
+        slug == "lck" -> "LCK"
+        slug == "lec" -> "LEC"
+        slug == "lcs" -> "LCS"
+        slug.startsWith("lta") -> "LTA"
+        slug == "lcp" -> "LCP"
+        slug.startsWith("cblol") -> "CBLOL"
+        slug == "pcs" -> "PCS"
+        slug == "vcs" -> "VCS"
+        slug == "ljl" -> "LJL"
+        slug == "lla" -> "LLA"
+        slug == "lrn" -> "LRN"
+        slug == "lrs" -> "LRS"
+        name.isNotBlank() -> name
+        else -> "其他赛区"
+    }
+}
+
+private fun regionalLeagueOrder(label: String): Int = when (label.uppercase()) {
+    "LPL" -> 0
+    "LCK" -> 1
+    "LEC" -> 2
+    "LCS" -> 3
+    "LTA" -> 4
+    "LCP" -> 5
+    "CBLOL" -> 6
+    "PCS" -> 7
+    "VCS" -> 8
+    "LJL" -> 9
+    "LLA" -> 10
+    "LRN" -> 11
+    "LRS" -> 12
+    else -> 99
 }
 
 @Composable
@@ -862,98 +985,107 @@ private fun buildCompetitionBuckets(
     matches: List<ScheduledEsportsMatch>,
     tournaments: List<EsportsTournamentRef>
 ): List<ScheduleCompetitionBucket> {
-    if (tournaments.isNotEmpty()) {
-        val official = tournaments.mapNotNull { tournament ->
-            val tournamentMatches = matches.filter { match ->
+    val official = tournaments.mapNotNull { tournament ->
+        val tournamentMatches = matches.filter { match ->
+            sameLeague(match, tournament) &&
                 matchStartDate(match)?.let { StandingsCenterStore.containsDate(tournament, it) } == true
-            }
-            if (tournamentMatches.isEmpty()) return@mapNotNull null
-            ScheduleCompetitionBucket(
-                key = tournament.id,
-                title = StandingsCenterStore.displayTournamentName(tournament),
-                matches = tournamentMatches.sortedBy(::matchStartEpochMs),
-                firstEpochMs = tournamentMatches.minOfOrNull(::matchStartEpochMs) ?: Long.MAX_VALUE,
-                tournamentId = tournament.id,
-                tournament = tournament
-            )
         }
-        if (official.isNotEmpty()) return official.sortedBy { it.firstEpochMs }
+        if (tournamentMatches.isEmpty()) return@mapNotNull null
+        ScheduleCompetitionBucket(
+            key = tournament.id,
+            title = StandingsCenterStore.displayTournamentName(tournament),
+            matches = tournamentMatches.sortedBy(::matchStartEpochMs),
+            firstEpochMs = tournamentMatches.minOfOrNull(::matchStartEpochMs) ?: Long.MAX_VALUE,
+            tournamentId = tournament.id,
+            tournament = tournament
+        )
     }
-    return buildFallbackBuckets(matches)
+
+    val used = official.flatMap { it.matches }.map(::scheduleIdentity).toSet()
+    val fallback = buildFallbackBuckets(matches.filterNot { scheduleIdentity(it) in used })
+    return (official + fallback)
+        .distinctBy { it.key }
+        .sortedBy { it.firstEpochMs }
+}
+
+private fun sameLeague(match: ScheduledEsportsMatch, tournament: EsportsTournamentRef): Boolean {
+    if (match.leagueId.isNotBlank() && tournament.leagueId.isNotBlank()) {
+        return match.leagueId == tournament.leagueId
+    }
+    val matchSlug = normalizeLeagueToken(match.leagueSlug)
+    val tournamentSlug = normalizeLeagueToken(tournament.leagueSlug)
+    if (matchSlug.isNotBlank() && tournamentSlug.isNotBlank()) return matchSlug == tournamentSlug
+    val matchName = normalizeLeagueToken(match.league)
+    val tournamentName = normalizeLeagueToken(tournament.leagueName)
+    return matchName.isNotBlank() && tournamentName.isNotBlank() && matchName == tournamentName
 }
 
 private fun buildFallbackBuckets(matches: List<ScheduledEsportsMatch>): List<ScheduleCompetitionBucket> {
-    val entries = matches.mapNotNull { match -> matchStartDate(match)?.let { match to it } }.sortedBy { it.second }
     val result = mutableListOf<ScheduleCompetitionBucket>()
-    entries.groupBy { it.second.year }.forEach { (year, yearEntries) ->
-        var index = 1
-        var current = mutableListOf<Pair<ScheduledEsportsMatch, LocalDate>>()
-        var previous: LocalDate? = null
-        fun flush() {
-            if (current.isEmpty()) return
-            val stageMatches = current.map { it.first }
-            result += ScheduleCompetitionBucket(
-                key = "$year-lpl-stage-$index",
-                title = "$year LPL ${stageName(index)}",
-                matches = stageMatches,
-                firstEpochMs = stageMatches.minOfOrNull(::matchStartEpochMs) ?: Long.MAX_VALUE
-            )
-            index += 1
-            current = mutableListOf()
+    matches
+        .mapNotNull { match -> matchStartDate(match)?.let { Triple(competitionLeagueKey(match), match, it) } }
+        .groupBy { it.first }
+        .forEach { (leagueKey, leagueEntries) ->
+            leagueEntries
+                .sortedBy { it.third }
+                .groupBy { it.third.year }
+                .forEach { (year, yearEntries) ->
+                    var index = 1
+                    var current = mutableListOf<Pair<ScheduledEsportsMatch, LocalDate>>()
+                    var previous: LocalDate? = null
+                    fun flush() {
+                        if (current.isEmpty()) return
+                        val stageMatches = current.map { it.first }
+                        result += ScheduleCompetitionBucket(
+                            key = "$year-$leagueKey-stage-$index",
+                            title = fallbackBucketTitle(stageMatches, year, index),
+                            matches = stageMatches,
+                            firstEpochMs = stageMatches.minOfOrNull(::matchStartEpochMs) ?: Long.MAX_VALUE
+                        )
+                        index += 1
+                        current = mutableListOf()
+                    }
+                    yearEntries.forEach { entry ->
+                        val date = entry.third
+                        val gap = previous?.let { ChronoUnit.DAYS.between(it, date) } ?: 0L
+                        if (current.isNotEmpty() && gap >= FALLBACK_STAGE_GAP_DAYS) flush()
+                        current += entry.second to date
+                        previous = date
+                    }
+                    flush()
+                }
         }
-        yearEntries.forEach { entry ->
-            val gap = previous?.let { ChronoUnit.DAYS.between(it, entry.second) } ?: 0L
-            if (current.isNotEmpty() && gap >= FALLBACK_STAGE_GAP_DAYS) flush()
-            current += entry
-            previous = entry.second
-        }
-        flush()
-    }
     return result.sortedBy { it.firstEpochMs }
 }
+
+private fun fallbackBucketTitle(matches: List<ScheduledEsportsMatch>, year: Int, index: Int): String {
+    val sample = matches.firstOrNull()
+    val identity = listOf(sample?.leagueSlug.orEmpty(), sample?.league.orEmpty()).joinToString(" ").lowercase()
+    return when {
+        identity.contains("worlds") || identity.contains("world championship") -> "$year 全球总决赛"
+        identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> "$year 季中冠军赛"
+        identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> "$year First Stand"
+        identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> "$year Esports World Cup"
+        else -> "$year ${sample?.league?.ifBlank { sample.leagueSlug.uppercase() } ?: "LoL Esports"} ${stageName(index)}"
+    }
+}
+
+private fun competitionLeagueKey(match: ScheduledEsportsMatch): String =
+    normalizeLeagueToken(match.leagueId.ifBlank { match.leagueSlug.ifBlank { match.league } }).ifBlank { "lol-esports" }
+
+private fun normalizeLeagueToken(value: String): String = value
+    .lowercase()
+    .replace(Regex("[^a-z0-9]+"), "-")
+    .trim('-')
+
+private fun scheduleIdentity(match: ScheduledEsportsMatch): String =
+    match.eventId.ifBlank { match.matchId }.ifBlank { "${match.leagueId}:${match.startTimeIso}:${match.teams.joinToString { it.id.ifBlank { it.code } }}" }
 
 private fun stageName(index: Int): String = when (index) {
     1 -> "第一赛段"
     2 -> "第二赛段"
     3 -> "第三赛段"
     else -> "第${index}赛段"
-}
-
-private fun translateSectionName(value: String): String = when {
-    value.contains("Ascend", true) -> "登峰组"
-    value.contains("Nirvana", true) -> "涅槃组"
-    else -> translateStageName(value)
-}
-
-private fun translateStageName(value: String): String = when {
-    value.contains("Knights", true) -> "骑士之路"
-    value.equals("Playoffs", true) -> "淘汰赛"
-    value.contains("Regional", true) -> "区域资格赛"
-    value.contains("Group Stage", true) -> "组内赛"
-    value.equals("Finals", true) -> "决赛"
-    else -> value.uppercase()
-}
-
-private fun scheduleActivityText(value: ScheduleActivityState): String = when (value) {
-    ScheduleActivityState.GAME_LIVE -> "小局直播"
-    ScheduleActivityState.EVENT_LIVE -> "赛事进行中"
-    ScheduleActivityState.BETWEEN_GAMES -> "局间"
-    ScheduleActivityState.UPCOMING -> "待开"
-    ScheduleActivityState.COMPLETED -> "已结束"
-}
-
-private fun bracketState(value: String): String = when {
-    value.contains("complete", true) -> "已结束"
-    value.contains("progress", true) || value.equals("live", true) -> "LIVE"
-    else -> "待开"
-}
-
-private fun scoreFor(team: EsportsTeamRef?, schedule: ScheduledEsportsMatch?): String {
-    if (team == null) return "—"
-    val scheduled = schedule?.teams?.firstOrNull { it.id == team.id || teamCode(it) == teamCode(team) }
-    val score = scheduled?.gameWins ?: team.gameWins
-    val completed = schedule?.let { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED } == true
-    return if (score > 0 || completed) score.toString() else "—"
 }
 
 private fun competitionRange(matches: List<ScheduledEsportsMatch>): String {

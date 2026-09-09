@@ -1,6 +1,11 @@
 package com.riftlab.app.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -18,13 +23,19 @@ internal object LolEsportsConfig {
     // Tier-one regional + international competitions tracked by RiftLab. IDs are discovered
     // dynamically from Riot getLeagues so league reshuffles do not require an APK update.
     val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(
-        "worlds", "msi", "first-stand", "first_stand", "ewc",
-        "lpl", "lck", "lec", "lcs", "lcp",
+        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup",
+        "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",
         "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs"
     )
     const val PERSISTED_BASE = "https://esports-api.lolesports.com/persisted/gw"
     const val LIVE_BASE = "https://feed.lolesports.com/livestats/v1"
 }
+
+internal data class TrackedLeagueRef(
+    val id: String,
+    val slug: String,
+    val name: String
+)
 
 internal data class LiveEventRef(
     val eventId: String,
@@ -49,41 +60,57 @@ internal class LolEsportsApiClient {
      * so the schedule center follows both older/newer page tokens and de-duplicates events.
      */
     suspend fun fetchGlobalSchedule(): List<ScheduledEsportsMatch> {
-        val leagueIds = fetchTrackedLeagueIds()
-        val pages = mutableListOf<JSONObject>()
-        val visitedTokens = mutableSetOf<String>()
+        val leagues = fetchTrackedLeagues()
+        if (leagues.isEmpty()) return emptyList()
 
-        val center = fetchSchedulePage(null, leagueIds)
-        pages += center
-
-        var older = schedulePageToken(center, "older")
-        repeat(4) {
-            if (older.isBlank() || !visitedTokens.add("older:$older")) return@repeat
-            val page = fetchSchedulePage(older, leagueIds)
-            pages += page
-            older = schedulePageToken(page, "older")
+        val semaphore = Semaphore(4)
+        val results = coroutineScope {
+            leagues.map { league ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        league to runCatching { fetchLeagueScheduleWindow(league) }.getOrDefault(emptyList())
+                    }
+                }
+            }.awaitAll()
         }
 
+        return results
+            .flatMap { it.second }
+            .distinctBy { it.eventId.ifBlank { it.matchId } }
+            .sortedWith(
+                compareBy<ScheduledEsportsMatch> { parseInstant(it.startTimeIso) ?: Instant.MAX }
+                    .thenBy { it.leagueSlug }
+                    .thenBy { it.eventId }
+            )
+    }
+
+    private suspend fun fetchLeagueScheduleWindow(league: TrackedLeagueRef): List<ScheduledEsportsMatch> {
+        val pages = mutableListOf<JSONObject>()
+        val visitedTokens = mutableSetOf<String>()
+        val center = fetchSchedulePage(null, league.id)
+        pages += center
+
+        // One neighbour page in each direction is enough for the always-on phone refresh.
+        // Historical deep collection belongs in the central mirror, not in every five-minute APK poll.
+        var older = schedulePageToken(center, "older")
+        if (older.isNotBlank() && visitedTokens.add("older:$older")) {
+            pages += fetchSchedulePage(older, league.id)
+        }
         var newer = schedulePageToken(center, "newer")
-        repeat(4) {
-            if (newer.isBlank() || !visitedTokens.add("newer:$newer")) return@repeat
-            val page = fetchSchedulePage(newer, leagueIds)
-            pages += page
-            newer = schedulePageToken(page, "newer")
+        if (newer.isNotBlank() && visitedTokens.add("newer:$newer")) {
+            pages += fetchSchedulePage(newer, league.id)
         }
 
         return pages
-            .flatMap(::parseSchedulePage)
+            .flatMap { parseSchedulePage(it, league) }
             .distinctBy { it.eventId.ifBlank { it.matchId } }
-            .sortedWith(compareBy<ScheduledEsportsMatch> { parseInstant(it.startTimeIso) ?: Instant.MAX }
-                .thenBy { it.eventId })
     }
 
     // Compatibility alias for older call sites while the app migrates away from LPL-only naming.
     suspend fun fetchLplSchedule(): List<ScheduledEsportsMatch> = fetchGlobalSchedule()
 
-    private suspend fun fetchTrackedLeagueIds(): List<String> {
-        return runCatching {
+    internal suspend fun fetchTrackedLeagues(): List<TrackedLeagueRef> {
+        val discovered = runCatching {
             val root = getJson("${LolEsportsConfig.PERSISTED_BASE}/getLeagues?hl=en-US")
             val leagues = root.optJSONObject("data")?.optJSONArray("leagues") ?: JSONArray()
             buildList {
@@ -91,18 +118,33 @@ internal class LolEsportsApiClient {
                     val league = leagues.optJSONObject(i) ?: continue
                     val id = league.optString("id")
                     val slug = league.optString("slug").lowercase()
-                    if (id.isNotBlank() && slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS) add(id)
+                    val normalized = slug.replace('_', '-')
+                    val tracked = slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||
+                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS
+                    if (id.isNotBlank() && tracked) {
+                        add(
+                            TrackedLeagueRef(
+                                id = id,
+                                slug = slug,
+                                name = league.optString("name").ifBlank { slug.uppercase() }
+                            )
+                        )
+                    }
                 }
-            }.distinct()
-        }.getOrDefault(emptyList()).ifEmpty { listOf(LolEsportsConfig.LPL_LEAGUE_ID) }
+            }.distinctBy { it.id }
+        }.getOrDefault(emptyList())
+
+        return discovered.ifEmpty {
+            listOf(TrackedLeagueRef(LolEsportsConfig.LPL_LEAGUE_ID, "lpl", "LPL"))
+        }
     }
 
-    private suspend fun fetchSchedulePage(pageToken: String?, leagueIds: List<String>): JSONObject {
+    private suspend fun fetchSchedulePage(pageToken: String?, leagueId: String): JSONObject {
         val url = buildString {
             append("${LolEsportsConfig.PERSISTED_BASE}/getSchedule?hl=en-US")
-            if (leagueIds.isNotEmpty()) {
+            if (leagueId.isNotBlank()) {
                 append("&leagueId=")
-                append(URLEncoder.encode(leagueIds.joinToString(","), "UTF-8"))
+                append(URLEncoder.encode(leagueId, "UTF-8"))
             }
             if (!pageToken.isNullOrBlank()) {
                 append("&pageToken=").append(URLEncoder.encode(pageToken, "UTF-8"))
@@ -118,7 +160,7 @@ internal class LolEsportsApiClient {
             ?.optString(direction)
             .orEmpty()
 
-    private fun parseSchedulePage(root: JSONObject): List<ScheduledEsportsMatch> {
+    private fun parseSchedulePage(root: JSONObject, trackedLeague: TrackedLeagueRef): List<ScheduledEsportsMatch> {
         val events = root.optJSONObject("data")
             ?.optJSONObject("schedule")
             ?.optJSONArray("events") ?: JSONArray()
@@ -129,6 +171,9 @@ internal class LolEsportsApiClient {
                 if (event.optString("type") != "match") continue
 
                 val league = event.optJSONObject("league")
+                val leagueId = league?.optString("id").orEmpty().ifBlank { trackedLeague.id }
+                val leagueSlug = league?.optString("slug").orEmpty().ifBlank { trackedLeague.slug }
+                val leagueName = league?.optString("name").orEmpty().ifBlank { trackedLeague.name }
                 val match = event.optJSONObject("match") ?: continue
                 val teams = parseTeams(match.optJSONArray("teams"))
                 if (teams.size < 2) continue
@@ -139,12 +184,14 @@ internal class LolEsportsApiClient {
                     ScheduledEsportsMatch(
                         eventId = event.optString("id", match.optString("id")),
                         matchId = match.optString("id"),
-                        league = league?.optString("name", "LoL Esports") ?: "LoL Esports",
+                        league = leagueName.ifBlank { "LoL Esports" },
                         blockName = event.optString("blockName", ""),
                         startTimeIso = event.optString("startTime"),
                         state = verifiedScheduleState(rawState, bestOf, teams),
                         bestOf = bestOf,
-                        teams = teams
+                        teams = teams,
+                        leagueId = leagueId,
+                        leagueSlug = leagueSlug
                     )
                 )
             }
@@ -187,7 +234,10 @@ internal class LolEsportsApiClient {
         var selected: JSONObject? = null
         for (i in 0 until teams.length()) {
             val item = teams.optJSONObject(i) ?: continue
-            if (item.optString("slug").equals(slug, ignoreCase = true)) {
+            if (
+                item.optString("id") == slug ||
+                item.optString("slug").equals(slug, ignoreCase = true)
+            ) {
                 selected = item
                 break
             }

@@ -317,6 +317,7 @@ object MatchSessionStore {
     }
 
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
+        if (team.id.isNotBlank()) return team.id
         if (team.slug.isNotBlank()) return team.slug
 
         return team.name

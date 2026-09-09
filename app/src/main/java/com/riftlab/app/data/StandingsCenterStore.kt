@@ -60,7 +60,7 @@ object StandingsCenterStore {
                 }
             )
 
-            if (selected != null && _state.value.standings?.tournamentId != selected.id) {
+            if (selected != null) {
                 refreshStandings(selected)
             }
         } catch (t: Throwable) {
@@ -101,15 +101,23 @@ object StandingsCenterStore {
 
     fun displayTournamentName(tournament: EsportsTournamentRef): String {
         val slug = tournament.slug.lowercase()
+        val leagueSlug = tournament.leagueSlug.lowercase()
+        val leagueName = tournament.leagueName.ifBlank { tournament.leagueSlug.uppercase() }.ifBlank { "LoL Esports" }
+        val identity = "$leagueSlug $leagueName $slug".lowercase()
         val year = parseDate(tournament.startDate)?.year?.toString().orEmpty()
+
         return when {
-            slug.contains("split_1") -> "$year LPL 第一赛段"
-            slug.contains("split_2") -> "$year LPL 第二赛段"
-            slug.contains("split_3") -> "$year LPL 第三赛段"
-            slug.contains("spring") -> "$year LPL 春季赛"
-            slug.contains("summer") -> "$year LPL 夏季赛"
-            slug.contains("regional") -> "$year LPL 区域资格赛"
-            else -> tournament.slug.replace('_', ' ').ifBlank { "$year LPL" }
+            identity.contains("worlds") || identity.contains("world championship") -> "$year 全球总决赛"
+            identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> "$year 季中冠军赛"
+            identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> "$year First Stand"
+            identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> "$year Esports World Cup"
+            slug.contains("split_1") -> "$year $leagueName 第一赛段"
+            slug.contains("split_2") -> "$year $leagueName 第二赛段"
+            slug.contains("split_3") -> "$year $leagueName 第三赛段"
+            slug.contains("spring") -> "$year $leagueName 春季赛"
+            slug.contains("summer") -> "$year $leagueName 夏季赛"
+            slug.contains("regional") -> "$year $leagueName 区域资格赛"
+            else -> tournament.slug.replace('_', ' ').ifBlank { "$year $leagueName" }
         }
     }
 

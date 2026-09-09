@@ -80,7 +80,7 @@ internal class LolEsportsScheduleDataSource(
 internal class LolEsportsStandingsDataSource(
     private val client: LolEsportsStandingsClient = LolEsportsStandingsClient()
 ) : StandingsDataSource {
-    override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> = client.fetchLplTournaments()
+    override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> = client.fetchGlobalTournaments()
     override suspend fun fetchStandings(tournamentId: String): TournamentStandings? =
         client.fetchTournamentStandings(tournamentId)
 }
