@@ -407,6 +407,7 @@ internal data class CitoSeriesContext(val gameId: String, val gameNumber: Int)
 internal object CitoArchiveCoordinator {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val attemptedAt = linkedMapOf<String, Long>()
+    private const val RETRY_MS = 6 * 60 * 60 * 1000L
 
     fun observe(matches: List<ScheduledEsportsMatch>) {
         if (CitoApiConfig.apiKey() == null) return
@@ -464,8 +465,6 @@ internal object CitoArchiveCoordinator {
         CompletedGameArchive.publishSeries(series)
         CitoProviderState.update("Cito REST · 已归档 ${match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }}")
     }
-
-    companion object { private const val RETRY_MS = 6 * 60 * 60 * 1000L }
 }
 
 internal object CitoJson {
