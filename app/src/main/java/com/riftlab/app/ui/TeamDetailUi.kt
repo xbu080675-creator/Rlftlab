@@ -286,6 +286,37 @@ private fun PlayerAvatar(player: EsportsPlayerRef?, team: EsportsTeamRef, modifi
 }
 
 @Composable
+private fun PersonAvatar(
+    imageUrl: String,
+    label: String,
+    fallbackGlyph: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier.background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageUrl.isBlank()) {
+            Text(fallbackGlyph, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        } else {
+            SubcomposeAsyncImage(
+                model = imageUrl,
+                contentDescription = label,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Text(fallbackGlyph, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                },
+                error = {
+                    Text(fallbackGlyph, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                },
+                success = { SubcomposeAsyncImageContent() }
+            )
+        }
+    }
+}
+
+@Composable
 private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
     Row(
         Modifier.fillMaxWidth()
@@ -294,16 +325,25 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(34.dp).background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(if (management) "管" else "教", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
+        PersonAvatar(
+            imageUrl = staff.imageUrl,
+            label = staff.name,
+            fallbackGlyph = if (management) "管" else "教",
+            modifier = Modifier.size(34.dp)
+        )
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(staff.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             if (staff.realName.isNotBlank()) Text(staff.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            val former = staff.careerHistory.filterNot { it.current }.takeLast(2)
+            if (former.isNotEmpty()) {
+                Text(
+                    "履历 · " + former.joinToString(" · ") { "${it.team} ${it.displayRole.ifBlank { staffRoleLabel(it.role) }}" },
+                    color = RiftMuted,
+                    fontSize = 7.sp,
+                    maxLines = 1
+                )
+            }
             if (staff.socialLinks.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 SocialLinkRow(staff.socialLinks, compact = true)
@@ -311,6 +351,7 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(staff.displayRole.ifBlank { staffRoleLabel(staff.role) }, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            if (staff.avatarSource.isNotBlank()) Text("头像 · ${staff.avatarSource}", color = RiftMuted, fontSize = 6.sp)
             Text(staff.source, color = RiftMuted, fontSize = 7.sp)
         }
     }
@@ -325,17 +366,26 @@ private fun TeamHistoryRow(history: TeamHistoryRef) {
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            Modifier.size(34.dp).background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("誉", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
+        PersonAvatar(
+            imageUrl = history.imageUrl,
+            label = history.name,
+            fallbackGlyph = "誉",
+            modifier = Modifier.size(34.dp)
+        )
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(history.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             if (history.realName.isNotBlank()) Text(history.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
             if (history.note.isNotBlank()) Text(history.note, color = RiftMuted, fontSize = 8.sp, maxLines = 2)
+            val timeline = history.careerHistory.takeLast(2)
+            if (timeline.isNotEmpty()) {
+                Text(
+                    "履历 · " + timeline.joinToString(" · ") { "${it.team} ${it.displayRole.ifBlank { staffRoleLabel(it.role) }}" },
+                    color = RiftMuted,
+                    fontSize = 7.sp,
+                    maxLines = 1
+                )
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(history.honoraryTitle, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)

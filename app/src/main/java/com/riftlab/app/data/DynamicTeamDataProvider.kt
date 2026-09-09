@@ -12,7 +12,11 @@ internal data class TeamHistoryRef(
     val realName: String = "",
     val honoraryTitle: String = "RiftLab 荣誉成员",
     val source: String = "",
-    val note: String = ""
+    val note: String = "",
+    val personId: String = "",
+    val imageUrl: String = "",
+    val avatarSource: String = "",
+    val careerHistory: List<EsportsCareerRef> = emptyList()
 )
 
 internal data class TeamDynamicSupplement(
@@ -40,9 +44,14 @@ internal class DynamicTeamDataProvider(
             "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/team_profiles.json",
             "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/team_profiles.json"
         )
+        private val PEOPLE_ENDPOINTS = listOf(
+            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/people.json",
+            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/people.json"
+        )
 
         private data class CachedDirectory(val fetchedAt: Long, val root: JSONObject)
         private val cache = AtomicReference<CachedDirectory?>(null)
+        private val peopleCache = AtomicReference<CachedDirectory?>(null)
     }
 
     suspend fun fetch(team: EsportsTeamRef, details: EsportsTeamDetails): TeamDynamicSupplement {
@@ -74,10 +83,11 @@ internal class DynamicTeamDataProvider(
             if (verifiedAt.isNotBlank()) append(" · verified ").append(verifiedAt)
         }
 
-        val management = parseStaff(node.optJSONArray("management"), sourceLabel)
-        val staff = parseStaff(node.optJSONArray("staff"), sourceLabel)
+        val peopleRoot = runCatching { peopleDirectory() }.getOrNull()
+        val management = parseStaff(node.optJSONArray("management"), sourceLabel, code, peopleRoot)
+        val staff = parseStaff(node.optJSONArray("staff"), sourceLabel, code, peopleRoot)
         val operators = parseOperators(node.optJSONArray("operators"))
-        val history = parseHistory(node.optJSONArray("history"), sourceLabel)
+        val history = parseHistory(node.optJSONArray("history"), sourceLabel, code, peopleRoot)
 
         val statusBits = mutableListOf<String>()
         statusBits += sourceLabel
@@ -122,6 +132,25 @@ internal class DynamicTeamDataProvider(
         throw lastError ?: IllegalStateException("team directory unavailable")
     }
 
+    private fun peopleDirectory(): JSONObject {
+        val now = System.currentTimeMillis()
+        peopleCache.get()?.takeIf { now - it.fetchedAt < CACHE_TTL_MS }?.let { return it.root }
+
+        var lastError: Throwable? = null
+        for (endpoint in PEOPLE_ENDPOINTS) {
+            val result = runCatching { getJson(endpoint) }
+            result.onSuccess { root ->
+                if (root.optInt("schemaVersion", 0) <= 0 || root.optJSONObject("people") == null) {
+                    lastError = IllegalStateException("people directory schema invalid")
+                } else {
+                    peopleCache.set(CachedDirectory(now, root))
+                    return root
+                }
+            }.onFailure { lastError = it }
+        }
+        throw lastError ?: IllegalStateException("people directory unavailable")
+    }
+
     private fun getJson(endpoint: String): JSONObject {
         val hourBucket = System.currentTimeMillis() / 3_600_000L
         val connection = URL("$endpoint?riftlab=$hourBucket").openConnection() as HttpURLConnection
@@ -141,7 +170,12 @@ internal class DynamicTeamDataProvider(
         }
     }
 
-    private fun parseStaff(rows: JSONArray?, source: String): List<EsportsStaffRef> {
+    private fun parseStaff(
+        rows: JSONArray?,
+        source: String,
+        teamCode: String,
+        peopleRoot: JSONObject?
+    ): List<EsportsStaffRef> {
         if (rows == null) return emptyList()
         return buildList {
             for (index in 0 until rows.length()) {
@@ -149,20 +183,32 @@ internal class DynamicTeamDataProvider(
                 val name = item.optString("name").trim()
                 val role = item.optString("role").trim()
                 if (name.isBlank() || role.isBlank()) continue
+                val realName = item.optString("realName")
+                val person = findPerson(peopleRoot, teamCode, name, realName)
+                val avatar = person?.second?.optJSONObject("avatar")
                 add(
                     EsportsStaffRef(
                         name = name,
                         role = role,
                         source = item.optString("source").ifBlank { source },
-                        realName = item.optString("realName"),
-                        displayRole = item.optString("displayRole")
+                        realName = realName,
+                        displayRole = item.optString("displayRole"),
+                        personId = person?.first.orEmpty(),
+                        imageUrl = avatar?.optString("url").orEmpty(),
+                        avatarSource = avatar?.optString("source").orEmpty(),
+                        careerHistory = parseCareer(person?.second?.optJSONArray("employments"))
                     )
                 )
             }
         }
     }
 
-    private fun parseHistory(rows: JSONArray?, source: String): List<TeamHistoryRef> {
+    private fun parseHistory(
+        rows: JSONArray?,
+        source: String,
+        teamCode: String,
+        peopleRoot: JSONObject?
+    ): List<TeamHistoryRef> {
         if (rows == null) return emptyList()
         return buildList {
             for (index in 0 until rows.length()) {
@@ -171,19 +217,71 @@ internal class DynamicTeamDataProvider(
                 val name = item.optString("name").trim()
                 val formerRole = item.optString("formerRole").ifBlank { item.optString("role") }.trim()
                 if (name.isBlank() || formerRole.isBlank()) continue
+                val realName = item.optString("realName")
+                val person = findPerson(peopleRoot, teamCode, name, realName)
+                val avatar = person?.second?.optJSONObject("avatar")
                 add(
                     TeamHistoryRef(
                         name = name,
                         formerRole = formerRole,
-                        realName = item.optString("realName"),
+                        realName = realName,
                         honoraryTitle = item.optString("honoraryTitle").ifBlank { "RiftLab 荣誉成员" },
                         source = item.optString("source").ifBlank { source },
-                        note = item.optString("note")
+                        note = item.optString("note"),
+                        personId = person?.first.orEmpty(),
+                        imageUrl = avatar?.optString("url").orEmpty(),
+                        avatarSource = avatar?.optString("source").orEmpty(),
+                        careerHistory = parseCareer(person?.second?.optJSONArray("employments"))
                     )
                 )
             }
         }
     }
+
+    private fun findPerson(
+        peopleRoot: JSONObject?,
+        teamCode: String,
+        name: String,
+        realName: String
+    ): Pair<String, JSONObject>? {
+        peopleRoot ?: return null
+        val lookup = peopleRoot.optJSONObject("lookup") ?: return null
+        val people = peopleRoot.optJSONObject("people") ?: return null
+        val keys = listOf(
+            "$teamCode|${personToken(name)}",
+            "$teamCode|${personToken(realName)}",
+            "*|${personToken(name)}",
+            "*|${personToken(realName)}"
+        ).filterNot { it.endsWith("|") }
+        val id = keys.firstNotNullOfOrNull { key -> lookup.optString(key).takeIf { it.isNotBlank() } } ?: return null
+        return people.optJSONObject(id)?.let { id to it }
+    }
+
+    private fun parseCareer(rows: JSONArray?): List<EsportsCareerRef> {
+        if (rows == null) return emptyList()
+        return buildList {
+            for (index in 0 until rows.length()) {
+                val item = rows.optJSONObject(index) ?: continue
+                val team = item.optString("team").trim()
+                val role = item.optString("role").trim()
+                if (team.isBlank() || role.isBlank()) continue
+                add(
+                    EsportsCareerRef(
+                        team = team,
+                        role = role,
+                        displayRole = item.optString("displayRole"),
+                        current = item.optBoolean("current", false),
+                        startDate = item.optString("startDate"),
+                        endDate = item.optString("endDate"),
+                        source = item.optString("source")
+                    )
+                )
+            }
+        }
+    }
+
+    private fun personToken(value: String): String =
+        value.uppercase().filter { it.isLetterOrDigit() }
 
     private fun parseOperators(rows: JSONArray?): String {
         if (rows == null) return ""

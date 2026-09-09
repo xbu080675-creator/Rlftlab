@@ -133,13 +133,27 @@ data class EsportsPlayerRef(
     val socialLinks: List<EsportsSocialLink> = emptyList()
 )
 
+data class EsportsCareerRef(
+    val team: String,
+    val role: String,
+    val displayRole: String = "",
+    val current: Boolean = false,
+    val startDate: String = "",
+    val endDate: String = "",
+    val source: String = ""
+)
+
 data class EsportsStaffRef(
     val name: String,
     val role: String,
     val source: String,
     val realName: String = "",
     val displayRole: String = "",
-    val socialLinks: List<EsportsSocialLink> = emptyList()
+    val socialLinks: List<EsportsSocialLink> = emptyList(),
+    val personId: String = "",
+    val imageUrl: String = "",
+    val avatarSource: String = "",
+    val careerHistory: List<EsportsCareerRef> = emptyList()
 )
 
 data class EsportsTeamDetails(
