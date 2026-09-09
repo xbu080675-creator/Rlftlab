@@ -86,3 +86,4 @@ dependencies {
 // Final dev.49 CI/OTA trigger after replay and academy-label fixes.
 
 // dev.50: retire LDL from current subscriptions, promote Worlds 2026, add Demacia Cup Global Invitational and WSCL international catalog entries.
+// Final dev.50 trigger: schedule center opens at directory/subscribed league instead of auto-jumping to NSCL or another active competition.
