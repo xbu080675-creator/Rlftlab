@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.0.0-dev.22"
+        versionCode = 23
+        versionName = "1.0.0-dev.23"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.22: distinguish event/broadcast start from actual game-live and between-games states.
+// dev.23: separate tournament standings points from annual LPL Championship Points.

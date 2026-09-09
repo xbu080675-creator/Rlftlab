@@ -45,6 +45,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.EsportsTournamentRef
+import com.riftlab.app.data.LplChampionshipPoints2026
+import com.riftlab.app.data.LplWorldsStatus
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduleActivityState
@@ -66,6 +68,7 @@ private const val FALLBACK_STAGE_GAP_DAYS = 21L
 private enum class EventCenterTab(val label: String) {
     SCHEDULE("赛程"),
     STANDINGS("排名"),
+    POINTS("积分"),
     BRACKET("淘汰赛"),
     TEAMS("战队")
 }
@@ -220,6 +223,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 }
                             )
                             EventCenterTab.STANDINGS -> StandingsView(selectedStandings)
+                            EventCenterTab.POINTS -> ChampionshipPointsView()
                             EventCenterTab.BRACKET -> BracketView(
                                 standings = selectedStandings,
                                 scheduleMatches = selectedBucket.matches
@@ -534,7 +538,7 @@ private fun StandingsView(standings: TournamentStandings?) {
                     TableText("名次", 0.7f, RiftMuted, FontWeight.Medium)
                     TableText("战队", 1.5f, RiftMuted, FontWeight.Medium)
                     TableText("胜/负", 1f, RiftMuted, FontWeight.Medium)
-                    TableText("积分", 0.8f, RiftMuted, FontWeight.Medium, end = true)
+                    TableText("组内积分", 0.8f, RiftMuted, FontWeight.Medium, end = true)
                 }
             }
             items(section.rankings, key = { "${it.ordinal}-${it.team.id}-${it.team.code}" }) { row ->
@@ -555,7 +559,7 @@ private fun StandingRow(row: StandingTeam) {
         TableText(row.ordinal.toString(), 0.7f, RiftText, FontWeight.SemiBold)
         TableText(teamCode(row.team), 1.5f, RiftText, FontWeight.SemiBold)
         TableText("${row.wins}/${row.losses}", 1f, RiftText, FontWeight.Normal)
-        TableText((row.points ?: row.wins).toString(), 0.8f, RiftText, FontWeight.SemiBold, end = true)
+        TableText(row.points?.toString() ?: "—", 0.8f, RiftText, FontWeight.SemiBold, end = true)
     }
     Spacer(Modifier.height(5.dp))
 }
@@ -576,6 +580,98 @@ private fun androidx.compose.foundation.layout.RowScope.TableText(
         fontWeight = fontWeight,
         textAlign = if (end) androidx.compose.ui.text.style.TextAlign.End else androidx.compose.ui.text.style.TextAlign.Start
     )
+}
+
+@Composable
+private fun ChampionshipPointsView() {
+    val rows = LplChampionshipPoints2026.rows
+    Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxWidth()
+                .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                .border(1.dp, RiftCyan.copy(alpha = 0.34f), CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                .padding(14.dp)
+        ) {
+            Text(
+                "${LplChampionshipPoints2026.season} 全球总决赛实时积分",
+                color = RiftText,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "更新至 ${LplChampionshipPoints2026.updatedThrough}",
+                color = RiftCyan,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                LplChampionshipPoints2026.note,
+                color = RiftMuted,
+                fontSize = 9.sp,
+                lineHeight = 14.sp
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(LplChampionshipPoints2026.sourceLabel, color = RiftMuted, fontSize = 8.sp)
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp)) {
+            TableText("#", 0.42f, RiftMuted, FontWeight.Medium)
+            TableText("战队", 0.92f, RiftMuted, FontWeight.Medium)
+            TableText("S1", 0.52f, RiftMuted, FontWeight.Medium, end = true)
+            TableText("S2", 0.52f, RiftMuted, FontWeight.Medium, end = true)
+            TableText("S3保底", 0.76f, RiftMuted, FontWeight.Medium, end = true)
+            TableText("总分", 0.70f, RiftMuted, FontWeight.Medium, end = true)
+        }
+
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            items(rows, key = { "${it.rank}-${it.teamCode}" }) { row ->
+                val statusColor = when (row.status) {
+                    LplWorldsStatus.WORLDS_LOCKED -> RiftCyan
+                    LplWorldsStatus.REGIONAL_LOCKED -> RiftText
+                    LplWorldsStatus.ELIMINATED -> RiftMuted
+                }
+                Column(
+                    Modifier.fillMaxWidth()
+                        .background(RiftPanel, CutCornerShape(topEnd = 8.dp, bottomStart = 5.dp))
+                        .border(
+                            1.dp,
+                            if (row.status == LplWorldsStatus.WORLDS_LOCKED) RiftCyan.copy(alpha = 0.38f) else RiftLine,
+                            CutCornerShape(topEnd = 8.dp, bottomStart = 5.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 10.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        TableText(row.rank.toString(), 0.42f, RiftMuted, FontWeight.SemiBold)
+                        TableText(row.teamCode, 0.92f, RiftText, FontWeight.Bold)
+                        TableText(row.split1.toString(), 0.52f, RiftText, FontWeight.Normal, end = true)
+                        TableText(row.split2.toString(), 0.52f, RiftText, FontWeight.Normal, end = true)
+                        TableText(row.split3Floor.toString(), 0.76f, RiftText, FontWeight.Normal, end = true)
+                        TableText(row.total.toString(), 0.70f, RiftCyan, FontWeight.Bold, end = true)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        row.status.label,
+                        color = statusColor,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 34.dp)
+                    )
+                }
+            }
+            item {
+                Text(
+                    "注：本页为年度 Championship Points；“排名”页中的组内积分属于当前 Tournament Standings，两者不是同一个积分体系。",
+                    color = RiftMuted,
+                    fontSize = 9.sp,
+                    lineHeight = 14.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
 }
 
 @Composable

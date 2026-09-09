@@ -98,8 +98,8 @@ internal class LolEsportsStandingsClient {
                             team = team,
                             wins = wins,
                             losses = losses,
-                            // Current LPL split standings expose W/L but no separate points field.
-                            // The official event UI uses series wins as points for this stage.
+                            // Tournament/group standing points shown by the Riot standings surface.
+                            // This is deliberately NOT annual Championship Points for Worlds qualification.
                             points = wins
                         )
                     )
