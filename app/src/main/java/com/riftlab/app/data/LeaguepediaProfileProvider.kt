@@ -15,18 +15,23 @@ internal data class TeamProfileSupplement(
  * after long retry delays. Keep management data local and deterministic instead of making the
  * user's network decide whether a team page has staff information.
  *
- * Snapshot date: 2026-09-09. Source: publicly indexed Leaguepedia organisation pages plus manual
- * current-status corrections. Entries are intentionally conservative: only people/roles treated
- * as current management are included. Former owners/managers are not kept in the current roster.
- * No social handle is fabricated. The existing social-link model stays in place for a future
- * China-friendly profile JSON mirror.
+ * Snapshot date: 2026-09-09. Sources are kept per entry where current public governance differs
+ * from older Leaguepedia organisation listings. Entries are intentionally conservative: only
+ * people/roles treated as current management are included. Former owners/managers are not kept in
+ * the current roster. Company legal-representative information is a separate corporate-registry
+ * concept and is not inferred from a club founder/owner label.
  */
 internal class LeaguepediaProfileProvider {
     companion object {
         private const val SOURCE = "Leaguepedia · 2026-09-09 快照"
+        private const val IG_SOURCE = "iG 官方重组公告 / 新民体育 · 2024-11~2025-05"
 
-        private fun person(name: String, role: String, realName: String = "") =
-            EsportsStaffRef(name = name, role = role, source = SOURCE, realName = realName)
+        private fun person(
+            name: String,
+            role: String,
+            realName: String = "",
+            source: String = SOURCE
+        ) = EsportsStaffRef(name = name, role = role, source = source, realName = realName)
 
         private val managementByCode: Map<String, List<EsportsStaffRef>> = mapOf(
             "AL" to emptyList(),
@@ -62,6 +67,7 @@ internal class LeaguepediaProfileProvider {
                 person("Vlone", "MANAGER", "Xiao Chu-Yu (肖楚愚)")
             ),
             "IG" to listOf(
+                person("An Jie", "CHAIRMAN", "安杰", source = IG_SOURCE),
                 person("facewind", "MANAGER", "Zheng Hao-Nan (郑浩楠)"),
                 person("xiaochen", "LEADER", "Wang Min-Chen (王敏晨)"),
                 person("Kezman", "SUPERVISOR", "Son Dae-young (손대영)")
@@ -129,6 +135,7 @@ internal class LeaguepediaProfileProvider {
         val management = code?.let(managementByCode::get).orEmpty()
         val status = when {
             code == null -> "人员资料快照未识别该战队"
+            code == "IG" -> "$IG_SOURCE · 重组运营：氧望体育 × 虎牙直播 · 管理层 ${management.size} 人 · 法人信息按工商主体单独维护"
             management.isNotEmpty() -> "$SOURCE · 管理层 ${management.size} 人 · 社交账号等待独立镜像"
             else -> "$SOURCE · 暂无可靠公开管理层记录 · 社交账号等待独立镜像"
         }
