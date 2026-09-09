@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-team-directory",
-  "updatedAt": "2026-09-09T02:22:00Z",
+  "updatedAt": "2026-09-09T02:25:00Z",
   "refreshPolicy": {
     "appTtlMinutes": 30,
     "sourceMonitorHours": 3,
@@ -55,6 +55,13 @@
           "displayRole": "赛训总监 / 经理",
           "realName": "Yuan Xi (袁玺)",
           "source": "人民电竞 2024-12-06；2026-08-09 公开身份持续称 BLG 经理"
+        },
+        {
+          "name": "You",
+          "role": "MANAGER",
+          "displayRole": "经理",
+          "realName": "You Chang-Xin (尤长鑫)",
+          "source": "2026 第二赛段 BLG 经理公开记录；截至当前未发现明确离任证据"
         },
         {
           "name": "YUZZ",

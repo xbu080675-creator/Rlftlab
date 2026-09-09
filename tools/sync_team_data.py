@@ -52,6 +52,7 @@ LEAGUEPEDIA_STAFF_ROLES = {
     "performance coach": "COACH",
 }
 DEPARTURE_WORDS = ("离队", "离任", "转会至", "不再担任", "结束任职", "合同到期离开")
+# Current-management removal/archive is allowed only when one of these explicit departure phrases is present.
 JOIN_WORDS = ("加入", "加盟", "担任", "出任", "正式成为", "大名单", "新赛段名单", "新赛季名单")
 IMPORTANT_WORDS = (
     "人员变动公告", "大名单", "离队", "加入", "加盟", "转会", "主教练", "经理", "领队",
