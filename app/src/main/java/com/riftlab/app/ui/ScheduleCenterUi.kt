@@ -165,7 +165,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
         Surface(Modifier.fillMaxSize(), color = RiftBg, contentColor = RiftText) {
             Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)) {
                 ScheduleCenterHeader(
-                    title = selectedDetailMatch?.let(::matchLabel)
+                    title = selectedDetailMatch?.let(::matchFullLabel)
                         ?: selectedTeam?.let(::teamCode)
                         ?: selectedBucket?.title
                         ?: "英雄联盟赛事",
@@ -1222,6 +1222,9 @@ private fun matchStartDate(match: ScheduledEsportsMatch): LocalDate? = runCatchi
 private fun matchStartEpochMs(match: ScheduledEsportsMatch): Long = runCatching {
     Instant.parse(match.startTimeIso).toEpochMilli()
 }.getOrElse { Long.MAX_VALUE }
+
+private fun matchFullLabel(match: ScheduledEsportsMatch): String =
+    match.teams.take(2).joinToString(" vs ") { team -> team.name.ifBlank { teamCode(team) } }
 
 private fun matchLabel(match: ScheduledEsportsMatch): String =
     match.teams.take(2).joinToString(" vs ") { teamCode(it) }

@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 48
-        versionName = "1.0.0-dev.48"
+        versionCode = 49
+        versionName = "1.0.0-dev.49"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -81,3 +81,5 @@ dependencies {
 
 // dev.48: subscription-driven homepage targeting, league-safe post-match routing, in-app official VOD playback with sensor fullscreen, startup/replay performance tuning.
 // dev.48 verified build passed; publish through dev-latest OTA.
+
+// dev.49: clarify academy team names, restore global series score, isolate overseas timeline from Bilibili, and harden in-app official YouTube VOD playback.

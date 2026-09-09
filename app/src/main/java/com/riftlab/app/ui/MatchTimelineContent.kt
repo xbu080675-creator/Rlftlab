@@ -38,13 +38,14 @@ internal fun MatchTimelineContent() {
     val series = state.series
     val live = state.liveGame
     val match = state.match
-    val vodKey = match?.let(BilibiliVodRepository::keyFor).orEmpty()
+    val lplReplay = match?.let(::isLplReplayMatch) == true
+    val vodKey = if (lplReplay) match?.let(BilibiliVodRepository::keyFor).orEmpty() else ""
 
-    LaunchedEffect(vodKey) {
-        if (match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)
+    LaunchedEffect(vodKey, lplReplay) {
+        if (lplReplay && match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)
     }
 
-    val vod = vodState.vod.takeIf { vodState.matchKey == vodKey }
+    val vod = vodState.vod.takeIf { lplReplay && vodState.matchKey == vodKey }
     val games = remember(series?.games, live?.game, vod?.parts) {
         buildList {
             series?.games.orEmpty().map { it.game }.filter { it > 0 }.distinct().sorted().forEach(::add)
@@ -77,7 +78,11 @@ internal fun MatchTimelineContent() {
                 Text("比赛进程 / 状态回放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(
-                    "实时阶段优先保存约 10 秒状态快照；历史比赛没有本机快照时，自动解析 B站英雄联盟赛事官方录像的分P与章节锚点补回时间轴。两种来源都会明确标记，不从终局比分伪造中间过程。",
+                    if (lplReplay) {
+                        "实时阶段优先保存约 10 秒状态快照；LPL 历史比赛没有本机快照时，可使用 B站英雄联盟赛事官方录像的分P与章节锚点补回时间轴。来源会明确标记，不从终局比分伪造中间过程。"
+                    } else {
+                        "实时阶段优先保存约 10 秒状态快照；海外赛区与国际赛事只使用 RiftLab 本机归档、Riot/官方可核实事件数据，不请求、不解析 Bilibili，也不从终局比分伪造中间过程。"
+                    },
                     color = RiftMuted,
                     fontSize = 9.sp
                 )
@@ -122,13 +127,13 @@ internal fun MatchTimelineContent() {
             }
             snapshot != null -> {
                 item { MatchTimelinePanel(snapshot) }
-                if (vodState.matchKey == vodKey && vodState.loading) {
+                if (lplReplay && vodState.matchKey == vodKey && vodState.loading) {
                     item { TimelineVodStatus("正在查找 B站英雄联盟赛事官方录像，找到后会自动补历史章节时间轴…") }
-                } else if (vodState.matchKey == vodKey && !vodState.loading) {
+                } else if (lplReplay && vodState.matchKey == vodKey && !vodState.loading) {
                     item { TimelineVodStatus(vodState.status) }
                 }
             }
-            vodState.matchKey == vodKey && vodState.loading -> {
+            lplReplay && vodState.matchKey == vodKey && vodState.loading -> {
                 item { TimelineVodStatus("正在解析 B站英雄联盟赛事官方录像与分P…") }
             }
             else -> {

@@ -90,7 +90,14 @@ internal fun MatchDetailContent() {
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { MatchHeroPanel(match, series?.scoreA, series?.scoreB, phase) }
+        item {
+            MatchHeroPanel(
+                match = match,
+                scoreA = series?.scoreA ?: left?.gameWins?.takeIf { phase == ScheduleMatchPhase.COMPLETED },
+                scoreB = series?.scoreB ?: right?.gameWins?.takeIf { phase == ScheduleMatchPhase.COMPLETED },
+                phase = phase
+            )
+        }
 
         item {
             if (gameNumbers.isNotEmpty()) {

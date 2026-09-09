@@ -144,11 +144,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
 @Composable
 private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: RiotVodLink?) {
     val embed = link?.embedUrl.orEmpty()
-    val sourceUrl = when {
-        embed.isNotBlank() -> embed
-        !link?.sourceUrl.isNullOrBlank() -> link!!.sourceUrl
-        else -> RiotVodRepository.riotVodPage(match, game)
-    }
+    val sourceUrl = embed
     val youtubeEmbed = embed.isNotBlank()
     Column {
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -159,13 +155,25 @@ private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: 
             Text("APP 内播放 · 全屏可旋转", color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.End)
         }
         Spacer(Modifier.height(5.dp))
-        OfficialWebVideoPlayer(sourceUrl, youtubeEmbed)
-        if (link == null) {
-            Text(
-                "该局 EventDetails 暂无可嵌入参数，当前在 RiftLab 内加载 LoL Esports 官方 VOD 页面。",
-                color = RiftMuted, fontSize = 8.sp, lineHeight = 13.sp,
-                modifier = Modifier.padding(start = 2.dp, top = 5.dp, end = 2.dp)
-            )
+        if (youtubeEmbed) {
+            OfficialWebVideoPlayer(sourceUrl, true)
+        } else {
+            val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+            Column(
+                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                    .background(Color.Black, shape)
+                    .border(1.dp, RiftLine, shape)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("该局官方 VOD 暂无可嵌入视频源", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Riot EventDetails 当前没有返回可直接嵌入的 YouTube 参数。RiftLab 不再把整个 LoL Esports 网页伪装成播放器，也不会改用 Bilibili。",
+                    color = RiftMuted, fontSize = 8.sp, lineHeight = 13.sp, textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
     }
 }
@@ -180,11 +188,12 @@ private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
             setBackgroundColor(AndroidColor.BLACK)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = true
+            settings.mediaPlaybackRequiresUserGesture = false
             settings.allowFileAccess = false
             settings.allowContentAccess = false
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.setSupportMultipleWindows(false)
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36"
             webViewClient = WebViewClient()
             webChromeClient = chromeClient
         }
@@ -211,7 +220,7 @@ private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
                 <iframe src="$safeUrl" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                 </body></html>
             """.trimIndent()
-            webView.loadDataWithBaseURL("https://www.youtube.com/", html, "text/html", "UTF-8", null)
+            webView.loadDataWithBaseURL("https://lolesports.com/", html, "text/html", "UTF-8", null)
         } else {
             webView.loadUrl(url)
         }

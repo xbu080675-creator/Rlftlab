@@ -20,8 +20,10 @@ internal data class RiotVodLink(
     val offsetSeconds: Int = 0
 ) {
     val isYoutube: Boolean
-        get() = provider.equals("youtube", ignoreCase = true) ||
+        get() = provider.contains("youtube", ignoreCase = true) ||
+            provider.equals("yt", ignoreCase = true) ||
             parameter.contains("youtube.com", ignoreCase = true) ||
+            parameter.contains("youtube-nocookie.com", ignoreCase = true) ||
             parameter.contains("youtu.be", ignoreCase = true)
 
     val youtubeVideoId: String
@@ -39,7 +41,7 @@ internal data class RiotVodLink(
 
     val embedUrl: String
         get() = youtubeVideoId.takeIf { it.isNotBlank() }
-            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0" }
+            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0&enablejsapi=1&origin=https%3A%2F%2Flolesports.com" }
             .orEmpty()
 
     val sourceUrl: String
