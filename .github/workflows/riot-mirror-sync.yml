@@ -1,0 +1,47 @@
+name: Riot Persisted Mirror Sync
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/sync_riot_persisted_mirror.py'
+      - '.github/workflows/riot-mirror-sync.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: riftlab-riot-persisted-mirror
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch Riot persisted data
+        run: python3 tools/sync_riot_persisted_mirror.py
+
+      - name: Validate mirror
+        run: |
+          python3 -m json.tool data/lpl/riot_persisted_mirror.json >/dev/null
+          git diff --check
+
+      - name: Commit fresh mirror
+        run: |
+          if git diff --quiet -- data/lpl/riot_persisted_mirror.json; then
+            echo "No mirror changes"
+            exit 0
+          fi
+          git config user.name "riftlab-data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/lpl/riot_persisted_mirror.json
+          git commit -m "data(lpl): refresh Riot persisted mirror"
+          git pull --rebase origin main
+          git push
