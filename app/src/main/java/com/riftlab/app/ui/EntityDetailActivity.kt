@@ -38,13 +38,14 @@ import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.data.StandingsCenterStore
 import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TournamentStandings
 import java.time.Instant
 
-private enum class MatchPane { DETAIL, TIMELINE, VOD }
+private enum class MatchPane { DETAIL, REPLAY }
 
 class EntityDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,6 +120,9 @@ class EntityDetailActivity : ComponentActivity() {
         }
 
         val showingMatch = activeMatch != null
+        val completedMatch = activeMatch?.let {
+            MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED
+        } == true
         val title = when {
             showingMatch -> activeMatch?.teams?.take(2)?.joinToString(" vs ") {
                 it.code.ifBlank { it.name }
@@ -149,13 +153,13 @@ class EntityDetailActivity : ComponentActivity() {
             Spacer(Modifier.height(12.dp))
 
             if (activeMatch != null) {
-                MatchPaneTabs(matchPane) { matchPane = it }
+                MatchPaneTabs(matchPane, completedMatch) { matchPane = it }
                 Spacer(Modifier.height(10.dp))
             }
 
             when {
-                activeMatch != null && matchPane == MatchPane.TIMELINE -> MatchTimelineContent()
-                activeMatch != null && matchPane == MatchPane.VOD -> MatchVodContent()
+                activeMatch != null && matchPane == MatchPane.REPLAY && completedMatch -> MatchReplayContent()
+                activeMatch != null && matchPane == MatchPane.REPLAY -> MatchTimelineContent()
                 activeMatch != null -> MatchDetailContent()
                 activeTeam != null -> TeamDetailContent(
                     team = activeTeam!!,
@@ -174,7 +178,11 @@ class EntityDetailActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MatchPaneTabs(selected: MatchPane, onSelect: (MatchPane) -> Unit) {
+private fun MatchPaneTabs(
+    selected: MatchPane,
+    completed: Boolean,
+    onSelect: (MatchPane) -> Unit
+) {
     val shape = CutCornerShape(topEnd = 10.dp, bottomStart = 8.dp)
     Row(
         Modifier.fillMaxWidth()
@@ -185,8 +193,7 @@ private fun MatchPaneTabs(selected: MatchPane, onSelect: (MatchPane) -> Unit) {
     ) {
         listOf(
             MatchPane.DETAIL to "比赛详情",
-            MatchPane.TIMELINE to "时间轴",
-            MatchPane.VOD to "官方录像"
+            MatchPane.REPLAY to if (completed) "比赛回放" else "时间轴"
         ).forEach { (pane, label) ->
             val active = pane == selected
             Text(
