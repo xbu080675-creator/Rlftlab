@@ -27,7 +27,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Apply compile fixes
+      - name: Apply dev58 compile/build fixes
         run: python3 tools/fix_dev57_research_compile.py
       - name: Compile check
         run: gradle :app:compileDebugKotlin
@@ -37,11 +37,13 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/riftlab/app/data/TournamentResearch.kt app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt
+          git add app/src/main/java/com/riftlab/app/data/TournamentResearch.kt \
+            app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt \
+            .github/workflows/android-build.yml DEV_CHANGELOG.txt
           if git diff --cached --quiet; then
-            echo "No compile-fix changes needed"
+            echo "No dev58 fix changes needed"
             exit 0
           fi
-          git commit -m "fix: compile annual tournament research UI"
+          git commit -m "fix: finalize dev.58 compile and build wiring"
           git pull --rebase origin main
           git push origin HEAD:main
