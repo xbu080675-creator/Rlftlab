@@ -138,6 +138,7 @@ data class EsportsStaffRef(
     val role: String,
     val source: String,
     val realName: String = "",
+    val displayRole: String = "",
     val socialLinks: List<EsportsSocialLink> = emptyList()
 )
 

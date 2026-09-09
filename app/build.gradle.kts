@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 26
-        versionName = "1.0.0-dev.26"
+        versionCode = 27
+        versionName = "1.0.0-dev.27"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.26: remote-first dynamic team directory with scheduled source synchronization.
+// dev.27: operator-focused organisation data, historical management honor archive, and verified multi-role titles.

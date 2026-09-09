@@ -21,7 +21,7 @@ internal data class TeamDetailState(
     val staffStatus: String = "教练组尚未同步",
     val profileStatus: String = "管理层 / 社交资料尚未同步",
     val organizationSummary: String = "",
-    val legalSummary: String = "",
+    val history: List<TeamHistoryRef> = emptyList(),
     val profileSourceMode: String = "",
     val errorMessage: String? = null
 )
@@ -36,6 +36,7 @@ internal object TeamDetailRepository {
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
     private val imageCache = linkedMapOf<String, String>()
     private val starterCache = linkedMapOf<String, Set<String>>()
+    private val historyCache = linkedMapOf<String, List<TeamHistoryRef>>()
     private var loadJob: Job? = null
     private var profileRefreshJob: Job? = null
     private var lastMatches: List<ScheduledEsportsMatch> = emptyList()
@@ -80,6 +81,7 @@ internal object TeamDetailRepository {
                 lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
                 staffStatus = if (cached.staff.isNotEmpty()) "教练组 · 已缓存，后台检查动态目录" else "教练组尚未同步",
                 profileStatus = "管理层 · 已缓存，后台检查 RiftLab Dynamic Data",
+                history = historyCache[key].orEmpty(),
                 profileSourceMode = "cache"
             )
             refreshDynamicOnly(team, cached, key, cachedStarters, cachedImage)
@@ -182,6 +184,7 @@ internal object TeamDetailRepository {
             )
             if (details != null) cache[key] = details
             if (starters.size >= 5) starterCache[key] = starters
+            historyCache[key] = dynamicSupplement.history
             if (image.isNotBlank()) {
                 imageCache[key] = image
                 EsportsAssetCache.putTeam(image, *aliases)
@@ -214,7 +217,7 @@ internal object TeamDetailRepository {
                 staffStatus = if (staff.isNotEmpty() && staffSupplement.staff.isEmpty()) "教练组 · 本地缓存" else staffSupplement.status,
                 profileStatus = profileSupplement.status,
                 organizationSummary = dynamicSupplement.organizationSummary,
-                legalSummary = dynamicSupplement.legalSummary,
+                history = dynamicSupplement.history,
                 profileSourceMode = dynamicSupplement.sourceMode,
                 errorMessage = detailResult.exceptionOrNull()?.message
             )
@@ -237,6 +240,7 @@ internal object TeamDetailRepository {
                 socialLinks = dynamic.profile.teamLinks.ifEmpty { cached.socialLinks }
             )
             cache[key] = updated
+            historyCache[key] = dynamic.history
 
             val current = _state.value
             val currentTeam = current.team ?: return@launch
@@ -255,7 +259,7 @@ internal object TeamDetailRepository {
                 staffStatus = dynamic.staff.status,
                 profileStatus = dynamic.profile.status,
                 organizationSummary = dynamic.organizationSummary,
-                legalSummary = dynamic.legalSummary,
+                history = dynamic.history,
                 profileSourceMode = dynamic.sourceMode
             )
         }

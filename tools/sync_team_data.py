@@ -53,7 +53,10 @@ LEAGUEPEDIA_STAFF_ROLES = {
 }
 DEPARTURE_WORDS = ("离队", "离任", "转会至", "不再担任", "结束任职", "合同到期离开")
 JOIN_WORDS = ("加入", "加盟", "担任", "出任", "正式成为", "大名单", "新赛段名单", "新赛季名单")
-IMPORTANT_WORDS = ("人员变动公告", "大名单", "离队", "加入", "加盟", "转会", "主教练", "经理", "领队", "监督", "董事长", "重组")
+IMPORTANT_WORDS = (
+    "人员变动公告", "大名单", "离队", "加入", "加盟", "转会", "主教练", "经理", "领队",
+    "监督", "董事长", "重组", "收购", "运营主体", "运营方", "旗下", "更名"
+)
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -97,7 +100,7 @@ def event_id(code: str, link: str, title: str) -> str:
 
 def official_search(code: str, cfg: dict[str, Any]) -> list[dict[str, str]]:
     official_name = cfg.get("officialName", code)
-    query = f'site:weibo.com "{official_name}" ("人员变动公告" OR "大名单" OR "离队" OR "加入" OR "转会" OR "重组")'
+    query = f'site:weibo.com "{official_name}" ("人员变动公告" OR "大名单" OR "离队" OR "加入" OR "转会" OR "重组" OR "收购" OR "运营主体")'
     url = BING_RSS.format(urllib.parse.quote_plus(query))
     xml_text = fetch_text(url)
     root = ET.fromstring(xml_text)
@@ -196,6 +199,63 @@ def contains_identity(text: str, row: dict[str, Any]) -> bool:
     return bool(chinese and chinese in text)
 
 
+def _operator_name(value: str) -> str:
+    value = clean_html(value).strip(" ，。；;：:（）()[]【】")
+    value = re.sub(r"(?:电子竞技俱乐部|电竞俱乐部)$", "", value).strip()
+    return value[:40]
+
+
+def extract_operators(text: str) -> list[str]:
+    found: list[str] = []
+    patterns = [
+        re.compile(r"运营主体(?:变更为|为|[:：])\s*(?P<op>[^，。；;]{2,30})"),
+        re.compile(r"运营方(?:变更为|为|[:：])\s*(?P<op>[^，。；;]{2,30})"),
+        re.compile(r"由(?P<op>[\u4e00-\u9fffA-Za-z0-9·]{2,24})(?:负责)?运营"),
+        re.compile(r"(?:正式)?被(?P<op>[\u4e00-\u9fffA-Za-z0-9·]{2,24})(?:完成)?收购"),
+        re.compile(r"成为(?P<op>[\u4e00-\u9fffA-Za-z0-9·]{2,24})旗下"),
+    ]
+    for pattern in patterns:
+        for match in pattern.finditer(text):
+            name = _operator_name(match.group("op"))
+            if len(name) >= 2:
+                found.append(name)
+
+    reorg = re.search(
+        r"与(?P<a>[\u4e00-\u9fffA-Za-z0-9·]{2,20}?)(?:及关联方)?、(?P<b>[\u4e00-\u9fffA-Za-z0-9·]{2,20}?)(?:就|共同).*?重组",
+        text,
+    )
+    if reorg:
+        for key in ("a", "b"):
+            name = _operator_name(reorg.group(key))
+            if len(name) >= 2:
+                found.append(name)
+    return list(dict.fromkeys(found))
+
+
+def archive_management(team: dict[str, Any], row: dict[str, Any], item: dict[str, str]) -> None:
+    history = team.setdefault("history", [])
+    name = str(row.get("name", "")).strip()
+    role = str(row.get("role", "")).strip()
+    if not name or not role:
+        return
+    duplicate = next((old for old in history if str(old.get("name", "")).lower() == name.lower() and str(old.get("role", old.get("formerRole", ""))).upper() == role.upper()), None)
+    if duplicate:
+        duplicate["current"] = False
+        duplicate.setdefault("honoraryTitle", "RiftLab 荣誉成员")
+        duplicate["source"] = item.get("link", "")
+        return
+    history.append({
+        "name": name,
+        "realName": str(row.get("realName", "")),
+        "role": role,
+        "displayRole": str(row.get("displayRole", "")),
+        "current": False,
+        "honoraryTitle": "RiftLab 荣誉成员",
+        "source": item.get("link", ""),
+        "note": "离任后转入历史荣誉档案",
+    })
+
+
 def apply_official_event(team: dict[str, Any], item: dict[str, str]) -> list[str]:
     text = clean_html(f"{item.get('title','')} {item.get('description','')}")
     changes: list[str] = []
@@ -207,10 +267,15 @@ def apply_official_event(team: dict[str, Any], item: dict[str, str]) -> list[str
             old_rows = list(team.get(bucket, []))
             kept = [row for row in old_rows if not contains_identity(text, row)]
             if len(kept) != len(old_rows):
-                removed = [row.get("name", "") for row in old_rows if row not in kept]
+                removed_rows = [row for row in old_rows if row not in kept]
                 team[bucket] = kept
-                for name in removed:
-                    changes.append(f"remove {bucket}:{name}")
+                for row in removed_rows:
+                    name = row.get("name", "")
+                    if bucket == "management":
+                        archive_management(team, row, item)
+                        changes.append(f"archive management:{name}")
+                    else:
+                        changes.append(f"remove {bucket}:{name}")
 
     extracted = extract_role_people(text)
     if joining and extracted:
@@ -220,6 +285,8 @@ def apply_official_event(team: dict[str, Any], item: dict[str, str]) -> list[str
             same_name = next((row for row in rows if str(row.get("name", "")).lower() == name.lower()), None)
             if same_name:
                 old_role = same_name.get("role", "")
+                if old_role == "ESPORTS_DIRECTOR_AND_MANAGER" and role in {"MANAGER", "ESPORTS_DIRECTOR"}:
+                    role = old_role
                 same_name["role"] = role
                 if real and not same_name.get("realName"):
                     same_name["realName"] = real
@@ -235,6 +302,13 @@ def apply_official_event(team: dict[str, Any], item: dict[str, str]) -> list[str
                 })
                 team[bucket] = rows
                 changes.append(f"add {bucket}:{name}/{role}")
+
+    operator_names = extract_operators(text)
+    if operator_names:
+        current_names = [str(row.get("name", "")).strip() for row in team.get("operators", []) if row.get("name")]
+        if current_names != operator_names:
+            team["operators"] = [{"name": name, "role": "OPERATOR", "source": "官方公告 · auto-sync"} for name in operator_names]
+            changes.append("operators:" + " × ".join(operator_names))
 
     return changes
 
@@ -274,6 +348,12 @@ def validate_profiles(profiles: dict[str, Any]) -> None:
                 if key in seen:
                     raise ValueError(f"{code}.{bucket} duplicate {name}/{role}")
                 seen.add(key)
+        history = team.get("history", [])
+        if not isinstance(history, list):
+            raise ValueError(f"{code}.history must be array")
+        for row in history:
+            if not str(row.get("name", "")).strip() or not str(row.get("role", row.get("formerRole", ""))).strip():
+                raise ValueError(f"{code}.history contains empty name/role")
 
 
 def main() -> int:

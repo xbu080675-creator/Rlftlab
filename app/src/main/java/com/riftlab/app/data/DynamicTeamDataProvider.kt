@@ -6,11 +6,20 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.atomic.AtomicReference
 
+internal data class TeamHistoryRef(
+    val name: String,
+    val formerRole: String,
+    val realName: String = "",
+    val honoraryTitle: String = "RiftLab 荣誉成员",
+    val source: String = "",
+    val note: String = ""
+)
+
 internal data class TeamDynamicSupplement(
     val profile: TeamProfileSupplement,
     val staff: TeamStaffSupplement,
     val organizationSummary: String = "",
-    val legalSummary: String = "",
+    val history: List<TeamHistoryRef> = emptyList(),
     val verifiedAt: String = "",
     val sourceMode: String = "remote"
 )
@@ -68,23 +77,13 @@ internal class DynamicTeamDataProvider(
         val management = parseStaff(node.optJSONArray("management"), sourceLabel)
         val staff = parseStaff(node.optJSONArray("staff"), sourceLabel)
         val operators = parseOperators(node.optJSONArray("operators"))
-        val corporate = node.optJSONObject("corporate")
-        val legalEntity = corporate?.optString("legalEntity").orEmpty()
-        val legalRepresentative = corporate?.optString("legalRepresentative").orEmpty()
-        val corporateNote = corporate?.optString("note").orEmpty()
+        val history = parseHistory(node.optJSONArray("history"), sourceLabel)
 
         val statusBits = mutableListOf<String>()
         statusBits += sourceLabel
         if (datasetUpdatedAt.isNotBlank()) statusBits += "dataset $datasetUpdatedAt"
         if (sourceCount > 0) statusBits += "来源 $sourceCount"
         if (operators.isNotBlank()) statusBits += "运营：$operators"
-
-        val legalSummary = when {
-            legalEntity.isNotBlank() && legalRepresentative.isNotBlank() ->
-                "$legalEntity · 法定代表人：$legalRepresentative"
-            corporateNote.isNotBlank() -> corporateNote
-            else -> ""
-        }
 
         return TeamDynamicSupplement(
             profile = TeamProfileSupplement(
@@ -98,7 +97,7 @@ internal class DynamicTeamDataProvider(
                 status = if (staff.isEmpty()) "$sourceLabel · 暂无远程教练组记录" else "$sourceLabel · 教练组 ${staff.size} 人"
             ),
             organizationSummary = operators,
-            legalSummary = legalSummary,
+            history = history,
             verifiedAt = verifiedAt,
             sourceMode = "remote"
         )
@@ -155,7 +154,31 @@ internal class DynamicTeamDataProvider(
                         name = name,
                         role = role,
                         source = item.optString("source").ifBlank { source },
-                        realName = item.optString("realName")
+                        realName = item.optString("realName"),
+                        displayRole = item.optString("displayRole")
+                    )
+                )
+            }
+        }
+    }
+
+    private fun parseHistory(rows: JSONArray?, source: String): List<TeamHistoryRef> {
+        if (rows == null) return emptyList()
+        return buildList {
+            for (index in 0 until rows.length()) {
+                val item = rows.optJSONObject(index) ?: continue
+                if (item.optBoolean("current", false)) continue
+                val name = item.optString("name").trim()
+                val formerRole = item.optString("formerRole").ifBlank { item.optString("role") }.trim()
+                if (name.isBlank() || formerRole.isBlank()) continue
+                add(
+                    TeamHistoryRef(
+                        name = name,
+                        formerRole = formerRole,
+                        realName = item.optString("realName"),
+                        honoraryTitle = item.optString("honoraryTitle").ifBlank { "RiftLab 荣誉成员" },
+                        source = item.optString("source").ifBlank { source },
+                        note = item.optString("note")
                     )
                 )
             }

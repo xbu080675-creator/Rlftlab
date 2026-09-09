@@ -1,23 +1,47 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-team-directory",
-  "updatedAt": "2026-09-09T02:05:00Z",
+  "updatedAt": "2026-09-09T02:22:00Z",
   "refreshPolicy": {
     "appTtlMinutes": 30,
     "sourceMonitorHours": 3,
-    "corporateCheckHours": 24
+    "operatorMonitorHours": 3
   },
   "teams": {
     "AL": {
       "verifiedAt": "2026-09-09",
       "management": [],
       "staff": [
-        {"name":"MingZhe","role":"HEAD_COACH","realName":"Zhang Yu"},
-        {"name":"BigWei","role":"HEAD_COACH","realName":"Fu Chien-wei"},
-        {"name":"Pewpew","role":"COACH","realName":"Jin Can"},
-        {"name":"Teacherma","role":"ASSISTANT_COACH","realName":"Jiang Chen"},
-        {"name":"Despa1r","role":"ASSISTANT_COACH","realName":"Zhou Lipeng"},
-        {"name":"May","role":"ANALYST","realName":"Bo Renjie"}
+        {
+          "name": "MingZhe",
+          "role": "HEAD_COACH",
+          "realName": "Zhang Yu"
+        },
+        {
+          "name": "BigWei",
+          "role": "HEAD_COACH",
+          "realName": "Fu Chien-wei"
+        },
+        {
+          "name": "Pewpew",
+          "role": "COACH",
+          "realName": "Jin Can"
+        },
+        {
+          "name": "Teacherma",
+          "role": "ASSISTANT_COACH",
+          "realName": "Jiang Chen"
+        },
+        {
+          "name": "Despa1r",
+          "role": "ASSISTANT_COACH",
+          "realName": "Zhou Lipeng"
+        },
+        {
+          "name": "May",
+          "role": "ANALYST",
+          "realName": "Bo Renjie"
+        }
       ],
       "operators": [],
       "sources": []
@@ -25,66 +49,220 @@
     "BLG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"You","role":"MANAGER","realName":"You Chang-Xin (尤长鑫)"},
-        {"name":"YUZZ","role":"LEADER","realName":"Zhang Xin-Yu (张新宇)"}
+        {
+          "name": "袁玺",
+          "role": "ESPORTS_DIRECTOR_AND_MANAGER",
+          "displayRole": "赛训总监 / 经理",
+          "realName": "Yuan Xi (袁玺)",
+          "source": "人民电竞 2024-12-06；2026-08-09 公开身份持续称 BLG 经理"
+        },
+        {
+          "name": "YUZZ",
+          "role": "LEADER",
+          "realName": "Zhang Xin-Yu (张新宇)"
+        }
       ],
       "staff": [
-        {"name":"Daeny","role":"HEAD_COACH","realName":"Yang Dae-in"},
-        {"name":"Ben","role":"COACH","realName":"Nam Dong-hyun"},
-        {"name":"Chieh","role":"ASSISTANT_COACH","realName":"Li Chieh"},
-        {"name":"Zyb","role":"ANALYST","realName":"Zhuang Yibin"}
+        {
+          "name": "Daeny",
+          "role": "HEAD_COACH",
+          "realName": "Yang Dae-in"
+        },
+        {
+          "name": "Ben",
+          "role": "COACH",
+          "realName": "Nam Dong-hyun"
+        },
+        {
+          "name": "Chieh",
+          "role": "ASSISTANT_COACH",
+          "realName": "Li Chieh"
+        },
+        {
+          "name": "Zyb",
+          "role": "ANALYST",
+          "realName": "Zhuang Yibin"
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"BLG电子竞技俱乐部官方微博","url":"https://weibo.com/u/5926660141"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "BLG电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/u/5926660141"
+        },
+        {
+          "type": "MEDIA_VERIFIED",
+          "label": "人民电竞：独家对话BLG赛训总监袁玺",
+          "url": "https://m.thepaper.cn/baijiahao_29570838"
+        },
+        {
+          "type": "MEDIA_VERIFIED",
+          "label": "2026-08-09 BLG经理袁玺公开说明",
+          "url": "https://harmony-h5.zhibo8.cc/news/web/game/2026-08-09/6a78267484774native.htm"
+        }
+      ]
     },
     "TES": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Hao","role":"CEO","realName":"Guo Hao (郭皓)"},
-        {"name":"wly","role":"LEADER","realName":"Wang Liang-Yi (王良毅)"},
-        {"name":"Lazi","role":"MANAGER","realName":"Deng Bao-Xing (邓宝兴)"}
+        {
+          "name": "Hao",
+          "role": "CEO",
+          "realName": "Guo Hao (郭皓)"
+        },
+        {
+          "name": "wly",
+          "role": "LEADER",
+          "realName": "Wang Liang-Yi (王良毅)"
+        },
+        {
+          "name": "Lazi",
+          "role": "MANAGER",
+          "realName": "Deng Bao-Xing (邓宝兴)"
+        }
       ],
       "staff": [
-        {"name":"Poppy","role":"HEAD_COACH","realName":"Chang Po-hao"},
-        {"name":"River","role":"COACH","realName":"Wang Yang"},
-        {"name":"Shuijing","role":"COACH","realName":""},
-        {"name":"Bobo","role":"ASSISTANT_COACH","realName":""},
-        {"name":"Leo","role":"ASSISTANT_COACH","realName":""},
-        {"name":"BZ","role":"ANALYST","realName":"Zhao Yetong"}
+        {
+          "name": "Poppy",
+          "role": "HEAD_COACH",
+          "realName": "Chang Po-hao"
+        },
+        {
+          "name": "River",
+          "role": "COACH",
+          "realName": "Wang Yang"
+        },
+        {
+          "name": "Shuijing",
+          "role": "COACH",
+          "realName": ""
+        },
+        {
+          "name": "Bobo",
+          "role": "ASSISTANT_COACH",
+          "realName": ""
+        },
+        {
+          "name": "Leo",
+          "role": "ASSISTANT_COACH",
+          "realName": ""
+        },
+        {
+          "name": "BZ",
+          "role": "ANALYST",
+          "realName": "Zhao Yetong"
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"滔搏电子竞技俱乐部官方微博","url":"https://weibo.com/2144gaming"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "滔搏电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/2144gaming"
+        }
+      ]
     },
     "JDG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Choice","role":"CEO","realName":"Shao Xiao-Hang (邵晓航)"},
-        {"name":"LLH","role":"ESPORTS_DIRECTOR","realName":"Lan Bai-Qing (蓝柏清)"},
-        {"name":"Fei","role":"GENERAL_MANAGER","realName":"Pan Fei (潘飞)"},
-        {"name":"Seek","role":"LEADER","realName":"Cui Hu (崔虎)"},
-        {"name":"Vus5o","role":"MANAGER","realName":"Wu Shuo (吴硕)"}
+        {
+          "name": "Choice",
+          "role": "CEO",
+          "realName": "Shao Xiao-Hang (邵晓航)"
+        },
+        {
+          "name": "LLH",
+          "role": "ESPORTS_DIRECTOR",
+          "realName": "Lan Bai-Qing (蓝柏清)"
+        },
+        {
+          "name": "Fei",
+          "role": "GENERAL_MANAGER",
+          "realName": "Pan Fei (潘飞)"
+        },
+        {
+          "name": "Seek",
+          "role": "LEADER",
+          "realName": "Cui Hu (崔虎)"
+        },
+        {
+          "name": "Vus5o",
+          "role": "MANAGER",
+          "realName": "Wu Shuo (吴硕)"
+        }
       ],
       "staff": [
-        {"name":"Tabe","role":"HEAD_COACH","realName":"Wong Pak Kan"},
-        {"name":"Xiasu","role":"COACH","realName":"Chen Long"},
-        {"name":"Zoom","role":"COACH","realName":"Zhang Xingran"},
-        {"name":"Xiaobai","role":"COACH","realName":"Yang Zhonghe"},
-        {"name":"Huge","role":"ASSISTANT_COACH","realName":"Cui Hu"},
-        {"name":"Karma","role":"ANALYST","realName":"Huang Yihong"},
-        {"name":"Zizheng","role":"ANALYST","realName":"Jia Zizheng"}
+        {
+          "name": "Tabe",
+          "role": "HEAD_COACH",
+          "realName": "Wong Pak Kan"
+        },
+        {
+          "name": "Xiasu",
+          "role": "COACH",
+          "realName": "Chen Long"
+        },
+        {
+          "name": "Zoom",
+          "role": "COACH",
+          "realName": "Zhang Xingran"
+        },
+        {
+          "name": "Xiaobai",
+          "role": "COACH",
+          "realName": "Yang Zhonghe"
+        },
+        {
+          "name": "Huge",
+          "role": "ASSISTANT_COACH",
+          "realName": "Cui Hu"
+        },
+        {
+          "name": "Karma",
+          "role": "ANALYST",
+          "realName": "Huang Yihong"
+        },
+        {
+          "name": "Zizheng",
+          "role": "ANALYST",
+          "realName": "Jia Zizheng"
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"JDG京东电子竞技俱乐部官方微博","url":"https://weibo.com/jdgaming"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "JDG京东电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/jdgaming"
+        }
+      ]
     },
     "LGD": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Bigbiao","role":"VICE_PRESIDENT","realName":"Hu Biao (胡彪)"},
-        {"name":"Justin Kenna","role":"CO_OWNER","realName":"Justin Kenna"}
+        {
+          "name": "Bigbiao",
+          "role": "VICE_PRESIDENT",
+          "realName": "Hu Biao (胡彪)"
+        },
+        {
+          "name": "Justin Kenna",
+          "role": "CO_OWNER",
+          "realName": "Justin Kenna"
+        }
       ],
       "staff": [
-        {"name":"1874","role":"HEAD_COACH","realName":"Chen Lixin"},
-        {"name":"Chelizi","role":"ASSISTANT_COACH","realName":"Xia Hanxi"}
+        {
+          "name": "1874",
+          "role": "HEAD_COACH",
+          "realName": "Chen Lixin"
+        },
+        {
+          "name": "Chelizi",
+          "role": "ASSISTANT_COACH",
+          "realName": "Xia Hanxi"
+        }
       ],
       "operators": [],
       "sources": []
@@ -92,28 +270,78 @@
     "EDG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Ed Zhu","role":"FOUNDER","realName":"Zhu Yi-Hang (朱一航)"},
-        {"name":"Aaron","role":"MANAGING_DIRECTOR","realName":"Ji Xing (姬星)"},
-        {"name":"Jasper","role":"DEPUTY_MANAGER","realName":"Wang Yi-Fan (王一帆)"},
-        {"name":"Bruce","role":"LEADER","realName":"You Sen-Yu (尤森煜)"}
+        {
+          "name": "Ed Zhu",
+          "role": "FOUNDER",
+          "realName": "Zhu Yi-Hang (朱一航)"
+        },
+        {
+          "name": "Aaron",
+          "role": "MANAGING_DIRECTOR",
+          "realName": "Ji Xing (姬星)"
+        },
+        {
+          "name": "Jasper",
+          "role": "DEPUTY_MANAGER",
+          "realName": "Wang Yi-Fan (王一帆)"
+        },
+        {
+          "name": "Bruce",
+          "role": "LEADER",
+          "realName": "You Sen-Yu (尤森煜)"
+        }
       ],
       "staff": [
-        {"name":"Mni","role":"HEAD_COACH","realName":"Peng Fang"},
-        {"name":"Liet","role":"ANALYST","realName":"Liu Zhengyang"}
+        {
+          "name": "Mni",
+          "role": "HEAD_COACH",
+          "realName": "Peng Fang"
+        },
+        {
+          "name": "Liet",
+          "role": "ANALYST",
+          "realName": "Liu Zhengyang"
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"EDG电子竞技俱乐部官方微博","url":"https://weibo.com/edgteam"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "EDG电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/edgteam"
+        }
+      ]
     },
     "TT": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Liu Yi-Fei","role":"CEO","realName":"Liu Yi-Fei (刘一非)"},
-        {"name":"Ben","role":"LEADER","realName":"Lu Jiang-Cheng (吕江城)"},
-        {"name":"Vlone","role":"MANAGER","realName":"Xiao Chu-Yu (肖楚愚)"}
+        {
+          "name": "Liu Yi-Fei",
+          "role": "CEO",
+          "realName": "Liu Yi-Fei (刘一非)"
+        },
+        {
+          "name": "Ben",
+          "role": "LEADER",
+          "realName": "Lu Jiang-Cheng (吕江城)"
+        },
+        {
+          "name": "Vlone",
+          "role": "MANAGER",
+          "realName": "Xiao Chu-Yu (肖楚愚)"
+        }
       ],
       "staff": [
-        {"name":"NoName","role":"HEAD_COACH","realName":"Zhou Qilin"},
-        {"name":"Benny","role":"ASSISTANT_COACH","realName":"Lien Hsiu-chi"}
+        {
+          "name": "NoName",
+          "role": "HEAD_COACH",
+          "realName": "Zhou Qilin"
+        },
+        {
+          "name": "Benny",
+          "role": "ASSISTANT_COACH",
+          "realName": "Lien Hsiu-chi"
+        }
       ],
       "operators": [],
       "sources": []
@@ -121,44 +349,112 @@
     "IG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"An Jie","role":"CHAIRMAN","realName":"安杰"},
-        {"name":"facewind","role":"MANAGER","realName":"Zheng Hao-Nan (郑浩楠)"},
-        {"name":"xiaochen","role":"LEADER","realName":"Wang Min-Chen (王敏晨)"},
-        {"name":"Kezman","role":"SUPERVISOR","realName":"Son Dae-young (손대영)"}
+        {
+          "name": "An Jie",
+          "role": "CHAIRMAN",
+          "realName": "安杰"
+        },
+        {
+          "name": "facewind",
+          "role": "MANAGER",
+          "realName": "Zheng Hao-Nan (郑浩楠)"
+        },
+        {
+          "name": "xiaochen",
+          "role": "LEADER",
+          "realName": "Wang Min-Chen (王敏晨)"
+        },
+        {
+          "name": "Kezman",
+          "role": "SUPERVISOR",
+          "realName": "Son Dae-young (손대영)"
+        }
       ],
       "staff": [
-        {"name":"Helper","role":"HEAD_COACH","realName":"Kwon Young-jae"},
-        {"name":"Fury","role":"COACH","realName":"Lee Jin-yong"},
-        {"name":"Kezman","role":"SUPERVISOR","realName":"Son Dae-young"}
+        {
+          "name": "Helper",
+          "role": "HEAD_COACH",
+          "realName": "Kwon Young-jae"
+        },
+        {
+          "name": "Fury",
+          "role": "COACH",
+          "realName": "Lee Jin-yong"
+        },
+        {
+          "name": "Kezman",
+          "role": "SUPERVISOR",
+          "realName": "Son Dae-young"
+        }
       ],
       "operators": [
-        {"name":"氧望体育","role":"OPERATOR"},
-        {"name":"虎牙直播","role":"STRATEGIC_PARTNER"}
+        {
+          "name": "氧望体育",
+          "role": "OPERATOR"
+        },
+        {
+          "name": "虎牙直播",
+          "role": "STRATEGIC_PARTNER"
+        }
       ],
-      "corporate": {
-        "legalEntity": "",
-        "legalRepresentative": "",
-        "note": "法人信息必须绑定具体公司主体后再展示；不从历史创始人或俱乐部负责人推断。"
-      },
       "history": [
-        {"name":"WXZ","realName":"Wang Si-Cong (王思聪)","role":"FOUNDER","current":false,"note":"历史创始人关系；不作为当前负责人/法人。"}
+        {
+          "name": "WXZ",
+          "realName": "Wang Si-Cong (王思聪)",
+          "role": "FOUNDER",
+          "current": false,
+          "note": "历史创始人关系；不作为当前负责人/法人。",
+          "honoraryTitle": "创始人 · RiftLab 荣誉成员"
+        }
       ],
       "sources": [
-        {"type":"TEAM_OFFICIAL","label":"iG电子竞技俱乐部官方微博","url":"https://weibo.com/igaming"},
-        {"type":"TEAM_OFFICIAL","label":"iG 2024-11-30 重组公告","url":"https://weibo.com/2099708877/P2Fz7aqpc"}
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "iG电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/igaming"
+        },
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "iG 2024-11-30 重组公告",
+          "url": "https://weibo.com/2099708877/P2Fz7aqpc"
+        }
       ]
     },
     "LNG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Li Qi-Lin","role":"OWNER","realName":"Li Qi-Lin (李麒麟)"},
-        {"name":"Shuang Quan","role":"FOUNDER_AND_CEO","realName":"Shuang Quan (爽全)"},
-        {"name":"kaka","role":"LEADER","realName":"Lin Tao (林涛)"},
-        {"name":"Jasper","role":"MANAGER","realName":"Wan Lei (万磊)"}
+        {
+          "name": "Li Qi-Lin",
+          "role": "OWNER",
+          "realName": "Li Qi-Lin (李麒麟)"
+        },
+        {
+          "name": "Shuang Quan",
+          "role": "FOUNDER_AND_CEO",
+          "realName": "Shuang Quan (爽全)"
+        },
+        {
+          "name": "kaka",
+          "role": "LEADER",
+          "realName": "Lin Tao (林涛)"
+        },
+        {
+          "name": "Jasper",
+          "role": "MANAGER",
+          "realName": "Wan Lei (万磊)"
+        }
       ],
       "staff": [
-        {"name":"YiL","role":"HEAD_COACH","realName":"Wang Liangyi"},
-        {"name":"333","role":"ANALYST","realName":"Huang Yihong"}
+        {
+          "name": "YiL",
+          "role": "HEAD_COACH",
+          "realName": "Wang Liangyi"
+        },
+        {
+          "name": "333",
+          "role": "ANALYST",
+          "realName": "Huang Yihong"
+        }
       ],
       "operators": [],
       "sources": []
@@ -166,45 +462,127 @@
     "NIP": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Aning","role":"MANAGER","realName":"Chen Ai-Ning (陈爱宁)"}
+        {
+          "name": "Aning",
+          "role": "MANAGER",
+          "realName": "Chen Ai-Ning (陈爱宁)"
+        }
       ],
       "staff": [
-        {"name":"Maizijian","role":"HEAD_COACH","realName":"Zeng Xinyi"},
-        {"name":"Cluo","role":"ANALYST","realName":"Shin Min-sung"}
+        {
+          "name": "Maizijian",
+          "role": "HEAD_COACH",
+          "realName": "Zeng Xinyi"
+        },
+        {
+          "name": "Cluo",
+          "role": "ANALYST",
+          "realName": "Shin Min-sung"
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"NIP电子竞技俱乐部官方微博","url":"https://weibo.com/u/6420953344"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "NIP电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/u/6420953344"
+        }
+      ]
     },
     "WBG": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"KIM","role":"SUPERVISOR","realName":"Kim Jeong-soo (김정수)"}
+        {
+          "name": "KIM",
+          "role": "SUPERVISOR",
+          "realName": "Kim Jeong-soo (김정수)"
+        }
       ],
       "staff": [
-        {"name":"Shine","role":"HEAD_COACH","realName":"Shin Dong-wook"},
-        {"name":"Clearlove","role":"HEAD_COACH","realName":"Ming Kai"},
-        {"name":"Tselin","role":"COACH","realName":"Zhao Zelin"},
-        {"name":"Medusa","role":"ANALYST","realName":""}
+        {
+          "name": "Shine",
+          "role": "HEAD_COACH",
+          "realName": "Shin Dong-wook"
+        },
+        {
+          "name": "Clearlove",
+          "role": "HEAD_COACH",
+          "realName": "Ming Kai"
+        },
+        {
+          "name": "Tselin",
+          "role": "COACH",
+          "realName": "Zhao Zelin"
+        },
+        {
+          "name": "Medusa",
+          "role": "ANALYST",
+          "realName": ""
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"WBG英雄联盟分部官方微博","url":"https://weibo.com/tbgclub"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "WBG英雄联盟分部官方微博",
+          "url": "https://weibo.com/tbgclub"
+        }
+      ]
     },
     "WE": {
       "verifiedAt": "2026-09-09",
       "management": [
-        {"name":"Smallorc","role":"CEO","realName":"Zhang Wei (张伟)"},
-        {"name":"Sky","role":"GENERAL_MANAGER","realName":"Li Xiao-Fen (李晓峰)"},
-        {"name":"Bigsam","role":"LEADER","realName":"Shi Xiao-Xi (石晓曦)"},
-        {"name":"milk","role":"MANAGER","realName":"Qiao Si-Yu (乔思昱)"}
+        {
+          "name": "Smallorc",
+          "role": "CEO",
+          "realName": "Zhang Wei (张伟)"
+        },
+        {
+          "name": "Sky",
+          "role": "GENERAL_MANAGER",
+          "realName": "Li Xiao-Fen (李晓峰)"
+        },
+        {
+          "name": "Bigsam",
+          "role": "LEADER",
+          "realName": "Shi Xiao-Xi (石晓曦)"
+        },
+        {
+          "name": "milk",
+          "role": "MANAGER",
+          "realName": "Qiao Si-Yu (乔思昱)"
+        }
       ],
       "staff": [
-        {"name":"Condi","role":"ASSISTANT_COACH","realName":"Xiang Renjie"},
-        {"name":"JinJin","role":"ASSISTANT_COACH","realName":"Jin Guanghua"},
-        {"name":"694","role":"ASSISTANT_COACH","realName":"He Xin"},
-        {"name":"zhaozhao","role":"ANALYST","realName":""}
+        {
+          "name": "Condi",
+          "role": "ASSISTANT_COACH",
+          "realName": "Xiang Renjie"
+        },
+        {
+          "name": "JinJin",
+          "role": "ASSISTANT_COACH",
+          "realName": "Jin Guanghua"
+        },
+        {
+          "name": "694",
+          "role": "ASSISTANT_COACH",
+          "realName": "He Xin"
+        },
+        {
+          "name": "zhaozhao",
+          "role": "ANALYST",
+          "realName": ""
+        }
       ],
       "operators": [],
-      "sources": [{"type":"TEAM_OFFICIAL","label":"WE电子竞技俱乐部官方微博","url":"https://weibo.com/teamwe"}]
+      "sources": [
+        {
+          "type": "TEAM_OFFICIAL",
+          "label": "WE电子竞技俱乐部官方微博",
+          "url": "https://weibo.com/teamwe"
+        }
+      ]
     }
   }
 }

@@ -42,6 +42,7 @@ import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.data.TeamDetailRepository
+import com.riftlab.app.data.TeamHistoryRef
 
 private val TEAM_ROLES = listOf("TOP", "JUG", "MID", "BOT", "SUP")
 
@@ -114,11 +115,6 @@ internal fun TeamDetailContent(
             item { TeamStatus("运营主体：${state.organizationSummary}") }
         }
 
-        if (state.legalSummary.isNotBlank()) {
-            item { TeamSectionTitle("CORPORATE / 工商信息") }
-            item { TeamStatus(state.legalSummary) }
-        }
-
         if (state.loading && roster.isEmpty()) {
             item { TeamSectionTitle("ROSTER / 战队名单") }
             item { TeamStatus("正在同步 Riot Teams 完整阵容…") }
@@ -175,6 +171,14 @@ internal fun TeamDetailContent(
                 TeamStaffRow(staff, management = true)
             }
             item { TeamSourceNote(state.profileStatus) }
+        }
+
+        if (state.history.isNotEmpty()) {
+            item { TeamSectionTitle("RIFT LEGACY / 历史荣誉") }
+            items(state.history, key = { "legacy-${it.name}-${it.formerRole}" }) { legacy ->
+                TeamHistoryRow(legacy)
+            }
+            item { TeamSourceNote("RiftLab 历史档案称号，不代表俱乐部官方现任职务或官方授予头衔。") }
         }
 
         item { TeamSectionTitle("COACHING STAFF / 教练组") }
@@ -306,8 +310,36 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(staffRoleLabel(staff.role), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            Text(staff.displayRole.ifBlank { staffRoleLabel(staff.role) }, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             Text(staff.source, color = RiftMuted, fontSize = 7.sp)
+        }
+    }
+}
+
+@Composable
+private fun TeamHistoryRow(history: TeamHistoryRef) {
+    Row(
+        Modifier.fillMaxWidth()
+            .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftCyan.copy(alpha = 0.22f), CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(34.dp).background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("誉", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.width(9.dp))
+        Column(Modifier.weight(1f)) {
+            Text(history.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            if (history.realName.isNotBlank()) Text(history.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            if (history.note.isNotBlank()) Text(history.note, color = RiftMuted, fontSize = 8.sp, maxLines = 2)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(history.honoraryTitle, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            Text("曾任${staffRoleLabel(history.formerRole)}", color = RiftMuted, fontSize = 8.sp)
         }
     }
 }
@@ -431,7 +463,8 @@ private fun staffRoleLabel(role: String): String = when (playerToken(role)) {
     "LEADER" -> "领队"
     "SUPERVISOR" -> "监督"
     "DIRECTOR" -> "主管"
-    "ESPORTSDIRECTOR" -> "电竞总监"
+    "ESPORTSDIRECTOR" -> "赛训总监"
+    "ESPORTSDIRECTORANDMANAGER" -> "赛训总监 / 经理"
     "MANAGINGDIRECTOR" -> "执行董事"
     "CHAIRMAN" -> "董事长"
     "VICEPRESIDENT" -> "副总裁"
