@@ -1,4 +1,5 @@
 name: Compile Diagnostics
+# Diagnostic refresh: official VOD timeline integration.
 on:
   push:
     paths:
