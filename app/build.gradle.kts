@@ -98,3 +98,4 @@ dependencies {
 // Final dev.53 trigger after validating KT vs T1 / T1 vs KT official VOD matching.
 
 // dev.54: global completed-series operator archive from OP.GG terminal data; unblock Riot/OP.GG history backfill game enumeration; labelled global MVP Point fallback.
+// Final dev.54 CI/OTA trigger after global final-series and operator-history routing changes.
