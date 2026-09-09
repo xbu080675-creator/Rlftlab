@@ -46,9 +46,8 @@ internal class DynamicTeamDataProvider(
         val staff = runCatching { fallbackStaff.fetch(team, details) }
             .getOrElse { TeamStaffSupplement(status = "教练组离线快照读取失败") }
         return TeamDynamicSupplement(
-            profile = profile,
-            staff = staff,
-            organizationSummary = "动态目录暂不可达 · 已回退 APK 离线快照",
+            profile = profile.copy(status = "RiftLab Dynamic Data 暂不可达 · ${profile.status}"),
+            staff = staff.copy(status = "RiftLab Dynamic Data 暂不可达 · ${staff.status}"),
             sourceMode = "fallback"
         )
     }

@@ -109,6 +109,16 @@ internal fun TeamDetailContent(
             item { TeamSourceNote(state.profileStatus) }
         }
 
+        if (state.organizationSummary.isNotBlank()) {
+            item { TeamSectionTitle("ORGANIZATION / 当前运营") }
+            item { TeamStatus("运营主体：${state.organizationSummary}") }
+        }
+
+        if (state.legalSummary.isNotBlank()) {
+            item { TeamSectionTitle("CORPORATE / 工商信息") }
+            item { TeamStatus(state.legalSummary) }
+        }
+
         if (state.loading && roster.isEmpty()) {
             item { TeamSectionTitle("ROSTER / 战队名单") }
             item { TeamStatus("正在同步 Riot Teams 完整阵容…") }
@@ -417,11 +427,18 @@ private fun staffRoleLabel(role: String): String = when (playerToken(role)) {
     "MANAGER", "TEAMMANAGER" -> "经理"
     "GENERALMANAGER" -> "总经理"
     "ASSISTANTMANAGER" -> "助理经理"
+    "DEPUTYMANAGER" -> "副经理"
     "LEADER" -> "领队"
     "SUPERVISOR" -> "监督"
     "DIRECTOR" -> "主管"
+    "ESPORTSDIRECTOR" -> "电竞总监"
+    "MANAGINGDIRECTOR" -> "执行董事"
+    "CHAIRMAN" -> "董事长"
+    "VICEPRESIDENT" -> "副总裁"
     "OWNER" -> "负责人"
     "COOWNER" -> "联合负责人"
+    "FOUNDER" -> "创始人"
+    "FOUNDERANDCEO" -> "创始人 / CEO"
     "CEO", "CHIEFEXECUTIVEOFFICER" -> "CEO"
     "COO", "CHIEFOPERATINGOFFICER" -> "COO"
     "HEADOFESPORTS" -> "电竞负责人"
@@ -432,7 +449,8 @@ private fun staffRoleLabel(role: String): String = when (playerToken(role)) {
 private fun isManagementStaff(staff: EsportsStaffRef): Boolean {
     val key = playerToken(staff.role)
     return key.contains("MANAGER") || key in setOf(
-        "LEADER", "SUPERVISOR", "DIRECTOR", "OWNER", "COOWNER", "CEO",
+        "LEADER", "SUPERVISOR", "DIRECTOR", "ESPORTSDIRECTOR", "MANAGINGDIRECTOR",
+        "CHAIRMAN", "VICEPRESIDENT", "OWNER", "COOWNER", "FOUNDER", "FOUNDERANDCEO", "CEO",
         "CHIEFEXECUTIVEOFFICER", "COO", "CHIEFOPERATINGOFFICER", "HEADOFESPORTS", "HEADOFLOL"
     )
 }

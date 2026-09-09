@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 25
-        versionName = "1.0.0-dev.25"
+        versionCode = 26
+        versionName = "1.0.0-dev.26"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.25: correct current IG governance after the OxHope Sports / Huya reorganization.
+// dev.26: remote-first dynamic team directory with scheduled source synchronization.
