@@ -3,7 +3,7 @@ name: Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, feat/schedule-center ]
+    branches: [ main, master, feat/schedule-center, dev55-cito-fullchain ]
 
 jobs:
   build:
