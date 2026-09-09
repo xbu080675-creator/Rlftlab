@@ -1,0 +1,56 @@
+name: Esports Graph Sync
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'data/lpl/team_archive.json'
+      - 'tools/build_esports_graph.py'
+      - '.github/workflows/esports-graph-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: riftlab-esports-graph-sync
+  cancel-in-progress: true
+
+jobs:
+  build-graph:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build normalized graph
+        run: python3 tools/build_esports_graph.py
+      - name: Validate graph
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('data/esports/esports_graph.json')
+          d = json.loads(p.read_text(encoding='utf-8'))
+          assert d['schemaVersion'] == 1
+          assert len(d['teams']) == 12
+          assert len(d['organizations']) >= 12
+          assert len(d['team_results']) >= 100
+          team_ids = {x['team_id'] for x in d['teams']}
+          org_ids = {x['organization_id'] for x in d['organizations']}
+          assert all(x['organization_id'] in org_ids for x in d['teams'])
+          assert all(x['team_id'] in team_ids for x in d['team_results'])
+          assert all(x['team_id'] in team_ids for x in d['team_organization_links'])
+          print('graph ok:', len(d['team_results']), 'results')
+          PY
+      - name: Commit graph update
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/esports/esports_graph.json; then
+            echo 'No graph changes.'
+            exit 0
+          fi
+          git config user.name 'riftlab-data-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/esports/esports_graph.json
+          git commit -m 'data: rebuild organization-centric esports graph'
+          git push origin HEAD:main
