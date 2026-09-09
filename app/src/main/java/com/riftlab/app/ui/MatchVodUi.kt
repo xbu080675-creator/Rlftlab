@@ -73,6 +73,9 @@ internal fun MatchVodContent() {
     }
     if (selectedGame !in parts.map { it.game } && parts.isNotEmpty()) selectedGame = parts.first().game
     val part = parts.firstOrNull { it.game == selectedGame }
+    var seekSecond by remember(key, part?.cid) {
+        mutableIntStateOf(part?.gameStartOffsetSeconds ?: 0)
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -102,11 +105,19 @@ internal fun MatchVodContent() {
         } else {
             item { VodSourceHeader(vod) }
             if (parts.size > 1) {
-                item { VodGameTabs(parts, selectedGame) { selectedGame = it } }
+                item {
+                    VodGameTabs(parts, selectedGame) {
+                        selectedGame = it
+                    }
+                }
             }
             if (part != null) {
-                item { BilibiliEmbeddedPlayer(vod, part, startSecond = 0) }
-                item { VodChapterList(vod, part) }
+                item { BilibiliEmbeddedPlayer(vod, part, startSecond = seekSecond) }
+                item {
+                    VodChapterList(part) { second ->
+                        seekSecond = second
+                    }
+                }
             }
         }
         item { Spacer(Modifier.height(24.dp)) }
@@ -204,10 +215,11 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
 @Composable
 private fun VodSourceHeader(vod: BilibiliMatchVod) {
     val context = LocalContext.current
+    val shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
     Column(
         Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+            .background(RiftPanel, shape)
+            .border(1.dp, RiftLine, shape)
             .padding(14.dp)
     ) {
         Text(vod.title, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -257,41 +269,40 @@ private fun VodGameTabs(parts: List<BilibiliVodPart>, selectedGame: Int, onSelec
 }
 
 @Composable
-private fun VodChapterList(vod: BilibiliMatchVod, part: BilibiliVodPart) {
-    var seekSecond by remember(vod.bvid, part.cid) { mutableIntStateOf(-1) }
-    val chapters = part.chapters
+private fun VodChapterList(part: BilibiliVodPart, onSeek: (Int) -> Unit) {
+    val shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
     Column(
         Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+            .background(RiftPanel, shape)
+            .border(1.dp, RiftLine, shape)
             .padding(14.dp)
     ) {
         Text("OFFICIAL CHAPTERS / 录像看点", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        if (chapters.isEmpty()) {
+        if (part.chapters.isEmpty()) {
             Text("当前分P没有公开章节信息。", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 7.dp))
         } else {
-            chapters.forEach { chapter ->
+            part.chapters.forEach { chapter ->
                 Row(
                     Modifier.fillMaxWidth()
-                        .clickable { seekSecond = chapter.fromSeconds }
+                        .clickable { onSeek(chapter.fromSeconds) }
                         .padding(vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(formatVodClock(part.gameSecondFor(chapter.fromSeconds)), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    Text(chapter.title, color = chapterColor(chapter.title), fontSize = 10.sp, modifier = Modifier.weight(1f).padding(start = 9.dp))
+                    Text(
+                        formatVodClock(part.gameSecondFor(chapter.fromSeconds)),
+                        color = RiftCyan,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        chapter.title,
+                        color = chapterColor(chapter.title),
+                        fontSize = 10.sp,
+                        modifier = Modifier.weight(1f).padding(start = 9.dp)
+                    )
                     Text("跳转 ›", color = RiftMuted, fontSize = 8.sp)
                 }
             }
-        }
-        if (seekSecond >= 0) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "已选 ${formatVodClock(part.gameSecondFor(seekSecond))}；上方播放器会从该录像位置重新加载。",
-                color = RiftMuted,
-                fontSize = 8.sp
-            )
-            Spacer(Modifier.height(6.dp))
-            BilibiliEmbeddedPlayer(vod, part, seekSecond)
         }
     }
 }
@@ -299,10 +310,12 @@ private fun VodChapterList(vod: BilibiliMatchVod, part: BilibiliVodPart) {
 @Composable
 private fun BilibiliEmbeddedPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart, startSecond: Int) {
     val context = LocalContext.current
+    val backgroundArgb = RiftBg.toArgb()
+    val line = RiftLine
     val url = remember(vod.bvid, part.cid, part.page, startSecond) { vod.playerUrl(part, startSecond) }
-    val webView = remember(vod.bvid, part.cid) {
+    val webView = remember(vod.bvid, part.cid, backgroundArgb) {
         WebView(context).apply {
-            setBackgroundColor(RiftBg.toArgb())
+            setBackgroundColor(backgroundArgb)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = true
@@ -320,12 +333,13 @@ private fun BilibiliEmbeddedPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart,
             webView.destroy()
         }
     }
+    val playerShape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
     AndroidView(
         factory = { webView },
         modifier = Modifier.fillMaxWidth()
             .aspectRatio(16f / 9f)
-            .background(Color.Black, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)),
+            .background(Color.Black, playerShape)
+            .border(1.dp, line, playerShape),
         update = { view ->
             if (view.url != url) {
                 view.loadUrl(
@@ -342,10 +356,11 @@ private fun BilibiliEmbeddedPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart,
 
 @Composable
 private fun VodStatusPanel(text: String) {
+    val shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
     Column(
         Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+            .background(RiftPanel, shape)
+            .border(1.dp, RiftLine, shape)
             .padding(14.dp)
     ) {
         Text("VOD STATUS", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -353,6 +368,7 @@ private fun VodStatusPanel(text: String) {
     }
 }
 
+@Composable
 private fun chapterColor(title: String): Color = when {
     title.contains("第一滴血") || title.contains("击杀") && !title.contains("亚龙") && !title.contains("男爵") -> RiftRed
     title.contains("亚龙") || title.contains("龙") || title.contains("男爵") || title.contains("纳什") || title.contains("先锋") || title.contains("巢虫") -> RiftCyan
