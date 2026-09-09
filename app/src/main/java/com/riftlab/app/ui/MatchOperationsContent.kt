@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,6 +41,9 @@ import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleFrame
 import com.riftlab.app.data.MatchLifecycleRecord
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.RiotHistoryBackfillState
+import com.riftlab.app.data.RiotHistoryPhase
+import com.riftlab.app.data.RiotLiveStatsHistoryResolver
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
 import kotlin.math.max
@@ -60,6 +64,7 @@ internal fun MatchOperationsContent() {
     val liveStatus by MatchSessionStore.liveSourceStatus.collectAsState()
     val completedSeries by MatchSessionStore.completedSeries.collectAsState()
     val records by MatchLifecycleArchive.records.collectAsState()
+    val riotHistory by RiotLiveStatsHistoryResolver.states.collectAsState()
 
     val baseMatch = detail.match
     if (baseMatch == null) {
@@ -96,13 +101,23 @@ internal fun MatchOperationsContent() {
     val currentSnapshot = live?.takeIf { it.game == selectedGame }
         ?: frames.lastOrNull()?.snapshot
         ?: finalSnapshot
+    val backfill = riotHistory[RiotLiveStatsHistoryResolver.stateKey(match, selectedGame)]
+
+    LaunchedEffect(match.eventId, match.matchId, selectedGame, phase, frames.size) {
+        if (selectedGame > 0 && phase != ScheduleMatchPhase.UPCOMING && frames.size < 2) {
+            RiotLiveStatsHistoryResolver.ensure(match, selectedGame)
+        }
+    }
 
     val visibleStatus = when (phase) {
         ScheduleMatchPhase.UPCOMING -> "赛前赛程持续同步 · 等待开赛"
         ScheduleMatchPhase.LIVE -> liveStatus.message
         ScheduleMatchPhase.COMPLETED -> when {
             frames.size >= 2 -> "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"
-            finalSnapshot != null -> "历史终局已归档 · 当前上游未提供这一局的连续过程帧"
+            backfill?.phase == RiotHistoryPhase.LOADING -> backfill.message
+            backfill?.phase == RiotHistoryPhase.READY -> backfill.message
+            backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> backfill?.message.orEmpty()
+            finalSnapshot != null -> "历史终局已归档 · 正在从 Riot LiveStats 恢复 G$selectedGame 过程帧…"
             finalSeries != null -> "历史系列赛终局已归档 · 正在等待所选小局终局数据"
             else -> "正在恢复历史终局数据…"
         }
@@ -131,7 +146,7 @@ internal fun MatchOperationsContent() {
             }
             currentSnapshot != null -> {
                 item { LiveStatePanel(currentSnapshot, phase, frames.size) }
-                item { GoldHistoryPanel(currentSnapshot, frames, phase) }
+                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill) }
                 item { PlayerOperatorTable(currentSnapshot, phase) }
             }
             else -> {
@@ -315,7 +330,8 @@ private fun androidx.compose.foundation.layout.RowScope.TeamMetricColumn(
 private fun GoldHistoryPanel(
     current: LiveSnapshot,
     frames: List<MatchLifecycleFrame>,
-    phase: ScheduleMatchPhase
+    phase: ScheduleMatchPhase,
+    backfill: RiotHistoryBackfillState?
 ) {
     val snapshots = remember(frames, current) {
         val archived = frames.map { it.snapshot }.filter { it.game == current.game }
@@ -340,7 +356,11 @@ private fun GoldHistoryPanel(
                 Text(
                     when (phase) {
                         ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"
-                        ScheduleMatchPhase.COMPLETED -> "该历史小局当前只有终局快照，暂无连续经济帧；RiftLab 不会用终局数据伪造过程曲线。"
+                        ScheduleMatchPhase.COMPLETED -> when (backfill?.phase) {
+                            RiotHistoryPhase.LOADING -> backfill.message
+                            RiotHistoryPhase.UNAVAILABLE, RiotHistoryPhase.ERROR -> "${backfill.message}；当前保留终局快照，不伪造过程曲线。"
+                            else -> "正在从 Riot LiveStats 恢复历史经济帧…"
+                        }
                         ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"
                     },
                     color = RiftMuted,

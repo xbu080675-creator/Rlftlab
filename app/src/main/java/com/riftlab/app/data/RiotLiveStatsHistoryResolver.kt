@@ -264,13 +264,8 @@ object RiotLiveStatsHistoryResolver {
         val redMeta = metadata.optJSONObject("redTeamMetadata") ?: JSONObject()
         val blueId = blueMeta.optString("esportsTeamId").ifBlank { sideIds.first }
         val redId = redMeta.optString("esportsTeamId").ifBlank { sideIds.second }
-        val byId = match.teams.associateBy { it.id }
-        val blueCode = byId[blueId]?.code?.ifBlank { null }
-            ?: match.teams.getOrNull(0)?.code?.ifBlank { match.teams.getOrNull(0)?.name }
-            ?: "BLUE"
-        val redCode = byId[redId]?.code?.ifBlank { null }
-            ?: match.teams.getOrNull(1)?.code?.ifBlank { match.teams.getOrNull(1)?.name }
-            ?: "RED"
+        val blueCode = teamCode(match, blueId, 0, "BLUE")
+        val redCode = teamCode(match, redId, 1, "RED")
 
         return LiveSnapshot(
             game = gameNumber,
@@ -293,6 +288,18 @@ object RiotLiveStatsHistoryResolver {
             source = "Riot LoL Esports LiveStats · verified window",
             gameId = gameId
         )
+    }
+
+    private fun teamCode(match: ScheduledEsportsMatch, teamId: String, index: Int, fallback: String): String {
+        match.teams.firstOrNull { it.id == teamId }?.let { team ->
+            if (team.code.isNotBlank()) return team.code
+            if (team.name.isNotBlank()) return team.name
+        }
+        match.teams.getOrNull(index)?.let { team ->
+            if (team.code.isNotBlank()) return team.code
+            if (team.name.isNotBlank()) return team.name
+        }
+        return fallback
     }
 
     private fun parsePlayers(metadata: JSONObject, teamFrame: JSONObject): List<LivePlayerSnapshot> {
@@ -371,7 +378,6 @@ object RiotLiveStatsHistoryResolver {
             snapshot.redPlayers.any { it.gold > 0 || it.level > 1 || it.creepScore > 0 }
 
     private fun unavailable(key: String, game: Int, message: String) {
-        MatchLifecycleArchive.records.value.values
         publish(
             RiotHistoryBackfillState(
                 key = key,
