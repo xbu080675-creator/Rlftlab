@@ -1,9 +1,10 @@
-name: Apply RiftLab dev.49 visible fixes
+name: Apply RiftLab dev49 visible fixes
 
 on:
   push:
     paths:
       - '.github/workflows/dev49-visible-fixes-apply.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,182 +16,178 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Apply dev.49
+      - name: Apply dev49
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          from textwrap import dedent
 
-          # 1) Make academy/challengers teams unambiguous in schedule cards + match title.
           p = Path('app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt')
           s = p.read_text()
-          old = '''        TeamMatchupVisual(
-            leftCode = teamCode(left),
-            leftImageUrl = left?.imageUrl.orEmpty(),
-            rightCode = teamCode(right),
-            rightImageUrl = right?.imageUrl.orEmpty(),
-            centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
-            centerSubtext = MatchSessionStore.scheduleTimingNote(match),
-            logoSize = 44.dp,
-            centerFontSize = 18.sp
-        )'''
-          new = '''        TeamMatchupVisual(
-            leftCode = matchTeamLabel(match, left),
-            leftImageUrl = left?.imageUrl.orEmpty(),
-            rightCode = matchTeamLabel(match, right),
-            rightImageUrl = right?.imageUrl.orEmpty(),
-            centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
-            centerSubtext = MatchSessionStore.scheduleTimingNote(match),
-            logoSize = 44.dp,
-            centerFontSize = 18.sp,
-            teamNameFontSize = 8.sp
-        )'''
+          old = dedent('''\
+                  TeamMatchupVisual(
+                      leftCode = teamCode(left),
+                      leftImageUrl = left?.imageUrl.orEmpty(),
+                      rightCode = teamCode(right),
+                      rightImageUrl = right?.imageUrl.orEmpty(),
+                      centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
+                      centerSubtext = MatchSessionStore.scheduleTimingNote(match),
+                      logoSize = 44.dp,
+                      centerFontSize = 18.sp
+                  )''')
+          new = dedent('''\
+                  TeamMatchupVisual(
+                      leftCode = matchTeamLabel(match, left),
+                      leftImageUrl = left?.imageUrl.orEmpty(),
+                      rightCode = matchTeamLabel(match, right),
+                      rightImageUrl = right?.imageUrl.orEmpty(),
+                      centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
+                      centerSubtext = MatchSessionStore.scheduleTimingNote(match),
+                      logoSize = 44.dp,
+                      centerFontSize = 18.sp,
+                      teamNameFontSize = 8.sp
+                  )''')
           if old not in s:
               raise SystemExit('ScheduleMatchCard target block not found')
           s = s.replace(old, new, 1)
-          old2 = '''private fun matchLabel(match: ScheduledEsportsMatch): String =
-    match.teams.take(2).joinToString(" vs ") { teamCode(it) }
+          old2 = dedent('''\
+              private fun matchLabel(match: ScheduledEsportsMatch): String =
+                  match.teams.take(2).joinToString(" vs ") { teamCode(it) }
 
-private fun teamCode(team: EsportsTeamRef?): String =
-    team?.code?.ifBlank { team.name }?.ifBlank { "—" } ?: "—"'''
-          new2 = '''private fun matchLabel(match: ScheduledEsportsMatch): String =
-    match.teams.take(2).joinToString(" vs ") { matchTeamLabel(match, it) }
+              private fun teamCode(team: EsportsTeamRef?): String =
+                  team?.code?.ifBlank { team.name }?.ifBlank { "—" } ?: "—"''')
+          new2 = dedent('''\
+              private fun matchLabel(match: ScheduledEsportsMatch): String =
+                  match.teams.take(2).joinToString(" vs ") { matchTeamLabel(match, it) }
 
-private fun teamCode(team: EsportsTeamRef?): String =
-    team?.code?.ifBlank { team.name }?.ifBlank { "—" } ?: "—"
+              private fun teamCode(team: EsportsTeamRef?): String =
+                  team?.code?.ifBlank { team.name }?.ifBlank { "—" } ?: "—"
 
-private fun matchTeamLabel(match: ScheduledEsportsMatch, team: EsportsTeamRef?): String {
-    val code = teamCode(team)
-    if (!isDevelopmentLeague(match)) return code
-    val name = team?.name?.trim().orEmpty()
-    return when {
-        code.equals("T1A", ignoreCase = true) -> "T1 Academy"
-        name.contains("Esports Academy", ignoreCase = true) -> name.replace(Regex("(?i)Esports\\s+Academy"), "Academy")
-        name.contains("Challengers", ignoreCase = true) -> name
-        name.contains("Academy", ignoreCase = true) -> name
-        name.contains("Youth", ignoreCase = true) -> name
-        name.isNotBlank() -> name
-        else -> code
-    }
-}
+              private fun matchTeamLabel(match: ScheduledEsportsMatch, team: EsportsTeamRef?): String {
+                  val code = teamCode(team)
+                  if (!isDevelopmentLeague(match)) return code
+                  val name = team?.name?.trim().orEmpty()
+                  return when {
+                      code.equals("T1A", ignoreCase = true) -> "T1 Academy"
+                      name.contains("Esports Academy", ignoreCase = true) -> name.replace(Regex("(?i)Esports\\s+Academy"), "Academy")
+                      name.contains("Challengers", ignoreCase = true) -> name
+                      name.contains("Academy", ignoreCase = true) -> name
+                      name.contains("Youth", ignoreCase = true) -> name
+                      name.isNotBlank() -> name
+                      else -> code
+                  }
+              }
 
-private fun isDevelopmentLeague(match: ScheduledEsportsMatch): Boolean {
-    val id = "${match.leagueSlug} ${match.league}".lowercase()
-    return id.contains("challenger") || id.contains("academy") || id.contains("development") || id.contains("youth") || id.contains("lck-cl")
-}'''
+              private fun isDevelopmentLeague(match: ScheduledEsportsMatch): Boolean {
+                  val id = "${match.leagueSlug} ${match.league}".lowercase()
+                  return id.contains("challenger") || id.contains("academy") || id.contains("development") || id.contains("youth") || id.contains("lck-cl")
+              }''')
           if old2 not in s:
               raise SystemExit('matchLabel/teamCode block not found')
           p.write_text(s.replace(old2, new2, 1))
 
-          # 2) Overseas timeline must never invoke Bilibili and must not show Bilibili copy.
           p = Path('app/src/main/java/com/riftlab/app/ui/MatchTimelineContent.kt')
           s = p.read_text()
-          s = s.replace(
-              '    val match = state.match\n    val vodKey = match?.let(BilibiliVodRepository::keyFor).orEmpty()\n\n    LaunchedEffect(vodKey) {\n        if (match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)\n    }\n\n    val vod = vodState.vod.takeIf { vodState.matchKey == vodKey }',
-              '    val match = state.match\n    val lplReplay = match?.let(::isLplReplayMatch) == true\n    val vodKey = if (lplReplay) match?.let(BilibiliVodRepository::keyFor).orEmpty() else ""\n\n    LaunchedEffect(vodKey, lplReplay) {\n        if (lplReplay && match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)\n    }\n\n    val vod = vodState.vod.takeIf { lplReplay && vodState.matchKey == vodKey }'
-          )
+          old = dedent('''\
+                  val match = state.match
+                  val vodKey = match?.let(BilibiliVodRepository::keyFor).orEmpty()
+
+                  LaunchedEffect(vodKey) {
+                      if (match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)
+                  }
+
+                  val vod = vodState.vod.takeIf { vodState.matchKey == vodKey }''')
+          new = dedent('''\
+                  val match = state.match
+                  val lplReplay = match?.let(::isLplReplayMatch) == true
+                  val vodKey = if (lplReplay) match?.let(BilibiliVodRepository::keyFor).orEmpty() else ""
+
+                  LaunchedEffect(vodKey, lplReplay) {
+                      if (lplReplay && match != null && vodKey.isNotBlank()) BilibiliVodRepository.open(match)
+                  }
+
+                  val vod = vodState.vod.takeIf { lplReplay && vodState.matchKey == vodKey }''')
+          if old not in s:
+              raise SystemExit('timeline Bilibili init block not found')
+          s = s.replace(old, new, 1)
           old_text = '                    "实时阶段优先保存约 10 秒状态快照；历史比赛没有本机快照时，自动解析 B站英雄联盟赛事官方录像的分P与章节锚点补回时间轴。两种来源都会明确标记，不从终局比分伪造中间过程。",'
           new_text = '                    if (lplReplay) "实时阶段优先保存约 10 秒状态快照；LPL 历史比赛没有本机快照时，可使用 B站英雄联盟赛事官方录像的分P与章节锚点补回时间轴。两种来源都会明确标记，不从终局比分伪造中间过程。" else "实时阶段优先保存约 10 秒状态快照；海外赛区与国际赛事的 Riot / YouTube 官方 VOD 只用于 APP 内播放。没有本机过程帧时保留时间轴缺口，不请求 Bilibili，也不从终局比分伪造中间过程。",'
           if old_text not in s:
-              raise SystemExit('timeline copy block not found')
+              raise SystemExit('timeline description not found')
           s = s.replace(old_text, new_text, 1)
-          # Guard every Bilibili status branch behind LPL mode.
           s = s.replace('            vod != null && vodPart != null -> {', '            lplReplay && vod != null && vodPart != null -> {')
           s = s.replace('                if (vodState.matchKey == vodKey && vodState.loading) {', '                if (lplReplay && vodState.matchKey == vodKey && vodState.loading) {')
           s = s.replace('                } else if (vodState.matchKey == vodKey && !vodState.loading) {', '                } else if (lplReplay && vodState.matchKey == vodKey && !vodState.loading) {')
           s = s.replace('            vodState.matchKey == vodKey && vodState.loading -> {', '            lplReplay && vodState.matchKey == vodKey && vodState.loading -> {')
           p.write_text(s)
 
-          # 3) Make YouTube official embed a direct first-party WebView load with a real origin/referrer.
           p = Path('app/src/main/java/com/riftlab/app/data/RiotVodRepository.kt')
           s = p.read_text()
-          s = s.replace(
-              '            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0" }',
-              '            ?.let { "https://www.youtube-nocookie.com/embed/$it?playsinline=1&rel=0&fs=1&enablejsapi=1&origin=https%3A%2F%2Flolesports.com" }'
-          )
-          p.write_text(s)
+          old = '            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0" }'
+          new = '            ?.let { "https://www.youtube-nocookie.com/embed/$it?playsinline=1&rel=0&fs=1&enablejsapi=1&origin=https%3A%2F%2Flolesports.com" }'
+          if old not in s:
+              raise SystemExit('embedUrl target not found')
+          p.write_text(s.replace(old, new, 1))
 
           p = Path('app/src/main/java/com/riftlab/app/ui/GlobalReplayContent.kt')
           s = p.read_text()
-          old = '''    LaunchedEffect(url, youtubeEmbed, webView) {
-        if (youtubeEmbed) {
-            val safeUrl = url.replace("&", "&amp;").replace("\\\"", "&quot;")
-            val html = """
-                <!doctype html><html><head>
-                <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-                <style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}</style>
-                </head><body>
-                <iframe src="$safeUrl" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                </body></html>
-            """.trimIndent()
-            webView.loadDataWithBaseURL("https://www.youtube.com/", html, "text/html", "UTF-8", null)
-        } else {
-            webView.loadUrl(url)
-        }
-    }'''
-          new = '''    LaunchedEffect(url, youtubeEmbed, webView) {
-        webView.stopLoading()
-        if (youtubeEmbed) {
-            webView.loadUrl(
-                url,
-                mapOf(
-                    "Referer" to "https://lolesports.com/",
-                    "Origin" to "https://lolesports.com"
-                )
-            )
-        } else {
-            webView.loadUrl(url)
-        }
-    }'''
-          if old not in s:
-              raise SystemExit('GlobalReplay YouTube load block not found')
-          s = s.replace(old, new, 1)
-          # Modern WebView settings for official video embed.
-          target = '''            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = true'''
-          repl = '''            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = true
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
-            settings.userAgentString = WebSettings.getDefaultUserAgent(context)'''
+          start = s.index('    LaunchedEffect(url, youtubeEmbed, webView) {')
+          end = s.index('\n\n    AndroidView(', start)
+          new_block = dedent('''\
+              LaunchedEffect(url, youtubeEmbed, webView) {
+                  webView.stopLoading()
+                  if (youtubeEmbed) {
+                      webView.loadUrl(
+                          url,
+                          mapOf(
+                              "Referer" to "https://lolesports.com/",
+                              "Origin" to "https://lolesports.com"
+                          )
+                      )
+                  } else {
+                      webView.loadUrl(url)
+                  }
+              }''')
+          s = s[:start] + new_block + s[end:]
+          target = dedent('''\
+                      settings.javaScriptEnabled = true
+                      settings.domStorageEnabled = true
+                      settings.mediaPlaybackRequiresUserGesture = true''')
+          repl = dedent('''\
+                      settings.javaScriptEnabled = true
+                      settings.domStorageEnabled = true
+                      settings.mediaPlaybackRequiresUserGesture = true
+                      settings.useWideViewPort = true
+                      settings.loadWithOverviewMode = true
+                      settings.userAgentString = WebSettings.getDefaultUserAgent(context)''')
           if target not in s:
-              raise SystemExit('WebView settings block not found')
+              raise SystemExit('WebView settings target not found')
           p.write_text(s.replace(target, repl, 1))
 
-          # 4) Rotation should not recreate the Activity and tear down the embedded player.
           p = Path('app/src/main/AndroidManifest.xml')
           s = p.read_text()
-          s = s.replace(
-              'android:exported="true"\n            android:screenOrientation="unspecified">',
-              'android:exported="true"\n            android:screenOrientation="unspecified"\n            android:configChanges="keyboardHidden|orientation|screenSize">',
-              1
-          )
-          s = s.replace(
-              'android:exported="false"\n            android:screenOrientation="unspecified" />',
-              'android:exported="false"\n            android:screenOrientation="unspecified"\n            android:configChanges="keyboardHidden|orientation|screenSize" />',
-              1
-          )
-          p.write_text(s)
+          main_old = 'android:exported="true"\n            android:screenOrientation="unspecified">'
+          main_new = 'android:exported="true"\n            android:screenOrientation="unspecified"\n            android:configChanges="keyboardHidden|orientation|screenSize">'
+          entity_old = 'android:exported="false"\n            android:screenOrientation="unspecified" />'
+          entity_new = 'android:exported="false"\n            android:screenOrientation="unspecified"\n            android:configChanges="keyboardHidden|orientation|screenSize" />'
+          if main_old not in s or entity_old not in s:
+              raise SystemExit('manifest activity target not found')
+          p.write_text(s.replace(main_old, main_new, 1).replace(entity_old, entity_new, 1))
 
-          # Version bump.
           p = Path('app/build.gradle.kts')
           s = p.read_text()
           if 'versionCode = 48' not in s or 'versionName = "1.0.0-dev.48"' not in s:
-              raise SystemExit('dev48 version markers not found')
+              raise SystemExit('dev48 version target not found')
           s = s.replace('versionCode = 48', 'versionCode = 49', 1)
           s = s.replace('versionName = "1.0.0-dev.48"', 'versionName = "1.0.0-dev.49"', 1)
-          s += '\n// dev.49: academy/challengers display labels, overseas replay embed reliability, no Bilibili on global timeline, rotation-safe fullscreen.\n'
+          s += '\n// dev.49: academy labels, global official replay reliability, no overseas Bilibili timeline calls, rotation-safe fullscreen.\n'
           p.write_text(s)
           PY
 
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt \
-                  app/src/main/java/com/riftlab/app/ui/MatchTimelineContent.kt \
-                  app/src/main/java/com/riftlab/app/ui/GlobalReplayContent.kt \
-                  app/src/main/java/com/riftlab/app/data/RiotVodRepository.kt \
-                  app/src/main/AndroidManifest.xml app/build.gradle.kts
-          git commit -m 'fix: academy labels and official replay playback dev49'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt app/src/main/java/com/riftlab/app/ui/MatchTimelineContent.kt app/src/main/java/com/riftlab/app/ui/GlobalReplayContent.kt app/src/main/java/com/riftlab/app/data/RiotVodRepository.kt app/src/main/AndroidManifest.xml app/build.gradle.kts
+          git commit -m "fix: academy labels and official replay playback dev49"
+          git pull --rebase origin main
           git push origin HEAD:main
