@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -71,6 +72,7 @@ fun RiftLabApp() {
         var phase by remember { mutableIntStateOf(1) }
         val context = LocalContext.current
         var updateCenterOpen by remember { androidx.compose.runtime.mutableStateOf(false) }
+        var sourceSettingsOpen by remember { androidx.compose.runtime.mutableStateOf(false) }
         LaunchedEffect(context) { AppUpdateManager.initialize(context) }
         val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -80,8 +82,12 @@ fun RiftLabApp() {
 
         Scaffold(containerColor = RiftBg) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
-                Header(onVersionClick = { updateCenterOpen = true })
+                Header(
+                    onVersionClick = { updateCenterOpen = true },
+                    onSourceSettingsClick = { sourceSettingsOpen = true }
+                )
                 if (updateCenterOpen) UpdateCenterDialog(onClose = { updateCenterOpen = false })
+                if (sourceSettingsOpen) RealtimeSourceSettingsDialog(onClose = { sourceSettingsOpen = false })
                 PhaseTabs(phase) { phase = it }
                 AnimatedContent(
                     targetState = Phase.entries[phase],
@@ -107,7 +113,7 @@ fun RiftLabApp() {
 }
 
 @Composable
-private fun Header(onVersionClick: () -> Unit) {
+private fun Header(onVersionClick: () -> Unit, onSourceSettingsClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -123,6 +129,18 @@ private fun Header(onVersionClick: () -> Unit) {
             Text("RIFTLAB", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = 1.4.sp)
             Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 9.sp, letterSpacing = 1.1.sp)
         }
+        Box(
+            Modifier.size(34.dp).clickable(onClick = onSourceSettingsClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = "实时数据源设置",
+                tint = RiftMuted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.width(4.dp))
         Text(
             BuildConfig.VERSION_NAME.replace("1.0.0-", "1.0 ").uppercase(),
             color = RiftCyan,

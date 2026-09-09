@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 43
-        versionName = "1.0.0-dev.43"
+        versionCode = 44
+        versionName = "1.0.0-dev.44"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.43: event/game lifecycle state machine + 20s watchdog escalation; no endless parsing state.
+// dev.44: encrypted provider credentials + Tachio Sports API key settings entry.
