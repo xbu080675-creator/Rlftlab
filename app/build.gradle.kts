@@ -80,3 +80,4 @@ dependencies {
 }
 
 // dev.47: persistent league subscriptions, two-level global competition navigation, timezone labels, global Riot/YouTube VOD routing.
+// dev.47 build/OTA verification trigger.
