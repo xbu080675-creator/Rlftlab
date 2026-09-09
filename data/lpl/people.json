@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T08:13:22Z",
+  "updatedAt": "2026-09-09T13:46:10Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -541,7 +541,11 @@
           "source": "",
           "stintId": "st_e0bb9bff7e34"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:08Z",
+        "attempts": 1
+      }
     },
     "p_114c8955ba46": {
       "displayName": "May",
@@ -659,7 +663,11 @@
           "source": "",
           "stintId": "st_64a0b0c88b12"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:08Z",
+        "attempts": 1
+      }
     },
     "p_164438580ea1": {
       "displayName": "Ben",
@@ -1004,7 +1012,11 @@
           "source": "",
           "stintId": "st_7b994d734a96"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:09Z",
+        "attempts": 1
+      }
     },
     "p_dbb7ce475987": {
       "displayName": "Seek",
@@ -1337,7 +1349,11 @@
           "source": "",
           "stintId": "st_0afaa2cc8582"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:09Z",
+        "attempts": 1
+      }
     },
     "p_31f8db771047": {
       "displayName": "Aaron",
@@ -1626,7 +1642,11 @@
           "source": "",
           "stintId": "st_4d878beb744b"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:09Z",
+        "attempts": 1
+      }
     },
     "p_ce60a1acd047": {
       "displayName": "xiaochen",
@@ -1941,7 +1961,11 @@
           "source": "",
           "stintId": "st_edb22f5608df"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:07Z",
+        "attempts": 1
+      }
     },
     "p_3268aa682aa7": {
       "displayName": "KIM",
@@ -2005,7 +2029,11 @@
           "source": "",
           "stintId": "st_a6e8e2400fe5"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:07Z",
+        "attempts": 1
+      }
     },
     "p_80686f7e6a59": {
       "displayName": "Tselin",
@@ -2163,7 +2191,11 @@
           "source": "",
           "stintId": "st_8aa991fcc11a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T13:46:08Z",
+        "attempts": 1
+      }
     },
     "p_5395c68837ae": {
       "displayName": "JinJin",
