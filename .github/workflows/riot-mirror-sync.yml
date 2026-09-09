@@ -36,7 +36,7 @@ jobs:
 
       - name: Commit fresh mirror
         run: |
-          if git diff --quiet -- data/lpl/riot_persisted_mirror.json; then
+          if [ -z "$(git status --porcelain -- data/lpl/riot_persisted_mirror.json)" ]; then
             echo "No mirror changes"
             exit 0
           fi
