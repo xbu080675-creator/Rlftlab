@@ -81,10 +81,12 @@ private enum class ScheduleDirectorySection(val label: String) {
 }
 
 private enum class InternationalCompetitionMenu(val label: String) {
+    WORLDS("2026 全球总决赛"),
+    DEMACIA_GLOBAL("德杯国际邀请赛"),
+    WSCL("WSCL"),
     FIRST_STAND("全球先锋赛"),
     MSI("季中冠军赛"),
     AMERICAS_CUP("美洲杯"),
-    WORLDS("全球总决赛"),
     EWC("EWC"),
     EMEA_MASTERS("EMEA 大师赛")
 }
@@ -473,7 +475,7 @@ private fun CompetitionDirectory(
             Spacer(Modifier.height(9.dp))
             val selectedBuckets = internationalBuckets.filter { internationalCompetitionKind(it) == selectedInternational }
             if (selectedBuckets.isEmpty()) {
-                EmptyData("${selectedInternational.label} · 当前分页暂无赛程，保留固定入口")
+                InternationalEventPlaceholder(selectedInternational)
             } else {
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(selectedBuckets.sortedByDescending { it.firstEpochMs }, key = { it.key }) { bucket ->
@@ -482,6 +484,46 @@ private fun CompetitionDirectory(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun InternationalEventPlaceholder(menu: InternationalCompetitionMenu) {
+    val (title, meta, detail) = when (menu) {
+        InternationalCompetitionMenu.WORLDS -> Triple(
+            "2026 全球总决赛 · WORLDS 2026",
+            "10月15日 - 11月14日 · 美国",
+            "年度最高优先级赛事。入围赛：洛杉矶；瑞士轮 / 八强 / 半决赛：德州 Allen；总决赛：纽约布鲁克林 Barclays Center。具体对阵、开赛时间与战队确认后由动态赛程替换本卡。"
+        )
+        InternationalCompetitionMenu.DEMACIA_GLOBAL -> Triple(
+            "2026 德玛西亚杯国际邀请赛",
+            "10月3日 - 10月17日 · 12队 / 6赛区",
+            "2026 德杯已升级为国际邀请赛。LPL、LCK、LEC、LCS、LCP、CBLOL 中未晋级 Worlds 的高顺位队伍受邀参赛；正式对阵与直播元数据进入可信赛事源后自动接管。"
+        )
+        InternationalCompetitionMenu.WSCL -> Triple(
+            "WSCL",
+            "国际赛事 · 当前赛事入口保留",
+            "WSCL 不归入已经停摆的 2026 LDL。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回 LDL。"
+        )
+        else -> Triple(
+            menu.label,
+            "国际赛事 · 固定入口",
+            "当前分页暂无可核实赛程；RiftLab 保留赛事入口，待 Riot / 官方赛事源返回数据后自动填充。"
+        )
+    }
+    Column(
+        Modifier.fillMaxWidth()
+            .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+            .border(1.dp, if (menu == InternationalCompetitionMenu.WORLDS) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+            .padding(14.dp)
+    ) {
+        Text(if (menu == InternationalCompetitionMenu.WORLDS) "SEASON FINALE · MAIN EVENT" else "INTERNATIONAL EVENT", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(5.dp))
+        Text(title, color = RiftText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text(meta, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text(detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
     }
 }
 
@@ -556,6 +598,8 @@ private fun internationalCompetitionKind(bucket: ScheduleCompetitionBucket): Int
         sample?.leagueSlug.orEmpty(), sample?.league.orEmpty(), bucket.title
     ).joinToString(" ").lowercase()
     return when {
+        identity.contains("demacia cup") || identity.contains("德玛西亚杯") || identity.contains("demacia global invitational") -> InternationalCompetitionMenu.DEMACIA_GLOBAL
+        Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCL
         identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> InternationalCompetitionMenu.FIRST_STAND
         identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.MSI
         identity.contains("americas cup") || identity.contains("america cup") -> InternationalCompetitionMenu.AMERICAS_CUP

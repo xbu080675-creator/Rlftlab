@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 49
-        versionName = "1.0.0-dev.49"
+        versionCode = 50
+        versionName = "1.0.0-dev.50"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -84,3 +84,5 @@ dependencies {
 
 // dev.49: clarify academy team names, restore global series score, isolate overseas timeline from Bilibili, and harden in-app official YouTube VOD playback.
 // Final dev.49 CI/OTA trigger after replay and academy-label fixes.
+
+// dev.50: retire LDL from current subscriptions, promote Worlds 2026, add Demacia Cup Global Invitational and WSCL international catalog entries.

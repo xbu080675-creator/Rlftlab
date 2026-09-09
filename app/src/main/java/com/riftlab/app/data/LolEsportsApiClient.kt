@@ -23,15 +23,15 @@ internal object LolEsportsConfig {
     // Tier-one regional + international competitions tracked by RiftLab. IDs are discovered
     // dynamically from Riot getLeagues so league reshuffles do not require an APK update.
     val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(
-        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup", "americas-cup", "emea-masters",
+        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup", "americas-cup", "emea-masters", "demacia-cup", "demacia-cup-global-invitational", "demacia-global-invitational", "wscl",
         "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",
         "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs", "fls",
-        "lck-cl", "lck_challengers", "lcp-wild-card", "lpl-development-league", "ldl",
+        "lck-cl", "lck_challengers", "lcp-wild-card",
         "greek-legends-league", "lit", "nlc", "esports-balkan-league", "tcl", "hitpoint-masters", "rift-legends", "nacl"
     )
     val GLOBAL_TRACKED_LEAGUE_NAMES = setOf(
-        "americas cup", "emea masters", "fls", "lck cl", "lck challengers", "lcp wild card",
-        "lpl development league", "greek legends league", "lit", "nlc", "esports balkan league",
+        "americas cup", "emea masters", "demacia cup global invitational", "demacia cup", "wscl", "fls", "lck cl", "lck challengers", "lcp wild card",
+        "greek legends league", "lit", "nlc", "esports balkan league",
         "tcl", "hitpoint masters", "rift legends", "nacl"
     )
     const val PERSISTED_BASE = "https://esports-api.lolesports.com/persisted/gw"

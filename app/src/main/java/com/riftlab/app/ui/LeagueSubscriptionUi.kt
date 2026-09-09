@@ -47,7 +47,6 @@ internal val LeagueSubscriptionOptions = listOf(
     LeagueSubscriptionOption("FLS", "FLS"),
     LeagueSubscriptionOption("LCKCL", "LCK CL"),
     LeagueSubscriptionOption("LCPWILDCARD", "LCP Wild Card"),
-    LeagueSubscriptionOption("LDL", "LDL"),
     LeagueSubscriptionOption("NLC", "NLC"),
     LeagueSubscriptionOption("LIT", "LIT"),
     LeagueSubscriptionOption("TCL", "TCL")
@@ -66,9 +65,10 @@ internal object LeagueSubscriptionStore {
     fun ensureLoaded(context: Context) {
         if (loaded) return
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val allowed = LeagueSubscriptionOptions.map { leagueSubscriptionKey(it.key) }.toSet()
         val stored = prefs.getStringSet(KEY, null)
             ?.map(::leagueSubscriptionKey)
-            ?.filter { it.isNotBlank() }
+            ?.filter { it.isNotBlank() && it in allowed }
             ?.toSet()
             .orEmpty()
         _subscribed.value = stored.ifEmpty { setOf("LPL") }
