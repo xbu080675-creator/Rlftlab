@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
@@ -51,8 +54,15 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
             Text(state.status, color = if (state.available) RiftCyan else RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
 
             if (state.changelog.isNotBlank()) {
-                Text("更新内容", color = RiftMuted, fontSize = 9.sp)
-                Text(state.changelog, fontSize = 10.sp, lineHeight = 15.sp)
+                Column(
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 180.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text("更新内容", color = RiftMuted, fontSize = 9.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text(state.changelog, fontSize = 10.sp, lineHeight = 15.sp)
+                }
             }
 
             if (state.downloading) {
