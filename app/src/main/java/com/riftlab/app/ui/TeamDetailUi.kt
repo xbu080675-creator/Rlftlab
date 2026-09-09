@@ -670,6 +670,7 @@ private fun staffRoleLabel(role: String): String = when (playerToken(role)) {
     "HEADCOACH" -> "主教练"
     "ASSISTANTCOACH" -> "助理教练"
     "STRATEGICCOACH" -> "战术教练"
+    "POSITIONALCOACH" -> "位置教练"
     "COACH" -> "教练"
     "ANALYST" -> "分析师"
     "MANAGER", "TEAMMANAGER" -> "经理"

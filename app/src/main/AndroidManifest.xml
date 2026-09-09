@@ -21,6 +21,7 @@
 
     <application
         android:name=".RiftLabApplication"
+        android:hardwareAccelerated="true"
         android:allowBackup="true"
         android:label="RiftLab"
         android:supportsRtl="true"

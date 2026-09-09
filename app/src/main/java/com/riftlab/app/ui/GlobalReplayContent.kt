@@ -268,8 +268,8 @@ private fun OfficialReplayPlaceholder(message: String) {
 
 @Composable
 private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
-    val embed = link?.embedUrl.orEmpty()
-    val youtubeEmbed = embed.isNotBlank()
+    val videoId = link?.youtubeVideoId.orEmpty()
+    val youtubeEmbed = videoId.isNotBlank()
     Column {
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -288,7 +288,7 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
         }
         Spacer(Modifier.height(5.dp))
         if (youtubeEmbed) {
-            OfficialWebVideoPlayer(embed)
+            OfficialWebVideoPlayer(videoId)
         } else {
             val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
             Column(
@@ -314,10 +314,10 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
 }
 
 @Composable
-private fun OfficialWebVideoPlayer(url: String) {
+private fun OfficialWebVideoPlayer(videoId: String) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
-    var sessionNonce by remember(url) { mutableIntStateOf(0) }
+    var sessionNonce by remember(videoId) { mutableIntStateOf(0) }
     val chromeClient = remember(context, activity) { EmbeddedVideoChromeClient(context, activity) }
     val webView = remember(context) {
         WebView(context).apply {
@@ -326,9 +326,12 @@ private fun OfficialWebVideoPlayer(url: String) {
     }
 
     DisposableEffect(webView) {
+        webView.onResume()
+        webView.resumeTimers()
         onDispose {
             CookieManager.getInstance().flush()
             chromeClient.release()
+            webView.onPause()
             webView.stopLoading()
             webView.loadUrl("about:blank")
             webView.removeAllViews()
@@ -336,21 +339,29 @@ private fun OfficialWebVideoPlayer(url: String) {
         }
     }
 
-    LaunchedEffect(url, sessionNonce, webView) {
+    LaunchedEffect(videoId, sessionNonce, webView) {
         webView.stopLoading()
-        webView.loadUrl(
-            url,
-            mapOf(
-                "Referer" to "https://lolesports.com/",
-                "Origin" to "https://lolesports.com"
-            )
+        webView.loadDataWithBaseURL(
+            "https://www.youtube.com/",
+            youtubeEmbedDocument(videoId),
+            "text/html",
+            "UTF-8",
+            null
         )
+        webView.post {
+            webView.requestLayout()
+            webView.invalidate()
+        }
     }
 
     Column {
         AndroidView(
             factory = { webView },
-            update = { },
+            update = { view ->
+                view.onResume()
+                view.requestLayout()
+                view.invalidate()
+            },
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
                 .background(Color.Black, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
                 .border(1.dp, RiftLine, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
@@ -369,24 +380,70 @@ private fun OfficialWebVideoPlayer(url: String) {
     }
 }
 
+private fun youtubeEmbedDocument(videoId: String): String {
+    val safeId = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+    return """<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;}
+#frame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#000;}
+</style>
+</head>
+<body>
+<iframe id="frame"
+  src="https://www.youtube.com/embed/$safeId?playsinline=1&rel=0&fs=1"
+  allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
+  allowfullscreen></iframe>
+</body>
+</html>"""
+}
+
 private fun configureOfficialWebView(webView: WebView, chromeClient: WebChromeClient) {
     CookieManager.getInstance().apply {
         setAcceptCookie(true)
         setAcceptThirdPartyCookies(webView, true)
     }
     webView.setBackgroundColor(AndroidColor.BLACK)
+    webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    webView.overScrollMode = View.OVER_SCROLL_NEVER
+    webView.isVerticalScrollBarEnabled = false
+    webView.isHorizontalScrollBarEnabled = false
     webView.settings.javaScriptEnabled = true
     webView.settings.domStorageEnabled = true
-    webView.settings.useWideViewPort = true
-    webView.settings.loadWithOverviewMode = true
+    webView.settings.loadsImagesAutomatically = true
+    webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+    webView.settings.useWideViewPort = false
+    webView.settings.loadWithOverviewMode = false
     webView.settings.mediaPlaybackRequiresUserGesture = false
     webView.settings.allowFileAccess = false
     webView.settings.allowContentAccess = false
     webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
     webView.settings.javaScriptCanOpenWindowsAutomatically = false
     webView.settings.setSupportMultipleWindows(false)
-    // Do not spoof Chrome: YouTube sees the real Android System WebView UA and the cookie/session matches it.
-    webView.webViewClient = WebViewClient()
+    webView.settings.setSupportZoom(false)
+    webView.settings.builtInZoomControls = false
+    webView.settings.displayZoomControls = false
+    // Keep the real Android System WebView UA/cookie jar. Do not attach a fake Origin/Referer.
+    webView.webViewClient = object : WebViewClient() {
+        override fun onPageFinished(view: WebView?, url: String?) {
+            super.onPageFinished(view, url)
+            view?.post {
+                view.setBackgroundColor(AndroidColor.BLACK)
+                view.requestLayout()
+                view.invalidate()
+            }
+        }
+
+        override fun onPageCommitVisible(view: WebView?, url: String?) {
+            super.onPageCommitVisible(view, url)
+            view?.post {
+                view.requestLayout()
+                view.invalidate()
+            }
+        }
+    }
     webView.webChromeClient = chromeClient
 }
 

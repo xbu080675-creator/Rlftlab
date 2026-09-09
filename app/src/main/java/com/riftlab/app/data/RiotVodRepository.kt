@@ -41,7 +41,7 @@ internal data class RiotVodLink(
 
     val embedUrl: String
         get() = youtubeVideoId.takeIf { it.isNotBlank() }
-            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0&fs=1&enablejsapi=1&origin=https%3A%2F%2Flolesports.com" }
+            ?.let { "https://www.youtube.com/embed/$it?playsinline=1&rel=0&fs=1" }
             .orEmpty()
 
     val sourceUrl: String

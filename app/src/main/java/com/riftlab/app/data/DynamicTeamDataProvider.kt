@@ -37,7 +37,8 @@ internal data class TeamDynamicSupplement(
  */
 internal class DynamicTeamDataProvider(
     private val fallbackProfile: LeaguepediaProfileProvider = LeaguepediaProfileProvider(),
-    private val fallbackStaff: LplStaffSnapshotProvider = LplStaffSnapshotProvider()
+    private val fallbackStaff: LplStaffSnapshotProvider = LplStaffSnapshotProvider(),
+    private val globalStaff: GlobalTeamStaffProvider = GlobalTeamStaffProvider()
 ) {
     companion object {
         private const val CACHE_TTL_MS = 30L * 60L * 1000L
@@ -57,8 +58,32 @@ internal class DynamicTeamDataProvider(
 
     suspend fun fetch(team: EsportsTeamRef, details: EsportsTeamDetails): TeamDynamicSupplement {
         val code = resolveCode(team, details)
-        val remote = runCatching { fetchRemote(code) }.getOrNull()
+        val remote = if (code.isNotBlank()) runCatching { fetchRemote(code) }.getOrNull() else null
         if (remote != null) return remote
+
+        // Non-LPL teams were previously sent into LPL-only snapshots, which guaranteed an empty
+        // management/coaching section. Use the global current-roster mirror / Leaguepedia resolver
+        // instead. Riot getTeams remains the player-roster authority.
+        if (code.isBlank()) {
+            val global = runCatching { globalStaff.fetch(team, details) }
+                .getOrElse { error ->
+                    GlobalTeamStaffSnapshot(
+                        status = "海外人员资料同步失败 · ${error.message?.take(80).orEmpty()}",
+                        sourceMode = "global-error"
+                    )
+                }
+            return TeamDynamicSupplement(
+                profile = TeamProfileSupplement(
+                    management = global.management,
+                    status = global.status
+                ),
+                staff = TeamStaffSupplement(
+                    staff = global.staff,
+                    status = global.status
+                ),
+                sourceMode = global.sourceMode
+            )
+        }
 
         val profile = runCatching { fallbackProfile.fetch(team, details) }
             .getOrElse { TeamProfileSupplement(status = "管理层离线快照读取失败") }

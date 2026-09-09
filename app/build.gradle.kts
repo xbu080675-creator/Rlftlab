@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 51
-        versionName = "1.0.0-dev.51"
+        versionCode = 52
+        versionName = "1.0.0-dev.52"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -90,3 +90,5 @@ dependencies {
 
 // dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.
 // Final dev.51 CI/OTA trigger after dual-source replay and YouTube session handling.
+
+// dev.52: global non-LPL management/coaching resolver plus stable hardware-accelerated inline YouTube embed rendering.
