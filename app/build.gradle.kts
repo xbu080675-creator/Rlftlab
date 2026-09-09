@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 56
-        versionName = "1.0.0-dev.56"
+        versionCode = 57
+        versionName = "1.0.0-dev.57"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -110,3 +110,5 @@ dependencies {
 
 // dev.56: tournament rulebook + draw/slot governance, verified LPL qualifier correction, and non-overwriting official confirmations.
 // Final dev.56 build/OTA trigger after governance UI integration.
+
+// dev.57: annual Tournament Research editions: version/update/rules/draw/schedule unified per year for international events and regional leagues.
