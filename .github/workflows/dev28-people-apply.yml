@@ -3,7 +3,6 @@ name: RiftLab dev28 people entity migration
 on:
   push:
     paths:
-      - 'tools/dev28_people_patch.py'
       - '.github/workflows/dev28-people-apply.yml'
   workflow_dispatch:
 
@@ -17,15 +16,65 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: python3 tools/dev28_people_patch.py
-      - name: Commit migrated source
+      - name: Reconcile AL management and person source rules
         run: |
-          git config user.name "github-actions[bot]"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('data/lpl/team_profiles.json')
+          root = json.loads(path.read_text(encoding='utf-8'))
+          al = root['teams']['AL']
+          management = al.setdefault('management', [])
+          if not any(str(row.get('name', '')).lower() in {'ag爱笑', '爱笑'} for row in management):
+              management.insert(0, {
+                  'name': 'AG爱笑',
+                  'role': 'ESPORTS_GENERAL_MANAGER',
+                  'displayRole': '电竞总经理 / 经理',
+                  'realName': '',
+                  'source': 'AG爱笑认证微博；2026-08 公开记录仍以 AL 经理身份参与战队事务'
+              })
+          operators = al.setdefault('operators', [])
+          if not any(str(row.get('name', '')).lower() in {'all gamers', 'ag电子竞技俱乐部'} for row in operators):
+              operators.append({
+                  'name': 'AG电子竞技俱乐部',
+                  'role': 'PARENT_ORG',
+                  'source': 'AL / Anyone’s Legend 为 All Gamers 旗下英雄联盟项目'
+              })
+          sources = al.setdefault('sources', [])
+          source_url = 'https://weibo.com/u/6032776385'
+          if not any(row.get('url') == source_url for row in sources):
+              sources.append({
+                  'type': 'VERIFIED_SOCIAL',
+                  'label': 'AG爱笑认证微博 · AG电子竞技俱乐部英雄联盟及无畏契约总经理',
+                  'url': source_url
+              })
+          al['verifiedAt'] = '2026-09-09'
+          root['updatedAt'] = '2026-09-09T03:00:00Z'
+          path.write_text(json.dumps(root, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          sync = Path('tools/sync_team_data.py')
+          text = sync.read_text(encoding='utf-8')
+          if '"电竞总经理": "ESPORTS_GENERAL_MANAGER"' not in text:
+              text = text.replace(
+                  '    "赛训总监": "ESPORTS_DIRECTOR",\n',
+                  '    "赛训总监": "ESPORTS_DIRECTOR",\n    "电竞总经理": "ESPORTS_GENERAL_MANAGER",\n    "赛训总经理": "ESPORTS_GENERAL_MANAGER",\n'
+              )
+          if '"ESPORTS_GENERAL_MANAGER"' not in text.split('LEAGUEPEDIA_STAFF_ROLES', 1)[0]:
+              text = text.replace(
+                  '    "HEAD_OF_ESPORTS", "ESPORTS_DIRECTOR", "CEO", "COO", "OWNER", "CO_OWNER",\n',
+                  '    "HEAD_OF_ESPORTS", "ESPORTS_DIRECTOR", "ESPORTS_GENERAL_MANAGER", "CEO", "COO", "OWNER", "CO_OWNER",\n'
+              )
+          sync.write_text(text, encoding='utf-8')
+          PY
+          python3 tools/sync_people_data.py --skip-avatar
+          python3 -m json.tool data/lpl/team_profiles.json >/dev/null
+          python3 -m json.tool data/lpl/people.json >/dev/null
+      - name: Commit reconciled dynamic data
+        run: |
+          git config user.name "riftlab-data-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/riftlab/app/data/Models.kt \
-                  app/src/main/java/com/riftlab/app/data/DynamicTeamDataProvider.kt \
-                  app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt \
-                  app/build.gradle.kts DEV_CHANGELOG.txt
-          git commit -m "feat: add people entities avatars and career timelines"
+          git add data/lpl/team_profiles.json data/lpl/people.json tools/sync_team_data.py
+          git commit -m "data(lpl): add AG Aixiao to AL management"
           git pull --rebase origin main
           git push
