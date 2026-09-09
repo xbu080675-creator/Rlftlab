@@ -41,6 +41,9 @@ import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleFrame
 import com.riftlab.app.data.MatchLifecycleRecord
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.OpggHistoricalFrameResolver
+import com.riftlab.app.data.OpggHistoryBackfillState
+import com.riftlab.app.data.OpggHistoryPhase
 import com.riftlab.app.data.RiotHistoryBackfillState
 import com.riftlab.app.data.RiotHistoryPhase
 import com.riftlab.app.data.RiotLiveStatsHistoryResolver
@@ -65,6 +68,7 @@ internal fun MatchOperationsContent() {
     val completedSeries by MatchSessionStore.completedSeries.collectAsState()
     val records by MatchLifecycleArchive.records.collectAsState()
     val riotHistory by RiotLiveStatsHistoryResolver.states.collectAsState()
+    val opggHistory by OpggHistoricalFrameResolver.states.collectAsState()
 
     val baseMatch = detail.match
     if (baseMatch == null) {
@@ -98,14 +102,27 @@ internal fun MatchOperationsContent() {
     val frames = record?.framesFor(selectedGame).orEmpty()
     val finalSnapshot = record?.finalGames?.get(selectedGame)
         ?: finalSeries?.games?.firstOrNull { it.game == selectedGame }
+    val archivedLatest = frames.lastOrNull()?.snapshot
     val currentSnapshot = live?.takeIf { it.game == selectedGame }
-        ?: frames.lastOrNull()?.snapshot
-        ?: finalSnapshot
+        ?: if (phase == ScheduleMatchPhase.COMPLETED && finalSnapshot != null) {
+            finalSnapshot.copy(
+                blueXp = archivedLatest?.blueXp?.takeIf { it > 0 } ?: finalSnapshot.blueXp,
+                redXp = archivedLatest?.redXp?.takeIf { it > 0 } ?: finalSnapshot.redXp
+            )
+        } else {
+            archivedLatest ?: finalSnapshot
+        }
     val backfill = riotHistory[RiotLiveStatsHistoryResolver.stateKey(match, selectedGame)]
+    val opggBackfill = opggHistory[OpggHistoricalFrameResolver.stateKey(match, selectedGame)]
 
-    LaunchedEffect(match.eventId, match.matchId, selectedGame, phase, frames.size) {
+    LaunchedEffect(match.eventId, match.matchId, selectedGame, phase, frames.size, backfill?.phase) {
         if (selectedGame > 0 && phase != ScheduleMatchPhase.UPCOMING && frames.size < 2) {
             RiotLiveStatsHistoryResolver.ensure(match, selectedGame)
+            if (phase == ScheduleMatchPhase.COMPLETED &&
+                (backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR)
+            ) {
+                OpggHistoricalFrameResolver.ensure(match, selectedGame)
+            }
         }
     }
 
@@ -113,10 +130,20 @@ internal fun MatchOperationsContent() {
         ScheduleMatchPhase.UPCOMING -> "赛前赛程持续同步 · 等待开赛"
         ScheduleMatchPhase.LIVE -> liveStatus.message
         ScheduleMatchPhase.COMPLETED -> when {
-            frames.size >= 2 -> "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"
+            frames.size >= 2 -> {
+                val provider = frames.lastOrNull()?.snapshot?.source.orEmpty()
+                if (provider.contains("OP.GG", ignoreCase = true)) {
+                    "历史过程已归档 · OP.GG GOLD/XP · G$selectedGame ${frames.size} 帧"
+                } else {
+                    "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"
+                }
+            }
+            opggBackfill?.phase == OpggHistoryPhase.LOADING -> opggBackfill.message
+            opggBackfill?.phase == OpggHistoryPhase.READY -> opggBackfill.message
+            opggBackfill?.phase == OpggHistoryPhase.UNAVAILABLE || opggBackfill?.phase == OpggHistoryPhase.ERROR -> opggBackfill?.message.orEmpty()
             backfill?.phase == RiotHistoryPhase.LOADING -> backfill.message
             backfill?.phase == RiotHistoryPhase.READY -> backfill.message
-            backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> backfill?.message.orEmpty()
+            backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> "${backfill?.message.orEmpty()} · 正在切换 OP.GG 历史帧"
             finalSnapshot != null -> "历史终局已归档 · 正在从 Riot LiveStats 恢复 G$selectedGame 过程帧…"
             finalSeries != null -> "历史系列赛终局已归档 · 正在等待所选小局终局数据"
             else -> "正在恢复历史终局数据…"
@@ -146,7 +173,7 @@ internal fun MatchOperationsContent() {
             }
             currentSnapshot != null -> {
                 item { LiveStatePanel(currentSnapshot, phase, frames.size) }
-                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill) }
+                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill, opggBackfill) }
                 item { PlayerOperatorTable(currentSnapshot, phase) }
             }
             else -> {
@@ -283,6 +310,9 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
                 Text("GOLD DIFF", color = RiftMuted, fontSize = 7.sp)
                 Text(signedGold(snapshot.goldDiff), color = if (snapshot.goldDiff >= 0) RiftCyan else RiftRed, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Text("K ${snapshot.blueKills}:${snapshot.redKills}", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                if (snapshot.blueXp > 0 || snapshot.redXp > 0) {
+                    Text("XP Δ ${signedGold(snapshot.blueXp - snapshot.redXp)}", color = RiftMuted, fontSize = 7.sp)
+                }
             }
             TeamMetricColumn(
                 team = snapshot.red,
@@ -331,7 +361,8 @@ private fun GoldHistoryPanel(
     current: LiveSnapshot,
     frames: List<MatchLifecycleFrame>,
     phase: ScheduleMatchPhase,
-    backfill: RiotHistoryBackfillState?
+    backfill: RiotHistoryBackfillState?,
+    opggBackfill: OpggHistoryBackfillState?
 ) {
     val snapshots = remember(frames, current) {
         val archived = frames.map { it.snapshot }.filter { it.game == current.game }
@@ -356,9 +387,11 @@ private fun GoldHistoryPanel(
                 Text(
                     when (phase) {
                         ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"
-                        ScheduleMatchPhase.COMPLETED -> when (backfill?.phase) {
-                            RiotHistoryPhase.LOADING -> backfill.message
-                            RiotHistoryPhase.UNAVAILABLE, RiotHistoryPhase.ERROR -> "${backfill.message}；当前保留终局快照，不伪造过程曲线。"
+                        ScheduleMatchPhase.COMPLETED -> when {
+                            opggBackfill?.phase == OpggHistoryPhase.LOADING -> opggBackfill.message
+                            opggBackfill?.phase == OpggHistoryPhase.UNAVAILABLE || opggBackfill?.phase == OpggHistoryPhase.ERROR -> "${opggBackfill.message}；当前保留终局快照，不伪造过程曲线。"
+                            backfill?.phase == RiotHistoryPhase.LOADING -> backfill.message
+                            backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> "Riot 历史帧不可用，正在尝试 OP.GG GOLD/XP 过程帧…"
                             else -> "正在从 Riot LiveStats 恢复历史经济帧…"
                         }
                         ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"

@@ -428,6 +428,8 @@ object MatchLifecycleArchive {
         .put("redDragons", snapshot.redDragons)
         .put("blueBarons", snapshot.blueBarons)
         .put("redBarons", snapshot.redBarons)
+        .put("blueXp", snapshot.blueXp)
+        .put("redXp", snapshot.redXp)
         .put("latestEvent", snapshot.latestEvent)
         .put("source", snapshot.source)
         .put("gameId", snapshot.gameId)
@@ -449,6 +451,8 @@ object MatchLifecycleArchive {
         redDragons = root.optInt("redDragons"),
         blueBarons = root.optInt("blueBarons"),
         redBarons = root.optInt("redBarons"),
+        blueXp = root.optInt("blueXp"),
+        redXp = root.optInt("redXp"),
         bluePlayers = playersFromJson(root.optJSONArray("bluePlayers") ?: JSONArray()),
         redPlayers = playersFromJson(root.optJSONArray("redPlayers") ?: JSONArray()),
         latestEvent = root.optString("latestEvent"),

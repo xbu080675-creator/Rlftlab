@@ -197,6 +197,8 @@ data class LiveSnapshot(
     val latestEvent: String,
     val blueBarons: Int = 0,
     val redBarons: Int = 0,
+    val blueXp: Int = 0,
+    val redXp: Int = 0,
     val bluePlayers: List<LivePlayerSnapshot> = emptyList(),
     val redPlayers: List<LivePlayerSnapshot> = emptyList(),
     val source: String = "unknown",

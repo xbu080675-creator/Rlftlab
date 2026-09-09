@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 40
-        versionName = "1.0.0-dev.40"
+        versionCode = 41
+        versionName = "1.0.0-dev.41"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.40: Riot LiveStats 10-second window backfill + dynamic official-feed priority.
+// dev.41: OP.GG gameByMatch GOLD/XP frame fallback after Riot LiveStats history miss.
