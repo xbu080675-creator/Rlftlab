@@ -1,0 +1,27 @@
+name: Fix RiftLab dev57 research compile
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev57-research-compile-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix Kotlin lambdas
+        run: python3 tools/fix_dev57_research_compile.py
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/TournamentResearch.kt
+          git commit -m "fix: compile annual tournament research model"
+          git pull --rebase origin main
+          git push origin HEAD:main
