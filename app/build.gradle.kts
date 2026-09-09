@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 44
-        versionName = "1.0.0-dev.44"
+        versionCode = 45
+        versionName = "1.0.0-dev.45"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.44: encrypted provider credentials + Tachio Sports API key settings entry.
+// dev.45: Cito API credential slot + official LoL REST/WSS transport contract for future paid live provider.
