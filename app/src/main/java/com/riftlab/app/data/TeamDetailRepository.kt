@@ -20,6 +20,9 @@ internal data class TeamDetailState(
     val lineupStatus: String = "首发阵容尚未识别",
     val staffStatus: String = "教练组尚未同步",
     val profileStatus: String = "管理层 / 社交资料尚未同步",
+    val organizationSummary: String = "",
+    val legalSummary: String = "",
+    val profileSourceMode: String = "",
     val errorMessage: String? = null
 )
 
@@ -28,13 +31,13 @@ internal object TeamDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val source: TeamDataSource = LolEsportsTeamDataSource()
     private val assetProvider = RiotTeamAssetProvider()
-    private val staffProvider = LplStaffSnapshotProvider()
-    private val profileProvider = LeaguepediaProfileProvider()
+    private val dynamicProvider = DynamicTeamDataProvider()
     private val lineupProvider = OpggMatchSupplementProvider()
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
     private val imageCache = linkedMapOf<String, String>()
     private val starterCache = linkedMapOf<String, Set<String>>()
     private var loadJob: Job? = null
+    private var profileRefreshJob: Job? = null
     private var lastMatches: List<ScheduledEsportsMatch> = emptyList()
 
     private val _state = MutableStateFlow(TeamDetailState())
@@ -75,17 +78,16 @@ internal object TeamDetailRepository {
                     cached.management.size
                 ),
                 lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
-                staffStatus = if (cached.staff.isNotEmpty()) "教练组 · 已缓存" else "教练组尚未同步",
-                profileStatus = if (cached.management.isNotEmpty() || cached.socialLinks.isNotEmpty() || cached.players.any { it.socialLinks.isNotEmpty() }) {
-                    "Leaguepedia · 管理层 / 社交账号已缓存"
-                } else {
-                    "管理层 / 社交资料尚未同步"
-                }
+                staffStatus = if (cached.staff.isNotEmpty()) "教练组 · 已缓存，后台检查动态目录" else "教练组尚未同步",
+                profileStatus = "管理层 · 已缓存，后台检查 RiftLab Dynamic Data",
+                profileSourceMode = "cache"
             )
+            refreshDynamicOnly(team, cached, key, cachedStarters, cachedImage)
             return
         }
 
         loadJob?.cancel()
+        profileRefreshJob?.cancel()
         _state.value = TeamDetailState(
             team = team,
             imageUrl = cachedImage,
@@ -143,19 +145,25 @@ internal object TeamDetailRepository {
                     ?: cachedStarters
             } else cachedStarters
 
-            val staffSupplement = if (baseDetails != null) {
-                staffProvider.fetch(effectiveTeam, baseDetails)
-            } else TeamStaffSupplement(status = "教练组等待 Riot roster")
-
-            val profileSupplement = if (baseDetails != null) {
-                runCatching { profileProvider.fetch(effectiveTeam, baseDetails) }
+            val dynamicSupplement = if (baseDetails != null) {
+                runCatching { dynamicProvider.fetch(effectiveTeam, baseDetails) }
                     .getOrElse {
-                        TeamProfileSupplement(status = "管理层 / 社交资料同步失败 · ${it.message?.take(80).orEmpty()}")
+                        TeamDynamicSupplement(
+                            profile = TeamProfileSupplement(status = "管理层动态目录同步失败 · ${it.message?.take(80).orEmpty()}"),
+                            staff = TeamStaffSupplement(status = "教练组动态目录同步失败"),
+                            sourceMode = "error"
+                        )
                     }
             } else {
-                TeamProfileSupplement(status = "管理层 / 社交资料等待 Riot roster")
+                TeamDynamicSupplement(
+                    profile = TeamProfileSupplement(status = "管理层动态目录等待 Riot roster"),
+                    staff = TeamStaffSupplement(status = "教练组动态目录等待 Riot roster"),
+                    sourceMode = "waiting"
+                )
             }
 
+            val staffSupplement = dynamicSupplement.staff
+            val profileSupplement = dynamicSupplement.profile
             val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
             val management = profileSupplement.management.ifEmpty { cached?.management.orEmpty() }
             val teamSocialLinks = profileSupplement.teamLinks.ifEmpty { cached?.socialLinks.orEmpty() }
@@ -205,7 +213,50 @@ internal object TeamDetailRepository {
                 },
                 staffStatus = if (staff.isNotEmpty() && staffSupplement.staff.isEmpty()) "教练组 · 本地缓存" else staffSupplement.status,
                 profileStatus = profileSupplement.status,
+                organizationSummary = dynamicSupplement.organizationSummary,
+                legalSummary = dynamicSupplement.legalSummary,
+                profileSourceMode = dynamicSupplement.sourceMode,
                 errorMessage = detailResult.exceptionOrNull()?.message
+            )
+        }
+    }
+
+    private fun refreshDynamicOnly(
+        team: EsportsTeamRef,
+        cached: EsportsTeamDetails,
+        key: String,
+        cachedStarters: Set<String>,
+        cachedImage: String
+    ) {
+        profileRefreshJob?.cancel()
+        profileRefreshJob = scope.launch {
+            val dynamic = runCatching { dynamicProvider.fetch(team, cached) }.getOrNull() ?: return@launch
+            val updated = cached.copy(
+                staff = dynamic.staff.staff.ifEmpty { cached.staff },
+                management = dynamic.profile.management.ifEmpty { cached.management },
+                socialLinks = dynamic.profile.teamLinks.ifEmpty { cached.socialLinks }
+            )
+            cache[key] = updated
+
+            val current = _state.value
+            val currentTeam = current.team ?: return@launch
+            if (!sameTeam(currentTeam, team)) return@launch
+            val substitutes = substituteCount(updated.players, cachedStarters)
+            _state.value = current.copy(
+                details = updated,
+                imageUrl = cachedImage,
+                status = rosterSummary(
+                    updated.players.size,
+                    cachedStarters.size,
+                    substitutes,
+                    updated.staff.size,
+                    updated.management.size
+                ),
+                staffStatus = dynamic.staff.status,
+                profileStatus = dynamic.profile.status,
+                organizationSummary = dynamic.organizationSummary,
+                legalSummary = dynamic.legalSummary,
+                profileSourceMode = dynamic.sourceMode
             )
         }
     }
@@ -217,6 +268,7 @@ internal object TeamDetailRepository {
 
     fun close() {
         loadJob?.cancel()
+        profileRefreshJob?.cancel()
         _state.value = TeamDetailState()
     }
 
