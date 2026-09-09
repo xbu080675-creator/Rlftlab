@@ -164,7 +164,7 @@ private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: 
             Text(
                 "该局 EventDetails 暂无可嵌入参数，当前在 RiftLab 内加载 LoL Esports 官方 VOD 页面。",
                 color = RiftMuted, fontSize = 8.sp, lineHeight = 13.sp,
-                modifier = Modifier.padding(top = 5.dp, horizontal = 2.dp)
+                modifier = Modifier.padding(start = 2.dp, top = 5.dp, end = 2.dp)
             )
         }
     }

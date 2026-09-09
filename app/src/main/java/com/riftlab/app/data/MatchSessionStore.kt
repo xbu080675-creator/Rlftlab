@@ -294,7 +294,7 @@ object MatchSessionStore {
         }
 
         val targetChanged = _targetMatch.value?.matchId != liveMatch.matchId
-        val next = findNextMatch(center.matches, liveMatch.matchId)
+        val next = findNextMatch(center.matches.filter(::matchesHomepageSubscription), liveMatch.matchId)
 
         _scheduleCenter.value = center.copy(
             currentMatch = liveMatch,
