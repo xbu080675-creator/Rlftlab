@@ -7,6 +7,7 @@ on:
   push:
     paths:
       - 'tools/sync_team_data.py'
+      - 'tools/sync_people_data.py'
       - 'data/lpl/source_registry.json'
       - '.github/workflows/team-data-sync.yml'
 
@@ -29,20 +30,24 @@ jobs:
       - name: Sync official team directory
         run: python3 tools/sync_team_data.py
 
+      - name: Sync people identities, careers and avatar references
+        run: python3 tools/sync_people_data.py --max-avatar-lookups 8
+
       - name: Validate JSON and diff
         run: |
           python3 -m json.tool data/lpl/team_profiles.json >/dev/null
           python3 -m json.tool data/lpl/team_watch_state.json >/dev/null
+          python3 -m json.tool data/lpl/people.json >/dev/null
           git diff --check
 
       - name: Commit fresh team data
         run: |
-          if git diff --quiet -- data/lpl/team_profiles.json data/lpl/team_watch_state.json; then
+          if git diff --quiet -- data/lpl/team_profiles.json data/lpl/team_watch_state.json data/lpl/people.json; then
             echo "No team-data changes"
             exit 0
           fi
           git config user.name "riftlab-data-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/lpl/team_profiles.json data/lpl/team_watch_state.json
-          git commit -m "data(lpl): sync current team directory"
+          git add data/lpl/team_profiles.json data/lpl/team_watch_state.json data/lpl/people.json
+          git commit -m "data(lpl): sync teams people careers and avatars"
           git push
