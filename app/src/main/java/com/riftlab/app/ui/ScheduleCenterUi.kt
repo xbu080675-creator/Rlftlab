@@ -47,6 +47,7 @@ import com.riftlab.app.data.EsportsTeamRef
 import com.riftlab.app.data.EsportsTournamentRef
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.ScheduleActivityState
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.data.StandingBracketMatch
@@ -275,6 +276,7 @@ private fun EventSummaryCard(
 ) {
     val hasCurrent = bucket.matches.any { it.matchId == current?.matchId }
     val hasNext = bucket.matches.any { it.matchId == next?.matchId }
+    val currentActivity = current?.takeIf { hasCurrent }?.let(MatchSessionStore::scheduleActivity)
     Column(
         Modifier.fillMaxWidth()
             .background(RiftPanel, CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
@@ -284,7 +286,7 @@ private fun EventSummaryCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 when {
-                    hasCurrent -> "进行中"
+                    hasCurrent -> currentActivity?.let(::scheduleActivityText) ?: "进行中"
                     hasNext -> "当前赛段"
                     bucket.matches.all { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED } -> "已结束"
                     else -> "赛事"
@@ -300,7 +302,12 @@ private fun EventSummaryCard(
         Text(competitionRange(bucket.matches), color = RiftMuted, fontSize = 10.sp)
         if (hasCurrent && current != null) {
             Spacer(Modifier.height(5.dp))
-            Text("LIVE · ${matchLabel(current)}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "${currentActivity?.let(::scheduleActivityText) ?: "进行中"} · ${matchLabel(current)} · ${MatchSessionStore.scheduleTimingNote(current)}",
+                color = RiftCyan,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         } else if (hasNext && next != null) {
             Spacer(Modifier.height(5.dp))
             Text("NEXT · ${matchLabel(next)} · ${MatchSessionStore.scheduleTimingNote(next)}", color = RiftMuted, fontSize = 10.sp)
@@ -351,7 +358,8 @@ private fun CompetitionDirectory(
 ) {
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(buckets, key = { it.key }) { bucket ->
-            val hasCurrent = bucket.matches.any { it.matchId == currentMatchId }
+            val currentMatch = bucket.matches.firstOrNull { it.matchId == currentMatchId }
+            val hasCurrent = currentMatch != null
             val hasNext = bucket.matches.any { it.matchId == nextMatchId }
             val completed = bucket.matches.count { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED }
             Column(
@@ -369,7 +377,12 @@ private fun CompetitionDirectory(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         when {
-                            hasCurrent -> Text("LIVE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            hasCurrent -> Text(
+                                currentMatch?.let { scheduleActivityText(MatchSessionStore.scheduleActivity(it)) } ?: "进行中",
+                                color = RiftCyan,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                             hasNext -> Text("NEXT", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Text("${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 9.sp)
@@ -433,24 +446,23 @@ private fun CompetitionMatches(
 
 @Composable
 private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, onClick: () -> Unit) {
-    val phase = MatchSessionStore.schedulePhase(match)
+    val phase = MatchSessionStore.scheduleActivity(match)
+    val active = phase == ScheduleActivityState.GAME_LIVE ||
+        phase == ScheduleActivityState.EVENT_LIVE ||
+        phase == ScheduleActivityState.BETWEEN_GAMES
     val left = match.teams.getOrNull(0)
     val right = match.teams.getOrNull(1)
     Column(
         Modifier.fillMaxWidth()
             .clickable(onClick = onClick)
             .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .border(1.dp, if (selected || phase == ScheduleMatchPhase.LIVE) RiftCyan.copy(alpha = 0.48f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+            .border(1.dp, if (selected || active) RiftCyan.copy(alpha = 0.48f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
             .padding(13.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                when (phase) {
-                    ScheduleMatchPhase.LIVE -> "LIVE"
-                    ScheduleMatchPhase.UPCOMING -> "待开"
-                    ScheduleMatchPhase.COMPLETED -> "已结束"
-                },
-                color = if (phase == ScheduleMatchPhase.LIVE) RiftCyan else RiftMuted,
+                scheduleActivityText(phase),
+                color = if (active) RiftCyan else RiftMuted,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -463,7 +475,7 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
             leftImageUrl = left?.imageUrl.orEmpty(),
             rightCode = teamCode(right),
             rightImageUrl = right?.imageUrl.orEmpty(),
-            centerText = if (phase == ScheduleMatchPhase.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
+            centerText = if (phase == ScheduleActivityState.COMPLETED || match.teams.any { it.gameWins > 0 }) MatchSessionStore.scheduleScore(match) else "VS",
             centerSubtext = MatchSessionStore.scheduleTimingNote(match),
             logoSize = 44.dp,
             centerFontSize = 18.sp
@@ -819,6 +831,14 @@ private fun translateStageName(value: String): String = when {
     value.contains("Group Stage", true) -> "组内赛"
     value.equals("Finals", true) -> "决赛"
     else -> value.uppercase()
+}
+
+private fun scheduleActivityText(value: ScheduleActivityState): String = when (value) {
+    ScheduleActivityState.GAME_LIVE -> "小局直播"
+    ScheduleActivityState.EVENT_LIVE -> "赛事进行中"
+    ScheduleActivityState.BETWEEN_GAMES -> "局间"
+    ScheduleActivityState.UPCOMING -> "待开"
+    ScheduleActivityState.COMPLETED -> "已结束"
 }
 
 private fun bracketState(value: String): String = when {

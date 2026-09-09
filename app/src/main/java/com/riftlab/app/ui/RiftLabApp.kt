@@ -55,6 +55,7 @@ import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MockAiInsightEngine
 import com.riftlab.app.data.PlayerCard
+import com.riftlab.app.data.ScheduleActivityState
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.stream.StreamLauncher
 import com.riftlab.app.stream.StreamPlatform
@@ -211,6 +212,26 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
     val scheduled by MatchSessionStore.preMatchFlow.collectAsState()
     val target by MatchSessionStore.targetMatch.collectAsState()
     val isLive = status.phase == LiveSourcePhase.LIVE
+    val activity = target?.let(MatchSessionStore::scheduleActivity)
+    val eventActive = isLive ||
+        activity == ScheduleActivityState.EVENT_LIVE ||
+        activity == ScheduleActivityState.BETWEEN_GAMES
+    val phaseLabel = when {
+        isLive -> "小局直播 · GAME ${snapshot.game}"
+        activity == ScheduleActivityState.BETWEEN_GAMES -> "局间 · 等待下一小局"
+        activity == ScheduleActivityState.EVENT_LIVE -> "赛事已开始 · 等待小局"
+        status.phase == LiveSourcePhase.WAITING_FOR_MATCH -> "等待赛事开始"
+        status.phase == LiveSourcePhase.ERROR -> "实时源异常"
+        else -> "实时源待机"
+    }
+    val feedLabel = when {
+        isLive -> "小局实时数据"
+        activity == ScheduleActivityState.BETWEEN_GAMES -> "局间待机"
+        activity == ScheduleActivityState.EVENT_LIVE -> "赛事进行中 · 等待小局数据"
+        status.phase == LiveSourcePhase.WAITING_FOR_MATCH -> "等待赛事"
+        status.phase == LiveSourcePhase.ERROR -> "实时源异常"
+        else -> "实时源待机"
+    }
     val displayBlue = if (isLive) snapshot.blue else scheduled.blue.takeUnless { it.isBlank() || it == "—" } ?: "—"
     val displayRed = if (isLive) snapshot.red else scheduled.red.takeUnless { it.isBlank() || it == "—" } ?: "—"
     val ai = remember { MockAiInsightEngine() }
@@ -229,13 +250,13 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Panel(accent = isLive) {
+            Panel(accent = eventActive) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (isLive) "LIVE · GAME ${snapshot.game}" else status.phase.name,
-                        color = when (status.phase) {
-                            LiveSourcePhase.LIVE -> RiftCyan
-                            LiveSourcePhase.ERROR -> RiftRed
+                        phaseLabel,
+                        color = when {
+                            status.phase == LiveSourcePhase.ERROR -> RiftRed
+                            eventActive -> RiftCyan
                             else -> RiftMuted
                         },
                         fontWeight = FontWeight.SemiBold,
@@ -275,13 +296,13 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
 
         item { SectionTitle("DATA FEED / 实时源") }
         item {
-            Panel(accent = isLive) {
+            Panel(accent = eventActive) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        status.phase.name,
-                        color = when (status.phase) {
-                            LiveSourcePhase.LIVE -> RiftCyan
-                            LiveSourcePhase.ERROR -> RiftRed
+                        feedLabel,
+                        color = when {
+                            status.phase == LiveSourcePhase.ERROR -> RiftRed
+                            eventActive -> RiftCyan
                             else -> RiftMuted
                         },
                         fontWeight = FontWeight.SemiBold,
@@ -334,7 +355,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         }
         item {
             Text(
-                "直播跳转只是快捷入口；赛事数据、RiftScreen 与直播平台完全解耦。计划开赛时间仅作参考，Live 状态以 Riot 实际数据为准。",
+                "赛事开始状态与小局 LIVE 分开判定：选手入场、评论席等阶段只标记“赛事进行中”，只有实时 Provider 拿到小局帧才进入“小局直播”。直播跳转只是快捷入口，赛事数据与直播平台完全解耦。",
                 color = RiftMuted,
                 fontSize = 11.sp,
                 lineHeight = 17.sp

@@ -227,10 +227,13 @@ object MatchSessionStore {
         } ?: return
 
         val key = scheduleKey(liveMatch)
-        val detected = if (key in center.liveDetectedAtEpochMs) {
-            center.liveDetectedAtEpochMs
-        } else {
+        val detected = if (
+            status.phase == LiveSourcePhase.LIVE &&
+            key !in center.liveDetectedAtEpochMs
+        ) {
             center.liveDetectedAtEpochMs + (key to System.currentTimeMillis())
+        } else {
+            center.liveDetectedAtEpochMs
         }
 
         val targetChanged = _targetMatch.value?.matchId != liveMatch.matchId
@@ -363,7 +366,7 @@ object MatchSessionStore {
         next: ScheduledEsportsMatch?
     ): String {
         val completed = matches.count(::isCompletedState)
-        val currentText = current?.let { "LIVE ${teamsLabel(it)}" } ?: "NO LIVE"
+        val currentText = current?.let { "${scheduleActivityLabel(it)} ${teamsLabel(it)}" } ?: "NO ACTIVE EVENT"
         val nextText = next?.let { "NEXT ${teamsLabel(it)} ${formatLocalDateTime(it.startTimeIso)}" } ?: "NO NEXT"
         return "Riot Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
     }
@@ -388,6 +391,41 @@ object MatchSessionStore {
         else -> ScheduleMatchPhase.UPCOMING
     }
 
+    fun scheduleActivity(match: ScheduledEsportsMatch): ScheduleActivityState {
+        if (isCompletedState(match)) return ScheduleActivityState.COMPLETED
+
+        val current = _scheduleCenter.value.currentMatch
+        val isCurrent = current?.let { candidate ->
+            candidate.matchId == match.matchId ||
+                (match.eventId.isNotBlank() && candidate.eventId == match.eventId)
+        } == true
+        val status = liveDataSource.status.value
+        val statusTargetsMatch = isCurrent && (
+            status.eventId.isBlank() ||
+                status.eventId == match.eventId ||
+                status.eventId == match.matchId
+            )
+
+        if (statusTargetsMatch) {
+            when (status.phase) {
+                LiveSourcePhase.LIVE -> return ScheduleActivityState.GAME_LIVE
+                LiveSourcePhase.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES
+                else -> Unit
+            }
+        }
+
+        if (isLiveState(match)) return ScheduleActivityState.EVENT_LIVE
+        return ScheduleActivityState.UPCOMING
+    }
+
+    fun scheduleActivityLabel(match: ScheduledEsportsMatch): String = when (scheduleActivity(match)) {
+        ScheduleActivityState.GAME_LIVE -> "小局进行中"
+        ScheduleActivityState.EVENT_LIVE -> "赛事进行中"
+        ScheduleActivityState.BETWEEN_GAMES -> "局间"
+        ScheduleActivityState.UPCOMING -> "待开"
+        ScheduleActivityState.COMPLETED -> "已结束"
+    }
+
     fun scheduleScore(match: ScheduledEsportsMatch): String {
         val left = match.teams.getOrNull(0)?.gameWins ?: 0
         val right = match.teams.getOrNull(1)?.gameWins ?: 0
@@ -400,14 +438,23 @@ object MatchSessionStore {
             .format(Instant.parse(match.startTimeIso))
     }.getOrElse { "日期未知" }
 
-    fun scheduleTimingNote(match: ScheduledEsportsMatch): String {
-        val detectedAt = _scheduleCenter.value.liveDetectedAtEpochMs[scheduleKey(match)] ?: return "计划 ${formatLocalStart(match.startTimeIso)}"
-        val planned = plannedStartEpochMs(match) ?: return "LIVE 已检测"
-        val deltaMs = planned - detectedAt
-        return if (deltaMs >= 60_000L) {
-            "计划 ${formatLocalStart(match.startTimeIso)} · 提前约 ${deltaMs / 60_000L} 分钟检测到 LIVE"
-        } else {
-            "计划 ${formatLocalStart(match.startTimeIso)} · LIVE 已检测"
+    fun scheduleTimingNote(match: ScheduledEsportsMatch): String = when (scheduleActivity(match)) {
+        ScheduleActivityState.UPCOMING -> "计划 ${formatLocalStart(match.startTimeIso)}"
+        ScheduleActivityState.EVENT_LIVE -> "赛事已开始 · 等待小局数据"
+        ScheduleActivityState.BETWEEN_GAMES -> "局间 · 等待下一小局"
+        ScheduleActivityState.COMPLETED -> "已结束"
+        ScheduleActivityState.GAME_LIVE -> {
+            val plannedLabel = formatLocalStart(match.startTimeIso)
+            val detectedAt = _scheduleCenter.value.liveDetectedAtEpochMs[scheduleKey(match)]
+                ?: return@when "赛事计划 $plannedLabel · 小局进行中"
+            val planned = plannedStartEpochMs(match)
+                ?: return@when "小局进行中"
+            val deltaMinutes = (detectedAt - planned) / 60_000L
+            when {
+                deltaMinutes >= 1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE +${deltaMinutes} 分钟"
+                deltaMinutes <= -1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE ${deltaMinutes} 分钟"
+                else -> "赛事计划 $plannedLabel · 小局进行中"
+            }
         }
     }
 

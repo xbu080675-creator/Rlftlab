@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.0.0-dev.21"
+        versionCode = 22
+        versionName = "1.0.0-dev.22"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.21: offline management snapshot; remove runtime Fandom profile dependency.
+// dev.22: distinguish event/broadcast start from actual game-live and between-games states.

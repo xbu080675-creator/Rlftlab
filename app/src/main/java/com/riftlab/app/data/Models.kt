@@ -98,6 +98,14 @@ enum class ScheduleMatchPhase {
     COMPLETED
 }
 
+enum class ScheduleActivityState {
+    GAME_LIVE,
+    EVENT_LIVE,
+    BETWEEN_GAMES,
+    UPCOMING,
+    COMPLETED
+}
+
 data class ScheduleCenterState(
     val matches: List<ScheduledEsportsMatch> = emptyList(),
     val currentMatch: ScheduledEsportsMatch? = null,
