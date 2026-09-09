@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.28: canonical people entities, sourced staff avatars, and employment timelines.
+// dev.28: canonical people entities, sourced staff avatars, employment timelines, and remote-first people directory.
