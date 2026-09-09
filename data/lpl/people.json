@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T18:40:24Z",
+  "updatedAt": "2026-09-09T23:18:48Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -812,7 +812,10 @@
           "stintId": "st_38e5c40fba66"
         }
       ],
-      "avatarProbe": {}
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:47Z",
+        "attempts": 1
+      }
     },
     "p_da67a7af42ed": {
       "displayName": "Poppy",
@@ -918,7 +921,11 @@
           "source": "",
           "stintId": "st_76f7e12a1f54"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:47Z",
+        "attempts": 1
+      }
     },
     "p_5e76e045f30a": {
       "displayName": "BZ",
@@ -993,7 +1000,11 @@
           "source": "",
           "stintId": "st_760d4fb028ce"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:47Z",
+        "attempts": 1
+      }
     },
     "p_2b515c4c32b2": {
       "displayName": "Fei",
@@ -1488,7 +1499,11 @@
           "source": "",
           "stintId": "st_96ef70ef1deb"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:47Z",
+        "attempts": 1
+      }
     },
     "p_70f62b2e22dc": {
       "displayName": "Liu Yi-Fei",
@@ -1510,7 +1525,11 @@
           "source": "",
           "stintId": "st_7bdb8b831d44"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:47Z",
+        "attempts": 1
+      }
     },
     "p_41c3070d8cce": {
       "displayName": "Ben",
@@ -1702,7 +1721,11 @@
           "endDate": "",
           "source": ""
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:45Z",
+        "attempts": 1
+      }
     },
     "p_458c2e1aae9b": {
       "displayName": "Helper",
@@ -1774,7 +1797,11 @@
           "source": "",
           "stintId": "st_65c58b9a9715"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:46Z",
+        "attempts": 1
+      }
     },
     "p_71bb62f7a7f3": {
       "displayName": "WXZ",
@@ -2015,7 +2042,11 @@
           "source": "",
           "stintId": "st_cf68c6edb8ac"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T23:18:46Z",
+        "attempts": 1
+      }
     },
     "p_3333703a038e": {
       "displayName": "Shine",
