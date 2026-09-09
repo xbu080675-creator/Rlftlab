@@ -42,11 +42,17 @@ jobs:
           gradle-version: '9.6.0'
       - name: Compile dev30
         run: gradle :app:compileDebugKotlin
-      - name: Commit dev30
+      - name: Commit dev30 non-workflow changes
         run: |
           git config user.name "riftlab-dev-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f tools/dev30_apply.py .github/workflows/dev30-team-archive.yml
-          git add -A
+          git add \
+            app/src/main/java/com/riftlab/app/RiftLabApplication.kt \
+            app/src/main/java/com/riftlab/app/data/DynamicTeamDataProvider.kt \
+            app/src/main/java/com/riftlab/app/data/TeamDetailRepository.kt \
+            app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt \
+            app/build.gradle.kts \
+            data/lpl/team_profiles.json \
+            DEV_CHANGELOG.txt
           git commit -m "feat: rebuild team pages as audited archives"
           git push
