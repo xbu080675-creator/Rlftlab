@@ -2,6 +2,7 @@ package com.riftlab.app.overlay
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -10,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.ui.graphics.toArgb
 import coil.ImageLoader
 import coil.request.ImageRequest
 import com.riftlab.app.data.EsportsAssetCache
@@ -19,6 +21,7 @@ import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.LiveSourceStatus
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduledEsportsMatch
+import com.riftlab.app.ui.RiftTeamSkins
 import kotlin.math.abs
 
 class RiftOverlayView(
@@ -30,6 +33,9 @@ class RiftOverlayView(
 
     private var mode = Mode.COMPACT
     private val imageLoader = ImageLoader.Builder(context).build()
+    private val containerBackground = GradientDrawable().apply {
+        cornerRadius = dp(10).toFloat()
+    }
 
     private val root = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
@@ -39,6 +45,10 @@ class RiftOverlayView(
     private val title = text("等待数据", 11f, 0xFF94A0B2.toInt(), bold = true)
     private val timer = text("--:--", 11f, 0xFF94A0B2.toInt())
     private val modeChip = text("COMPACT ›", 9f, 0xFF6CEBFF.toInt(), bold = true)
+    private val close = text("×", 20f, 0xFF8C98AA.toInt(), bold = true).apply {
+        setPadding(dp(12), 0, 0, 0)
+        setOnClickListener { onClose() }
+    }
 
     private val blueLogo = logoView(38)
     private val redLogo = logoView(38)
@@ -78,11 +88,7 @@ class RiftOverlayView(
 
     init {
         elevation = dp(14).toFloat()
-        background = GradientDrawable().apply {
-            cornerRadius = dp(10).toFloat()
-            setColor(0xEE0B1019.toInt())
-            setStroke(dp(1), 0xFF233347.toInt())
-        }
+        background = containerBackground
 
         addView(root, LayoutParams(dp(308), LayoutParams.WRAP_CONTENT))
 
@@ -95,10 +101,6 @@ class RiftOverlayView(
         modeChip.setPadding(dp(10), 0, 0, 0)
         modeChip.setOnClickListener { cycleMode() }
         top.addView(modeChip)
-        val close = text("×", 20f, 0xFF8C98AA.toInt(), bold = true).apply {
-            setPadding(dp(12), 0, 0, 0)
-            setOnClickListener { onClose() }
-        }
         top.addView(close)
         root.addView(top)
 
@@ -149,6 +151,12 @@ class RiftOverlayView(
         val right = if (isLive) snapshot.red else scheduledRight.ifBlank { "—" }
         val leftTeam = target?.teams?.firstOrNull { sameLabel(left, it) } ?: target?.teams?.getOrNull(0)
         val rightTeam = target?.teams?.firstOrNull { sameLabel(right, it) } ?: target?.teams?.getOrNull(1)
+        val dark = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        val skin = target?.let(RiftTeamSkins::resolve)
+            ?: RiftTeamSkins.resolveCode(snapshot.blue.ifBlank { scheduledLeft })
+        val palette = skin.palette(dark)
+
+        applySkinColors(palette, status)
 
         title.text = when (status.phase) {
             LiveSourcePhase.LIVE -> "LIVE · G${snapshot.game}"
@@ -157,13 +165,6 @@ class RiftOverlayView(
             LiveSourcePhase.ERROR -> "数据源异常"
             LiveSourcePhase.IDLE -> "等待数据"
         }
-        title.setTextColor(
-            when (status.phase) {
-                LiveSourcePhase.LIVE -> 0xFF6CEBFF.toInt()
-                LiveSourcePhase.ERROR -> 0xFFFF667A.toInt()
-                else -> 0xFF94A0B2.toInt()
-            }
-        )
         timer.text = if (isLive) MatchSessionStore.formatTime(snapshot.elapsedSeconds) else "--:--"
         blue.text = left
         red.text = right
@@ -174,7 +175,11 @@ class RiftOverlayView(
 
         if (isLive) {
             val diff = formatDiff(snapshot.goldDiff)
-            val leadColor = if (snapshot.goldDiff >= 0) 0xFF6CEBFF.toInt() else 0xFFFF667A.toInt()
+            val leadColor = when {
+                snapshot.goldDiff > 0 -> palette.accent.toArgb()
+                snapshot.goldDiff < 0 -> palette.secondary.toArgb()
+                else -> palette.text.toArgb()
+            }
             goldDiff.text = diff
             goldDiff.setTextColor(leadColor)
             miniCenter.text = diff
@@ -184,15 +189,47 @@ class RiftOverlayView(
             event.text = "EVENT · ${snapshot.latestEvent}"
         } else {
             goldDiff.text = "VS"
-            goldDiff.setTextColor(0xFF94A0B2.toInt())
+            goldDiff.setTextColor(palette.muted.toArgb())
             miniCenter.text = "VS"
-            miniCenter.setTextColor(Color.WHITE)
+            miniCenter.setTextColor(palette.text.toArgb())
             metrics.text = "K —   T —   D —"
             goldLine.text = "GOLD — : —   LEAD —"
             event.text = "STATUS · ${status.message}"
         }
 
         flashAccent()
+    }
+
+    private fun applySkinColors(
+        palette: com.riftlab.app.ui.RiftSkinPalette,
+        status: LiveSourceStatus
+    ) {
+        containerBackground.colors = intArrayOf(
+            palette.panel.toArgb(),
+            palette.panelAlt.toArgb(),
+            palette.panel.toArgb()
+        )
+        containerBackground.orientation = GradientDrawable.Orientation.TL_BR
+        containerBackground.setStroke(dp(1), palette.line.toArgb())
+        background = containerBackground
+
+        accent.setBackgroundColor(palette.accent.toArgb())
+        modeChip.setTextColor(palette.accent.toArgb())
+        timer.setTextColor(palette.muted.toArgb())
+        close.setTextColor(palette.muted.toArgb())
+        blue.setTextColor(palette.text.toArgb())
+        red.setTextColor(palette.text.toArgb())
+        metrics.setTextColor(palette.text.toArgb())
+        goldLine.setTextColor(palette.text.toArgb())
+        event.setTextColor(palette.muted.toArgb())
+        hint.setTextColor(palette.muted.copy(alpha = 0.78f).toArgb())
+        title.setTextColor(
+            when (status.phase) {
+                LiveSourcePhase.LIVE -> palette.accent.toArgb()
+                LiveSourcePhase.ERROR -> palette.danger.toArgb()
+                else -> palette.muted.toArgb()
+            }
+        )
     }
 
     private fun EsportsTeamRef.displayCode(): String = code.ifBlank { name }.ifBlank { "—" }
