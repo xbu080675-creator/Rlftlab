@@ -1,0 +1,48 @@
+name: Probe OP.GG Global Awards
+
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-opgg-global-awards.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe public OP.GG GraphQL schema and 2025 Worlds final
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request
+          URL='https://esports.op.gg/matches/graphql'
+          def gql(operation, query, variables=None):
+              body=json.dumps({'operationName':operation,'query':query,'variables':variables or {}}).encode()
+              req=urllib.request.Request(URL,data=body,headers={'Content-Type':'application/json','Accept':'application/json','Origin':'https://esports.op.gg','Referer':'https://esports.op.gg/','User-Agent':'Mozilla/5.0 RiftLab-CI'})
+              with urllib.request.urlopen(req,timeout=20) as r: return json.load(r)
+          q='''query ListPagedAllMatches($status: String!, $leagueId: ID, $teamId: ID, $page: Int, $year: Int, $month: Int, $limit: Int) { pagedAllMatches(status:$status,leagueId:$leagueId,teamId:$teamId,page:$page,year:$year,month:$month,limit:$limit){ id name scheduledAt beginAt status homeScore awayScore homeTeam{id name acronym} awayTeam{id name acronym} } }'''
+          root=gql('ListPagedAllMatches',q,{'status':'finished','leagueId':None,'teamId':None,'page':0,'year':2025,'month':11,'limit':500})
+          rows=root.get('data',{}).get('pagedAllMatches') or []
+          hit=None
+          for row in rows:
+              a=(row.get('homeTeam') or {}).get('acronym','').upper(); b=(row.get('awayTeam') or {}).get('acronym','').upper()
+              if {a,b}=={'T1','KT'}:
+                  print('MATCH',json.dumps(row,ensure_ascii=False)); hit=row; break
+          iq='''query Schema { __schema { types { name fields { name type { kind name ofType { kind name ofType { kind name } } } } } } }'''
+          try:
+              schema=gql('Schema',iq)
+              for t in schema.get('data',{}).get('__schema',{}).get('types',[]):
+                  fields=[f.get('name') for f in (t.get('fields') or [])]
+                  joined=' '.join(fields).lower()
+                  if any(k in joined for k in ['mvppoint','kills','creepscore','goldearned']) or ('game' in (t.get('name') or '').lower() and fields):
+                      print('TYPE',t.get('name'),fields)
+          except Exception as e: print('INTROSPECTION_ERROR',repr(e))
+          if hit:
+              mid=str(hit['id'])
+              candidates=[
+                ('A','''query GetGameByMatch($matchId: ID!, $set: Int) { gameByMatch(matchId:$matchId,set:$set){ id finished length winner{id name acronym} teams{side kills deaths assists towerKills inhibitorKills heraldKills dragonKills elderDrakeKills baronKills goldEarned team{id name acronym}} players{side championId position mvpPoint kills deaths assists creepScore goldEarned totalGold damageDealt damageTaken visionScore team{id name acronym} player{id nickName position imageUrl}} } }'''),
+                ('B','''query GetGameByMatch($matchId: ID!, $set: Int) { gameByMatch(matchId:$matchId,set:$set){ id finished length winner{id name acronym} players{side championId position mvpPoint kills deaths assists cs gold team{id name acronym} player{id nickName position imageUrl}} } }''')
+              ]
+              for label,qg in candidates:
+                  try:
+                      g=gql('GetGameByMatch',qg,{'matchId':mid,'set':1}); print('GAME_'+label,json.dumps(g,ensure_ascii=False)[:12000])
+                  except Exception as e: print('GAME_'+label+'_ERROR',repr(e))
+          PY
