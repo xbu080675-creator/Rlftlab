@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "dataset": "riftlab-lpl-team-archive",
+  "updatedAt": "2026-09-09T04:45:00Z",
+  "coverage": {
+    "teams": 12,
+    "organizationAudit": "complete",
+    "lineageAudit": "complete",
+    "alumniCoverage": "partial-explicit-sources-only",
+    "note": "No inferred departures. Historical people are added only when a source establishes the former tenure."
+  },
+  "teams": {
+    "AL": {
+      "identity": {"foundedAt":"2021-12-01","lolDivisionFoundedAt":"2021-12-01","region":"CN","city":"成都","status":"ACTIVE"},
+      "operators": [{"name":"All Gamers","role":"PARENT_ORG","source":"All Gamers is the organization behind Anyone's Legend","sourceUrl":"https://esports.gg/news/league-of-legends/agal-league-of-legends-at-ewc-2026-interview-with-eddy-chen/"}],
+      "parentOrganizations": [{"name":"All Gamers","role":"OWNER_OR_PARENT","source":"AG / AL organization relationship"}],
+      "peopleInCharge": [{"name":"AG爱笑","role":"ESPORTS_GENERAL_MANAGER","displayRole":"电竞总经理 / 经理","source":"认证微博及 2026 公开任职记录"}],
+      "honors": [{"year":"2025","event":"LPL 第二赛段","placement":"冠军","tier":"LPL","source":"公开赛事记录"}],
+      "lineage": [
+        {"name":"Rogue Warriors","from":"2017","to":"2021-12-01","relation":"ACQUIRED_AND_REBRANDED","scope":"LPL_SLOT","operator":"RW","note":"All Gamers 收购 RW 的 LPL 席位并建立 Anyone's Legend","source":"Liquipedia Anyone's Legend","sourceUrl":"https://liquipedia.net/leagueoflegends/Anyone%27s_Legend"},
+        {"name":"Anyone's Legend","from":"2021-12-01","to":"","relation":"CURRENT","scope":"TEAM","operator":"All Gamers","note":"","source":"AL / All Gamers"}
+      ],
+      "alumni": []
+    },
+    "BLG": {
+      "identity": {"foundedAt":"2017-12-17","lolDivisionFoundedAt":"2017-12-17","region":"CN","city":"杭州","status":"ACTIVE"},
+      "operators": [{"name":"哔哩哔哩 / Bilibili","role":"OWNER_OR_PARENT","source":"Bilibili acquired I May and formed BLG"}],
+      "parentOrganizations": [{"name":"哔哩哔哩 / Bilibili","role":"OWNER_OR_PARENT","source":"Bilibili public organization record"}],
+      "peopleInCharge": [{"name":"袁玺","role":"ESPORTS_DIRECTOR_AND_MANAGER","displayRole":"赛训总监 / 经理","source":"人民电竞；2026 公开身份持续称 BLG 经理"}],
+      "honors": [
+        {"year":"2024","event":"LPL 春季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2024","event":"LPL 夏季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2024","event":"英雄联盟全球总决赛","placement":"亚军","tier":"WORLDS","source":"公开赛事记录"}
+      ],
+      "lineage": [
+        {"name":"I May","from":"2016","to":"2017-12-17","relation":"ACQUIRED_AND_REBRANDED","scope":"LPL_SLOT","operator":"I May","note":"Bilibili 收购 I May 阵容/席位后成立 BLG","source":"Bilibili Gaming public history"},
+        {"name":"Bilibili Gaming","from":"2017-12-17","to":"","relation":"CURRENT","scope":"TEAM","operator":"Bilibili","note":"","source":"BLG"}
+      ],
+      "alumni": []
+    },
+    "TES": {
+      "identity": {"foundedAt":"2017-12-21","lolDivisionFoundedAt":"2017-12-21","region":"CN","city":"","status":"ACTIVE"},
+      "operators": [{"name":"滔搏 / Topsports","role":"OWNER_OR_PARENT","source":"Top Esports is owned by Topsports","sourceUrl":"https://lol.fandom.com/wiki/Top_Esports"}],
+      "parentOrganizations": [{"name":"滔搏 / Topsports","role":"OWNER_OR_PARENT","source":"Top Esports public history"}],
+      "peopleInCharge": [{"name":"Hao","role":"CEO","displayRole":"CEO","source":"RiftLab current management audit"}],
+      "honors": [
+        {"year":"2020","event":"LPL 夏季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2020","event":"Mid-Season Cup","placement":"冠军","tier":"INTERNATIONAL","source":"公开赛事记录"}
+      ],
+      "lineage": [
+        {"name":"DAN Gaming","from":"","to":"2017-12-21","relation":"SLOT_ACQUIRED","scope":"LPL_SLOT","operator":"DAN","note":"Topsports acquired DAN Gaming's LPL slot","source":"Top Esports public history"},
+        {"name":"Topsports Gaming","from":"2017-12-21","to":"2019","relation":"REBRANDED","scope":"TEAM","operator":"Topsports","note":"Current TES brand predecessor","source":"Top Esports public history"},
+        {"name":"Top Esports","from":"2019","to":"","relation":"CURRENT","scope":"TEAM","operator":"Topsports","note":"","source":"TES"}
+      ],
+      "alumni": []
+    },
+    "JDG": {
+      "identity": {"foundedAt":"2017-05-20","lolDivisionFoundedAt":"2017-05-20","region":"CN","city":"北京","status":"ACTIVE"},
+      "operators": [{"name":"京东 / JD.com","role":"OWNER_OR_PARENT","source":"JD.com acquired QG Reapers' LPL slot and formed JD Gaming"}],
+      "parentOrganizations": [{"name":"京东 / JD.com","role":"OWNER_OR_PARENT","source":"JD Gaming public history"}],
+      "peopleInCharge": [{"name":"Choice","role":"CEO","displayRole":"CEO","source":"RiftLab current management audit"}],
+      "honors": [
+        {"year":"2020","event":"LPL 春季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2022","event":"LPL 夏季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2023","event":"LPL 春季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"},
+        {"year":"2023","event":"MSI 季中冠军赛","placement":"冠军","tier":"MSI","source":"公开赛事记录"},
+        {"year":"2023","event":"LPL 夏季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"}
+      ],
+      "lineage": [
+        {"name":"QG Reapers","from":"","to":"2017-05-20","relation":"SLOT_ACQUIRED","scope":"LPL_SLOT","operator":"QG","note":"JD.com acquired QG Reapers' LPL slot","source":"JD Gaming public history"},
+        {"name":"JD Gaming","from":"2017-05-20","to":"","relation":"CURRENT","scope":"TEAM","operator":"JD.com","note":"","source":"JDG"}
+      ],
+      "alumni": []
+    },
+    "LGD": {
+      "identity": {"foundedAt":"2009","lolDivisionFoundedAt":"2012-02-20","region":"CN","city":"杭州","status":"ACTIVE"},
+      "operators": [{"name":"LGD电子竞技俱乐部 / LGD Gaming","role":"OPERATOR","source":"LGD public club record"}],
+      "parentOrganizations": [],
+      "peopleInCharge": [{"name":"Bigbiao","role":"VICE_PRESIDENT","displayRole":"副总裁","source":"RiftLab current management audit"}],
+      "honors": [{"year":"2015","event":"LPL 夏季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"}],
+      "lineage": [
+        {"name":"FTD (For The Dream)","from":"","to":"2009","relation":"ORG_PREDECESSOR","scope":"ORGANIZATION","operator":"","note":"LGD 俱乐部组织历史前身；不是英雄联盟分部直接前身","source":"LGD public history"},
+        {"name":"LGD Gaming LoL","from":"2012-02-20","to":"","relation":"CURRENT","scope":"LOL_DIVISION","operator":"LGD Gaming","note":"","source":"LGD public history"}
+      ],
+      "alumni": []
+    },
+    "EDG": {
+      "identity": {"foundedAt":"2013-09-13","lolDivisionFoundedAt":"2013-09-13","region":"CN","city":"上海","status":"ACTIVE"},
+      "operators": [{"name":"超竞集团 / EDG电子竞技俱乐部","role":"OPERATOR_OR_PARENT","source":"EDG organization record","sourceUrl":"https://www.edgteam.cn/"}],
+      "parentOrganizations": [{"name":"超竞集团","role":"PARENT_ORG","source":"EDG public organization record"}],
+      "peopleInCharge": [{"name":"Ed Zhu","role":"FOUNDER","displayRole":"创始人 / 负责人","source":"EDG public club record"}],
+      "honors": [
+        {"year":"2015","event":"MSI 季中邀请赛","placement":"冠军","tier":"MSI","source":"EDG official record"},
+        {"year":"2021","event":"英雄联盟全球总决赛","placement":"冠军","tier":"WORLDS","source":"EDG official record"}
+      ],
+      "lineage": [
+        {"name":"LMQ LPL slot","from":"","to":"2013-09","relation":"SLOT_ACQUIRED","scope":"LPL_SLOT","operator":"LMQ","note":"EDG 组建时取得原 LMQ 的 LPL 席位；并非品牌更名","source":"EDG public history"},
+        {"name":"EDward Gaming","from":"2013-09-13","to":"","relation":"CURRENT","scope":"TEAM","operator":"EDG","note":"","source":"EDG official"}
+      ],
+      "alumni": []
+    },
+    "TT": {
+      "identity": {"foundedAt":"2020-09-15","lolDivisionFoundedAt":"2017-12-25","region":"CN","city":"广州","status":"ACTIVE"},
+      "operators": [{"name":"趣丸科技 / TT电竞","role":"OWNER_OR_OPERATOR","source":"趣丸集团官网 TT电竞公开信息","sourceUrl":"https://quwangroup.com/news/25"}],
+      "parentOrganizations": [{"name":"趣丸科技","role":"PARENT_ORG","source":"趣丸集团官网"}],
+      "peopleInCharge": [{"name":"Liu Yi-Fei","role":"CEO","displayRole":"CEO","source":"RiftLab current management audit"}],
+      "honors": [],
+      "lineage": [
+        {"name":"SinoDragon Gaming","from":"2017-12-25","to":"2019-05-22","relation":"REBRANDED","scope":"TEAM","operator":"","note":"","source":"TT public history"},
+        {"name":"Dominus Esports","from":"2019-05-22","to":"2020-09-15","relation":"ACQUIRED_AND_REBRANDED","scope":"TEAM","operator":"","note":"","source":"TT public history"},
+        {"name":"TT Gaming / ThunderTalk Gaming","from":"2020-09-15","to":"","relation":"CURRENT","scope":"TEAM","operator":"趣丸科技 / TT电竞","note":"","source":"TT / 趣丸"}
+      ],
+      "alumni": []
+    },
+    "IG": {
+      "identity": {"foundedAt":"2011-08-02","lolDivisionFoundedAt":"2011","region":"CN","city":"","status":"ACTIVE"},
+      "operators": [
+        {"name":"氧望体育","role":"OPERATOR","source":"iG 2024-11-30 重组公告"},
+        {"name":"虎牙直播","role":"STRATEGIC_PARTNER","source":"iG 2024-11-30 重组公告"}
+      ],
+      "parentOrganizations": [],
+      "peopleInCharge": [{"name":"An Jie","role":"CHAIRMAN","displayRole":"董事长","source":"RiftLab 2026-09-09 管理层核验"}],
+      "honors": [
+        {"year":"2018","event":"英雄联盟全球总决赛","placement":"冠军","tier":"WORLDS","source":"公开赛事记录"},
+        {"year":"2019","event":"LPL 春季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"}
+      ],
+      "lineage": [
+        {"name":"CCM / Catastrophic Cruel Memory","from":"","to":"2011-08","relation":"ORG_ACQUIRED","scope":"ORGANIZATION","operator":"","note":"iG 组织建立的重要前身；不把其简单等同于当前 LOL 分部品牌","source":"iG public history"},
+        {"name":"Invictus Gaming","from":"2011-08-02","to":"","relation":"CURRENT","scope":"ORGANIZATION","operator":"氧望体育 / 虎牙","note":"2024 重组后当前运营体系另行记录","source":"iG official"}
+      ],
+      "alumni": []
+    },
+    "LNG": {
+      "identity": {"foundedAt":"2019-05-21","lolDivisionFoundedAt":"2013-09-11","region":"CN","city":"苏州","status":"ACTIVE"},
+      "operators": [{"name":"李宁 / Li-Ning","role":"OWNER_OR_PARENT","source":"LNG public history"}],
+      "parentOrganizations": [{"name":"李宁 / Li-Ning","role":"PARENT_ORG","source":"LNG public history"}],
+      "peopleInCharge": [{"name":"Li Qi-Lin","role":"OWNER","displayRole":"负责人","source":"RiftLab current management audit"}],
+      "honors": [],
+      "lineage": [
+        {"name":"Snake Esports","from":"2013-09-11","to":"2019-05-21","relation":"ACQUIRED_AND_REBRANDED","scope":"TEAM","operator":"Snake","note":"2019 被李宁收购并更名 LNG Esports","source":"LNG public history"},
+        {"name":"LNG Esports","from":"2019-05-21","to":"","relation":"CURRENT","scope":"TEAM","operator":"Li-Ning","note":"","source":"LNG"}
+      ],
+      "alumni": []
+    },
+    "NIP": {
+      "identity": {"foundedAt":"2023-01-06","lolDivisionFoundedAt":"2018","region":"CN","city":"深圳","status":"ACTIVE"},
+      "operators": [{"name":"NIP Group","role":"OWNER_OR_OPERATOR","source":"NIP Group official history","sourceUrl":"https://www.nipg.com/about-us"}],
+      "parentOrganizations": [{"name":"NIP Group","role":"PARENT_ORG","source":"NIP Group official"}],
+      "peopleInCharge": [],
+      "honors": [],
+      "lineage": [
+        {"name":"Victory Five","from":"2018","to":"2023-01-06","relation":"MERGER_AND_REBRAND","scope":"LPL_TEAM","operator":"ESV5","note":"Ninjas in Pyjamas 与 ESV5 合并合作后，V5 的 LPL 队伍更名为 NIP","source":"NIP official history","sourceUrl":"https://nip.gl/zh/pages/nip-group-a-new-era"},
+        {"name":"Ninjas in Pyjamas.CN","from":"2023-01-06","to":"","relation":"CURRENT","scope":"TEAM","operator":"NIP Group","note":"","source":"NIP Group official"}
+      ],
+      "alumni": []
+    },
+    "WBG": {
+      "identity": {"foundedAt":"2021-11-22","lolDivisionFoundedAt":"2016-12-28","region":"CN","city":"北京","status":"ACTIVE"},
+      "operators": [{"name":"微博 / Weibo Corporation","role":"OWNER_OR_PARENT","source":"WBG public history and official account"}],
+      "parentOrganizations": [{"name":"微博 / Weibo Corporation","role":"PARENT_ORG","source":"WBG official"}],
+      "peopleInCharge": [],
+      "honors": [{"year":"2023","event":"英雄联盟全球总决赛","placement":"亚军","tier":"WORLDS","source":"公开赛事记录"}],
+      "lineage": [
+        {"name":"Suning Gaming","from":"2016-12-28","to":"2021-11-22","relation":"ACQUIRED_AND_REBRANDED","scope":"LPL_TEAM","operator":"Suning","note":"微博收购 Suning 英雄联盟战队并更名 WBG","source":"WBG public history"},
+        {"name":"Weibo Gaming","from":"2021-11-22","to":"","relation":"CURRENT","scope":"TEAM","operator":"Weibo","note":"","source":"WBG official"}
+      ],
+      "alumni": []
+    },
+    "WE": {
+      "identity": {"foundedAt":"2005-04-14","lolDivisionFoundedAt":"2011-03-21","region":"CN","city":"西安","status":"ACTIVE"},
+      "operators": [{"name":"WE电子竞技俱乐部 / Team WE","role":"OPERATOR","source":"WE官方微博","sourceUrl":"https://weibo.com/teamwe"}],
+      "parentOrganizations": [{"name":"西安曲江","role":"CO_BRAND_HOME_PARTNER","source":"西安曲江WE官方微博命名"}],
+      "peopleInCharge": [],
+      "honors": [
+        {"year":"2012","event":"IGN ProLeague Season 5 (IPL5)","placement":"冠军","tier":"INTERNATIONAL","source":"WE official history"},
+        {"year":"2017","event":"LPL 春季赛","placement":"冠军","tier":"LPL","source":"公开赛事记录"}
+      ],
+      "lineage": [
+        {"name":"World Elite / Team WE","from":"2005-04-14","to":"","relation":"ORG_CONTINUITY","scope":"ORGANIZATION","operator":"Team WE","note":"俱乐部品牌延续；英雄联盟分部于 2011-03-21 建立","source":"Team WE history"}
+      ],
+      "alumni": []
+    }
+  }
+}
