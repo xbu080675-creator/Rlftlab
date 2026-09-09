@@ -1,0 +1,48 @@
+name: Team Data Sync
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/sync_team_data.py'
+      - 'data/lpl/source_registry.json'
+      - '.github/workflows/team-data-sync.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: riftlab-team-data-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync official team directory
+        run: python3 tools/sync_team_data.py
+
+      - name: Validate JSON and diff
+        run: |
+          python3 -m json.tool data/lpl/team_profiles.json >/dev/null
+          python3 -m json.tool data/lpl/team_watch_state.json >/dev/null
+          git diff --check
+
+      - name: Commit fresh team data
+        run: |
+          if git diff --quiet -- data/lpl/team_profiles.json data/lpl/team_watch_state.json; then
+            echo "No team-data changes"
+            exit 0
+          fi
+          git config user.name "riftlab-data-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/lpl/team_profiles.json data/lpl/team_watch_state.json
+          git commit -m "data(lpl): sync current team directory"
+          git push
