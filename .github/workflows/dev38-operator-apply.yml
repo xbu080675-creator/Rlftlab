@@ -1,0 +1,66 @@
+name: Apply dev38 operator data UI fixes
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev38-operator-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch operator data surfaces
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"expected text not found in {path}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          ops = 'app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt'
+          replace(
+              ops,
+              'private fun TeamMetricColumn(\n',
+              'private fun androidx.compose.foundation.layout.RowScope.TeamMetricColumn(\n'
+          )
+          replace(
+              ops,
+              'private fun OperatorPanel(accent: Boolean = false, content: @Composable Column.() -> Unit) {',
+              'private fun OperatorPanel(accent: Boolean = false, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {'
+          )
+
+          entity = 'app/src/main/java/com/riftlab/app/ui/EntityDetailActivity.kt'
+          replace(entity, 'private enum class MatchPane { DETAIL, REPLAY }', 'private enum class MatchPane { DETAIL, OPERATIONS, REPLAY }')
+          replace(
+              entity,
+              '            when {\n                activeMatch != null && matchPane == MatchPane.REPLAY && completedMatch -> MatchReplayContent()',
+              '            when {\n                activeMatch != null && matchPane == MatchPane.OPERATIONS -> MatchOperationsContent()\n                activeMatch != null && matchPane == MatchPane.REPLAY && completedMatch -> MatchReplayContent()'
+          )
+          replace(
+              entity,
+              '            MatchPane.DETAIL to "比赛详情",\n            MatchPane.REPLAY to if (completed) "比赛回放" else "时间轴"',
+              '            MatchPane.DETAIL to "比赛详情",\n            MatchPane.OPERATIONS to "运营数据",\n            MatchPane.REPLAY to if (completed) "比赛回放" else "时间轴"'
+          )
+
+          Path('.github/workflows/dev38-operator-apply.yml').unlink()
+          PY
+      - name: Commit applied patch
+        shell: bash
+        run: |
+          git config user.name "riftlab-dev-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: wire dynamic operator data across match detail"
+          git pull --rebase origin main
+          git push origin HEAD:main
