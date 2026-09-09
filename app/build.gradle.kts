@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 34
-        versionName = "1.0.0-dev.34"
+        versionCode = 35
+        versionName = "1.0.0-dev.35"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.34: persistent scrubbable match timeline + team-aware RiftScreen overlay theme.
+// dev.35: official Bilibili match VOD resolver/player + chapter-backed historical timeline fallback.
