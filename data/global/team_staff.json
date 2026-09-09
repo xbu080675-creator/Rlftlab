@@ -1,24 +1,22 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-09-09T20:22:16+00:00",
+  "updatedAt": "2026-09-09T20:23:44+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
     "7REXTEAM": {
       "name": "7REX Team",
-      "short": "7REX",
+      "short": "",
       "page": "",
       "aliases": [
-        "7REX",
-        "7REX Team",
-        "Active"
+        "7REX Team"
       ],
       "regions": [
         "AME"
       ],
       "management": [
         {
-          "name": "7REX 官方战队联系人",
+          "name": "7REX Team 官方战队联系人",
           "realName": "Gustavo Nobre <contato@7rex.org>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -28,22 +26,17 @@
     },
     "ANYONESLEGEND": {
       "name": "Anyone's Legend",
-      "short": "AL",
+      "short": "",
       "page": "",
       "aliases": [
-        "AL",
-        "Anyone's Legend",
-        "CUI",
-        "KIM",
-        "LI",
-        "WANG"
+        "Anyone's Legend"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "AL 官方战队联系人",
+          "name": "Anyone's Legend 官方战队联系人",
           "realName": "shaoxiaohang@allgamers.com.cn",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -53,20 +46,17 @@
     },
     "BARÇAESPORTS": {
       "name": "Barça Esports",
-      "short": "BAR",
+      "short": "",
       "page": "",
       "aliases": [
-        "BAR",
-        "Barça Esports",
-        "Resident",
-        "Sub"
+        "Barça Esports"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "BAR 官方战队联系人",
+          "name": "Barça Esports 官方战队联系人",
           "realName": "jordi.guarte@studios.fcbarcelona.cat",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -83,22 +73,17 @@
     },
     "BEIJINGJDGESPORTS": {
       "name": "Beijing JDG Esports",
-      "short": "JDG",
+      "short": "",
       "page": "",
       "aliases": [
-        "Beijing JDG Esports",
-        "CHEN",
-        "JDG",
-        "TSAI",
-        "XU",
-        "ZHAO"
+        "Beijing JDG Esports"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "JDG 官方战队联系人",
+          "name": "Beijing JDG Esports 官方战队联系人",
           "realName": "panfei@jdgaming.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -108,22 +93,17 @@
     },
     "BERLININTERNATIONALGAMING": {
       "name": "Berlin International Gaming",
-      "short": "BIG",
+      "short": "",
       "page": "",
       "aliases": [
-        "BIG",
-        "Berlin International Gaming",
-        "Greff",
-        "PRM-LTR",
-        "Resident",
-        "Salomon"
+        "Berlin International Gaming"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "BIG 官方战队联系人",
+          "name": "Berlin International Gaming 官方战队联系人",
           "realName": "Finn Luca Wettern finnluca.wettern@bigleet.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -146,22 +126,17 @@
     },
     "BILIBILIGAMING": {
       "name": "BILIBILI GAMING",
-      "short": "BLG",
+      "short": "",
       "page": "",
       "aliases": [
-        "BILIBILI GAMING",
-        "BLG",
-        "CHEN",
-        "LUO",
-        "PARK",
-        "ZHUO"
+        "BILIBILI GAMING"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "BLG 官方战队联系人",
+          "name": "BILIBILI GAMING 官方战队联系人",
           "realName": "LINQING@BILIBILI.COM",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -171,11 +146,9 @@
     },
     "BLUEOTTER": {
       "name": "Blue Otter",
-      "short": "BLUE",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "BLUE",
         "Blue Otter"
       ],
       "regions": [
@@ -183,7 +156,7 @@
       ],
       "management": [
         {
-          "name": "BLUE 官方战队联系人",
+          "name": "Blue Otter 官方战队联系人",
           "realName": "Brad Kurtz - bradk@blueottersolutions.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -193,23 +166,10 @@
     },
     "BNKFEARX": {
       "name": "BNK FEARX",
-      "short": "BFX",
+      "short": "",
       "page": "",
       "aliases": [
-        "BFX",
-        "BNK FEARX",
-        "Choi",
-        "Hwang",
-        "Jo",
-        "Jun",
-        "KIM",
-        "Kim",
-        "LEE",
-        "Lee",
-        "Nam",
-        "Park",
-        "Shin",
-        "Yoo"
+        "BNK FEARX"
       ],
       "regions": [
         "KR"
@@ -244,10 +204,9 @@
     },
     "BOOSTGATEESPORTS": {
       "name": "Boostgate Esports",
-      "short": "BGT",
+      "short": "",
       "page": "",
       "aliases": [
-        "BGT",
         "Boostgate Esports"
       ],
       "regions": [
@@ -255,7 +214,7 @@
       ],
       "management": [
         {
-          "name": "BGT 官方战队联系人",
+          "name": "Boostgate Esports 官方战队联系人",
           "realName": "talhareceparslan@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -272,10 +231,9 @@
     },
     "BUSHIDOWILDCATS": {
       "name": "Bushido Wildcats",
-      "short": "BW",
+      "short": "",
       "page": "",
       "aliases": [
-        "BW",
         "Bushido Wildcats"
       ],
       "regions": [
@@ -283,7 +241,7 @@
       ],
       "management": [
         {
-          "name": "BW 官方战队联系人",
+          "name": "Bushido Wildcats 官方战队联系人",
           "realName": "holyphoenix@hotmail.com.tr",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -306,26 +264,17 @@
     },
     "CLOCKS": {
       "name": "Clocks",
-      "short": "CK",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "CK",
-        "Clocks",
-        "Jungle",
-        "Mid",
-        "Odawara",
-        "Saito",
-        "Shimizu",
-        "Support",
-        "Syodai"
+        "Clocks"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Odawara 官方战队联系人",
+          "name": "Clocks 官方战队联系人",
           "realName": "dssk665@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -335,11 +284,9 @@
     },
     "CLOUD9": {
       "name": "Cloud9",
-      "short": "C9",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "C9",
         "Cloud9"
       ],
       "regions": [
@@ -347,7 +294,7 @@
       ],
       "management": [
         {
-          "name": "C9 官方战队联系人",
+          "name": "Cloud9 官方战队联系人",
           "realName": "Tiffany Truong <tiffany.truong@cloud9.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -357,18 +304,11 @@
     },
     "CTBCFLYINGOYSTER": {
       "name": "CTBC Flying Oyster",
-      "short": "XU",
+      "short": "CFO",
       "page": "",
       "aliases": [
         "CFO",
-        "CHIU",
-        "CTBC Flying Oyster",
-        "HAN",
-        "JHU WU",
-        "LIU",
-        "WONG",
-        "XU",
-        "ZHAO"
+        "CTBC Flying Oyster"
       ],
       "regions": [
         "LCP"
@@ -385,24 +325,17 @@
     },
     "CTBCFLYINGOYSTERACADEMY": {
       "name": "CTBC Flying Oyster Academy",
-      "short": "CFOA",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "CFOA",
-        "CTBC Flying Oyster Academy",
-        "Chang",
-        "Jungle",
-        "Mid",
-        "Support",
-        "shang"
+        "CTBC Flying Oyster Academy"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "shang 官方战队联系人",
+          "name": "CTBC Flying Oyster Academy 官方战队联系人",
           "realName": "shang.fin01@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -412,10 +345,9 @@
     },
     "DARKPASSAGE": {
       "name": "Dark Passage",
-      "short": "DP",
+      "short": "",
       "page": "",
       "aliases": [
-        "DP",
         "Dark Passage"
       ],
       "regions": [
@@ -423,7 +355,7 @@
       ],
       "management": [
         {
-          "name": "DP 官方战队联系人",
+          "name": "Dark Passage 官方战队联系人",
           "realName": "ertug@dp-gaming.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -440,18 +372,11 @@
     },
     "DEEPCROSSGAMING": {
       "name": "Deep Cross Gaming",
-      "short": "LO",
+      "short": "DCG",
       "page": "",
       "aliases": [
-        "CHEN",
-        "CHIU",
         "DCG",
-        "Deep Cross Gaming",
-        "KUO",
-        "LIAO",
-        "LIU",
-        "LO",
-        "WU"
+        "Deep Cross Gaming"
       ],
       "regions": [
         "LCP"
@@ -468,18 +393,11 @@
     },
     "DETONATIONFOCUSME": {
       "name": "DetonatioN FocusMe",
-      "short": "Tobita",
+      "short": "DFM",
       "page": "",
       "aliases": [
-        "Aoki",
-        "Byun",
         "DFM",
-        "DetonatioN FocusMe",
-        "LEE",
-        "LIN",
-        "Nomoto",
-        "Sasaki",
-        "Tobita"
+        "DetonatioN FocusMe"
       ],
       "regions": [
         "LCP"
@@ -496,24 +414,17 @@
     },
     "DETONATIONFOCUSMEACADEMY": {
       "name": "DetonatioN FocusMe Academy",
-      "short": "DFMA",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "DFMA",
-        "DetonatioN FocusMe Academy",
-        "Jungle",
-        "Mid",
-        "Nakano",
-        "Support",
-        "Urata"
+        "DetonatioN FocusMe Academy"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Nakano 官方战队联系人",
+          "name": "DetonatioN FocusMe Academy 官方战队联系人",
           "realName": "r-nakano@detonation.jp",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -523,10 +434,9 @@
     },
     "DIAOZAROXESPORTS": {
       "name": "DIA Ozarox Esports",
-      "short": "DIA",
+      "short": "",
       "page": "",
       "aliases": [
-        "DIA",
         "DIA Ozarox Esports"
       ],
       "regions": [
@@ -544,11 +454,9 @@
     },
     "DISGUISED": {
       "name": "Disguised",
-      "short": "DSG",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "DSG",
         "Disguised"
       ],
       "regions": [
@@ -556,7 +464,7 @@
       ],
       "management": [
         {
-          "name": "DSG 官方战队联系人",
+          "name": "Disguised 官方战队联系人",
           "realName": "Chris Yong <chris@disguised.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -569,20 +477,8 @@
       "short": "DNS",
       "page": "",
       "aliases": [
-        "Bang",
         "DN SOOPers",
-        "DNS",
-        "Han",
-        "Hong",
-        "Jeong",
-        "Jung",
-        "Kim",
-        "Kwak",
-        "Lee",
-        "Seo",
-        "Son",
-        "Yang",
-        "Yu"
+        "DNS"
       ],
       "regions": [
         "KR"
@@ -591,12 +487,6 @@
         {
           "name": "DNS 官方战队联系人",
           "realName": "yaki3@sooplive.com",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Kwak 官方战队联系人",
-          "realName": "jskim@sooplive.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -639,22 +529,8 @@
       "short": "DK",
       "page": "",
       "aliases": [
-        "Choi",
         "DK",
-        "Dplus Kia",
-        "Ha",
-        "Heo",
-        "Hwang",
-        "Jeon",
-        "Kim",
-        "Ko",
-        "Kwon",
-        "LEE",
-        "Nam",
-        "Oh",
-        "Park",
-        "Seol",
-        "Shin"
+        "Dplus Kia"
       ],
       "regions": [
         "KR"
@@ -702,22 +578,17 @@
     },
     "EDWARDGAMING": {
       "name": "EDWARD GAMING",
-      "short": "EDG",
+      "short": "",
       "page": "",
       "aliases": [
-        "EDG",
-        "EDWARD GAMING",
-        "HU",
-        "WANG",
-        "XIANG",
-        "ZHU"
+        "EDWARD GAMING"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "EDG 官方战队联系人",
+          "name": "EDWARD GAMING 官方战队联系人",
           "realName": "jasper@edgteam.cn",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -727,19 +598,17 @@
     },
     "EINERDESPORTS": {
       "name": "Ei Nerd Esports",
-      "short": "NERD",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "Ei Nerd Esports",
-        "NERD"
+        "Ei Nerd Esports"
       ],
       "regions": [
         "AME"
       ],
       "management": [
         {
-          "name": "NERD 官方战队联系人",
+          "name": "Ei Nerd Esports 官方战队联系人",
           "realName": "Alef Pires <alef.pires@einerd.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -749,22 +618,17 @@
     },
     "EINTRACHTFRANKFURT": {
       "name": "Eintracht Frankfurt",
-      "short": "SGE",
+      "short": "",
       "page": "",
       "aliases": [
-        "Anuth",
-        "Eintracht Frankfurt",
-        "PRM-LTR",
-        "Resident",
-        "SGE",
-        "Schmit"
+        "Eintracht Frankfurt"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "SGE 官方战队联系人",
+          "name": "Eintracht Frankfurt 官方战队联系人",
           "realName": "m.broemel@eintrachtfrankfurt.de",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -787,20 +651,17 @@
     },
     "EINTRACHTSPANDAU": {
       "name": "Eintracht Spandau",
-      "short": "EINS",
+      "short": "",
       "page": "",
       "aliases": [
-        "EINS",
-        "Eintracht Spandau",
-        "Kippe",
-        "PRM-LTR"
+        "Eintracht Spandau"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "EINS 官方战队联系人",
+          "name": "Eintracht Spandau 官方战队联系人",
           "realName": "kevin.westphal@instinct3.de",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -817,20 +678,11 @@
     },
     "EQUINOXCORE": {
       "name": "Equinox Core",
-      "short": "Top",
+      "short": "EQX",
       "page": "",
       "aliases": [
-        "Bot",
         "EQX",
-        "Equinox Core",
-        "HU",
-        "Jungle",
-        "Mid",
-        "OU",
-        "PENG",
-        "Support",
-        "TSAI",
-        "Top"
+        "Equinox Core"
       ],
       "regions": [
         "LCP"
@@ -847,19 +699,10 @@
     },
     "ES": {
       "name": "ES",
-      "short": "Petkov",
+      "short": "",
       "page": "",
       "aliases": [
-        "Ayoub",
-        "Azvedo",
-        "Behnam",
-        "ES",
-        "Folcher",
-        "Jungle",
-        "Marcos",
-        "Petkov",
-        "Serkan",
-        "Valente"
+        "ES"
       ],
       "regions": [
         "EMEA"
@@ -876,11 +719,9 @@
     },
     "ESTRALESPORTS": {
       "name": "Estral Esports",
-      "short": "EST",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "EST",
         "Estral Esports"
       ],
       "regions": [
@@ -888,7 +729,7 @@
       ],
       "management": [
         {
-          "name": "EST 官方战队联系人",
+          "name": "Estral Esports 官方战队联系人",
           "realName": "Arturo Gonzalez <agonzalez@estral.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -898,21 +739,17 @@
     },
     "EWIEEINFACHESPORTS": {
       "name": "E WIE EINFACH E-SPORTS",
-      "short": "EWI",
+      "short": "",
       "page": "",
       "aliases": [
-        "E WIE EINFACH E-SPORTS",
-        "EWI",
-        "PRM",
-        "PRM-LTR",
-        "Schadrin"
+        "E WIE EINFACH E-SPORTS"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "EWI 官方战队联系人",
+          "name": "E WIE EINFACH E-SPORTS 官方战队联系人",
           "realName": "Alexander Bochert alexander.bochert@e-wie-einfach.de",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -929,19 +766,17 @@
     },
     "FALKEESPORTS": {
       "name": "Falke Esports",
-      "short": "FLK",
+      "short": "",
       "page": "",
       "aliases": [
-        "FLK",
-        "Falke Esports",
-        "Resident"
+        "Falke Esports"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "FLK 官方战队联系人",
+          "name": "Falke Esports 官方战队联系人",
           "realName": "rafael.b@falke.pro",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -958,25 +793,17 @@
     },
     "FAST8": {
       "name": "Fast8",
-      "short": "F8",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "F8",
-        "Fast8",
-        "Jungle",
-        "Mid",
-        "Miyazaki",
-        "Ohtsu",
-        "Soga",
-        "Support"
+        "Fast8"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Ohtsu 官方战队联系人",
+          "name": "Fast8 官方战队联系人",
           "realName": "mine8023@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -986,25 +813,17 @@
     },
     "FENNEL": {
       "name": "FENNEL",
-      "short": "FL",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "CHO",
-        "FENNEL",
-        "FL",
-        "Jaeseok",
-        "Jungle",
-        "Mid",
-        "Support",
-        "Ueno"
+        "FENNEL"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Ueno 官方战队联系人",
+          "name": "FENNEL 官方战队联系人",
           "realName": "m.ueno@fennel.jp",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1014,11 +833,9 @@
     },
     "FLUXOW7M": {
       "name": "Fluxo W7M",
-      "short": "FX",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "FX",
         "Fluxo W7M"
       ],
       "regions": [
@@ -1026,7 +843,7 @@
       ],
       "management": [
         {
-          "name": "FX 官方战队联系人",
+          "name": "Fluxo W7M 官方战队联系人",
           "realName": "Alex Watanabe <alex@fluxo.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1036,11 +853,9 @@
     },
     "FLYQUEST": {
       "name": "FlyQuest",
-      "short": "FLY",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "FLY",
         "FlyQuest"
       ],
       "regions": [
@@ -1048,7 +863,7 @@
       ],
       "management": [
         {
-          "name": "FLY 官方战队联系人",
+          "name": "FlyQuest 官方战队联系人",
           "realName": "Andrew Barton <andrew@flyquest.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1058,22 +873,17 @@
     },
     "FNATIC": {
       "name": "Fnatic",
-      "short": "FNC",
+      "short": "",
       "page": "",
       "aliases": [
-        "FNC",
-        "Fnatic",
-        "LEC",
-        "Lim",
-        "Park",
-        "Resident"
+        "Fnatic"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "FNC 官方战队联系人",
+          "name": "Fnatic 官方战队联系人",
           "realName": "Javier Zafra <lol-management@fnatic.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1096,24 +906,17 @@
     },
     "FRANKESPORTS": {
       "name": "FRANK Esports",
-      "short": "Top",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "FAK",
-        "FRANK Esports",
-        "Jungle",
-        "Leung",
-        "Mid",
-        "Support",
-        "Top"
+        "FRANK Esports"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Leung 官方战队联系人",
+          "name": "FRANK Esports 官方战队联系人",
           "realName": "jonleung@spm.vc",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1123,18 +926,11 @@
     },
     "FUKUOKASOFTBANKHAWKSGAMING": {
       "name": "Fukuoka SoftBank HAWKS gaming",
-      "short": "Murase",
+      "short": "SHG",
       "page": "",
       "aliases": [
-        "CHEN",
         "Fukuoka SoftBank HAWKS gaming",
-        "Kim",
-        "Lee",
-        "Murase",
-        "Oh",
-        "SANGHUN",
-        "SHG",
-        "Shimaya"
+        "SHG"
       ],
       "regions": [
         "LCP"
@@ -1151,11 +947,9 @@
     },
     "FURIA": {
       "name": "FURIA",
-      "short": "FUR",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "FUR",
         "FURIA"
       ],
       "regions": [
@@ -1163,14 +957,8 @@
       ],
       "management": [
         {
-          "name": "FUR 官方战队联系人",
+          "name": "FURIA 官方战队联系人",
           "realName": "Jaime de Pádua <jaime@furia.gg>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Active 官方战队联系人",
-          "realName": "Julia Medeiros <zaz@furia.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1179,22 +967,17 @@
     },
     "G2ESPORTS": {
       "name": "G2 Esports",
-      "short": "G2",
+      "short": "",
       "page": "",
       "aliases": [
-        "G2",
-        "G2 Esports",
-        "LEC",
-        "Labros",
-        "Liv",
-        "Resident"
+        "G2 Esports"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "G2 官方战队联系人",
+          "name": "G2 Esports 官方战队联系人",
           "realName": "ownership-group-lec@g2esports.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1223,23 +1006,17 @@
     },
     "G2NORD": {
       "name": "G2 NORD",
-      "short": "G2N",
+      "short": "",
       "page": "",
       "aliases": [
-        "Chea",
-        "G2 NORD",
-        "G2N",
-        "PRM",
-        "PRM-LTR",
-        "Perez",
-        "Resident"
+        "G2 NORD"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "G2N 官方战队联系人",
+          "name": "G2 NORD 官方战队联系人",
           "realName": "nick@nordesports.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1256,21 +1033,10 @@
     },
     "GALIONS": {
       "name": "Galions",
-      "short": "GL",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "CARL",
-        "CASTILLO",
-        "Dimitrov",
-        "GL",
-        "Galions",
-        "JASSES",
-        "Jungle",
-        "LFL",
-        "THEO",
-        "TROCHEL",
-        "Řiháček"
+        "Galions"
       ],
       "regions": [
         "EMEA"
@@ -1293,16 +1059,11 @@
     },
     "GAMESPORTS": {
       "name": "GAM Esports",
-      "short": "TRAN",
+      "short": "GAM",
       "page": "",
       "aliases": [
         "GAM",
-        "GAM Esports",
-        "Le",
-        "TRAN",
-        "Tran",
-        "Vo",
-        "Đinh"
+        "GAM Esports"
       ],
       "regions": [
         "LCP"
@@ -1322,19 +1083,8 @@
       "short": "GEN",
       "page": "",
       "aliases": [
-        "Byeon",
         "GEN",
-        "Gen.G",
-        "JU",
-        "JUNG",
-        "KIM",
-        "KO",
-        "Kang",
-        "Kim",
-        "Lee",
-        "PARK",
-        "Park",
-        "Yoo"
+        "Gen.G"
       ],
       "regions": [
         "KR"
@@ -1376,23 +1126,17 @@
     },
     "GIANTX": {
       "name": "GIANTX",
-      "short": "GX",
+      "short": "",
       "page": "",
       "aliases": [
-        "GIANTX",
-        "GX",
-        "LEC",
-        "Nubar",
-        "Oh",
-        "Resident",
-        "Yoon"
+        "GIANTX"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "GX 官方战队联系人",
+          "name": "GIANTX 官方战队联系人",
           "realName": "David Alonso <david.alonso@giantx.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1421,19 +1165,17 @@
     },
     "GIANTXITERO": {
       "name": "Giantx Itero",
-      "short": "GX",
+      "short": "",
       "page": "",
       "aliases": [
-        "GX",
-        "Giantx Itero",
-        "Resident"
+        "Giantx Itero"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "GX 官方战队联系人",
+          "name": "Giantx Itero 官方战队联系人",
           "realName": "david.alonso@giantx.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1450,19 +1192,11 @@
     },
     "GROUNDZEROACADEMY": {
       "name": "Ground Zero Academy",
-      "short": "Top",
+      "short": "GZA",
       "page": "",
       "aliases": [
-        "Bot",
-        "CAI",
-        "CHANG",
         "GZA",
-        "Ground Zero Academy",
-        "Jungle",
-        "LI",
-        "Mid",
-        "Support",
-        "Top"
+        "Ground Zero Academy"
       ],
       "regions": [
         "LCP"
@@ -1479,17 +1213,11 @@
     },
     "GROUNDZEROGAMING": {
       "name": "Ground Zero Gaming",
-      "short": "Chen",
+      "short": "GZ",
       "page": "",
       "aliases": [
-        "Chang",
-        "Chen",
         "GZ",
-        "Ground Zero Gaming",
-        "Huang",
-        "LING",
-        "LU",
-        "Wong"
+        "Ground Zero Gaming"
       ],
       "regions": [
         "LCP"
@@ -1509,18 +1237,8 @@
       "short": "BRO",
       "page": "",
       "aliases": [
-        "Ahn",
         "BRO",
-        "Cho",
-        "HANJIN BRION",
-        "Hong",
-        "Hwang",
-        "Jo",
-        "Kim",
-        "LCK",
-        "Lee",
-        "Oh",
-        "Park"
+        "HANJIN BRION"
       ],
       "regions": [
         "KR"
@@ -1565,18 +1283,8 @@
       "short": "HLE",
       "page": "",
       "aliases": [
-        "Choi",
         "HLE",
-        "Han",
-        "Hanwha Life Esports",
-        "Kim",
-        "Lee",
-        "Park",
-        "Pyeon",
-        "Seo",
-        "Yeon",
-        "Yoon",
-        "Yu"
+        "Hanwha Life Esports"
       ],
       "regions": [
         "KR"
@@ -1618,19 +1326,17 @@
     },
     "HERETICSACADEMY": {
       "name": "Heretics Academy",
-      "short": "HRTS",
+      "short": "",
       "page": "",
       "aliases": [
-        "HRTS",
-        "Heretics Academy",
-        "Resident"
+        "Heretics Academy"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "HRTS 官方战队联系人",
+          "name": "Heretics Academy 官方战队联系人",
           "realName": "arnau@teamheretics.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1653,18 +1359,10 @@
     },
     "IJC": {
       "name": "IJC",
-      "short": "Piochaud",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bruk",
-        "Dimier",
-        "IJC",
-        "Osman",
-        "Piochaud",
-        "Ramón",
-        "Ryppa",
-        "Support",
-        "Thomas"
+        "IJC"
       ],
       "regions": [
         "EMEA"
@@ -1687,25 +1385,17 @@
     },
     "INFERNODRIVETOKYO": {
       "name": "Inferno Drive Tokyo",
-      "short": "IDT",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Hyun",
-        "IDT",
-        "Inferno Drive Tokyo",
-        "Jungle",
-        "Mid",
-        "Support",
-        "Tsui",
-        "Yuki"
+        "Inferno Drive Tokyo"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Yuki 官方战队联系人",
+          "name": "Inferno Drive Tokyo 官方战队联系人",
           "realName": "varrel.nagi@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1715,10 +1405,9 @@
     },
     "INTZ": {
       "name": "INTZ",
-      "short": "Active",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
         "INTZ"
       ],
       "regions": [
@@ -1726,7 +1415,7 @@
       ],
       "management": [
         {
-          "name": "Active 官方战队联系人",
+          "name": "INTZ 官方战队联系人",
           "realName": "Thiago Campos <thiago.campos@stellaegg.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1736,24 +1425,17 @@
     },
     "INVICTUSGAMING": {
       "name": "Invictus Gaming",
-      "short": "IG",
+      "short": "",
       "page": "",
       "aliases": [
-        "IG",
-        "Invictus Gaming",
-        "LIM",
-        "SONG",
-        "SUN",
-        "TIAN",
-        "YAN",
-        "ZHANG"
+        "Invictus Gaming"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "IG 官方战队联系人",
+          "name": "Invictus Gaming 官方战队联系人",
           "realName": "huyueqian@ig.show",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1763,20 +1445,10 @@
     },
     "JL": {
       "name": "JL",
-      "short": "RASSI",
+      "short": "",
       "page": "",
       "aliases": [
-        "Akça",
-        "Aslan",
-        "Bak",
-        "Emre",
-        "JL",
-        "LFL",
-        "Nikos",
-        "RASSI",
-        "Rafael",
-        "Sari",
-        "Selaimia"
+        "JL"
       ],
       "regions": [
         "EMEA"
@@ -1799,11 +1471,9 @@
     },
     "KABUMESPORTS": {
       "name": "KaBuM! Esports",
-      "short": "KBM",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "KBM",
         "KaBuM! Esports"
       ],
       "regions": [
@@ -1811,7 +1481,7 @@
       ],
       "management": [
         {
-          "name": "KBM 官方战队联系人",
+          "name": "KaBuM! Esports 官方战队联系人",
           "realName": "Marcelo Fadul <marcelo.fadul@kabum.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1821,22 +1491,17 @@
     },
     "KARMINECORP": {
       "name": "Karmine Corp",
-      "short": "KC",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bok",
-        "KC",
-        "Kang",
-        "Karmine Corp",
-        "LEC",
-        "Resident"
+        "Karmine Corp"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "KC 官方战队联系人",
+          "name": "Karmine Corp 官方战队联系人",
           "realName": "Clement Laparra <clement.laparra@karminecorp.fr>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1859,22 +1524,17 @@
     },
     "KAUFLANDHANGRYKNIGHTS": {
       "name": "Kaufland Hangry Knights",
-      "short": "KHK",
+      "short": "",
       "page": "",
       "aliases": [
-        "Abgarian",
-        "Dennis",
-        "KHK",
-        "Kaufland Hangry Knights",
-        "PRM-LTR",
-        "Resident"
+        "Kaufland Hangry Knights"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "KHK 官方战队联系人",
+          "name": "Kaufland Hangry Knights 官方战队联系人",
           "realName": "dennis@weedoo.group",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1897,17 +1557,10 @@
     },
     "KCB": {
       "name": "KCB",
-      "short": "Xu",
+      "short": "",
       "page": "",
       "aliases": [
-        "Dang",
-        "KCB",
-        "Mid",
-        "Paul",
-        "Payet",
-        "Pestrițu",
-        "Stoffel",
-        "Xu"
+        "KCB"
       ],
       "regions": [
         "EMEA"
@@ -1930,30 +1583,17 @@
     },
     "KRX": {
       "name": "KRX",
-      "short": "Choi",
+      "short": "KRX",
       "page": "",
       "aliases": [
-        "Choi",
-        "Ha",
-        "Jo",
-        "KRX",
-        "Kang",
-        "Kim",
-        "Lee",
-        "Mun",
-        "Oh",
-        "Son",
-        "Tran",
-        "Woo",
-        "Yoo",
-        "Yoon"
+        "KRX"
       ],
       "regions": [
         "KR"
       ],
       "management": [
         {
-          "name": "Choi 官方战队联系人",
+          "name": "KRX 官方战队联系人",
           "realName": "staff@drx.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -1997,21 +1637,7 @@
       "short": "KT",
       "page": "",
       "aliases": [
-        "An",
-        "Jang",
-        "Jeon",
-        "Jeong",
-        "Jung",
         "KT",
-        "Kang",
-        "Kim",
-        "Ko",
-        "LEE",
-        "Lee",
-        "Mun",
-        "Oh",
-        "Park",
-        "Son",
         "kt Rolster"
       ],
       "regions": [
@@ -2060,11 +1686,9 @@
     },
     "LEVIATÁN": {
       "name": "LEVIATÁN",
-      "short": "LEV",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "LEV",
         "LEVIATÁN"
       ],
       "regions": [
@@ -2072,14 +1696,8 @@
       ],
       "management": [
         {
-          "name": "LEV 官方战队联系人",
+          "name": "LEVIATÁN 官方战队联系人",
           "realName": "Guido Gernetti <guido@leviatan.gg>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Active 官方战队联系人",
-          "realName": "Eloy Santos <tostado@leviatan.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -2088,22 +1706,17 @@
     },
     "LGDGAMING": {
       "name": "LGD GAMING",
-      "short": "LGD",
+      "short": "",
       "page": "",
       "aliases": [
-        "LGD",
-        "LGD GAMING",
-        "LIN",
-        "YAN",
-        "YANG",
-        "ZHAO"
+        "LGD GAMING"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "LGD 官方战队联系人",
+          "name": "LGD GAMING 官方战队联系人",
           "realName": "qinwei@lgdgaming.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2113,25 +1726,17 @@
     },
     "LGUIDEGAMING": {
       "name": "L Guide Gaming",
-      "short": "LGG",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "KIM",
-        "L Guide Gaming",
-        "LGG",
-        "Mid",
-        "Rinka",
-        "Sato",
-        "Support"
+        "L Guide Gaming"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Sato 官方战队联系人",
+          "name": "L Guide Gaming 官方战队联系人",
           "realName": "s.sato@sephirothic-system.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2141,10 +1746,9 @@
     },
     "LOS": {
       "name": "LOS",
-      "short": "Active",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
         "LOS"
       ],
       "regions": [
@@ -2152,7 +1756,7 @@
       ],
       "management": [
         {
-          "name": "Active 官方战队联系人",
+          "name": "LOS 官方战队联系人",
           "realName": "Alexandre Peres <alexandre@teamoneesports.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2162,10 +1766,9 @@
     },
     "LOUD": {
       "name": "LOUD",
-      "short": "Active",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
         "LOUD"
       ],
       "regions": [
@@ -2173,7 +1776,7 @@
       ],
       "management": [
         {
-          "name": "Active 官方战队联系人",
+          "name": "LOUD 官方战队联系人",
           "realName": "Jean Ortega <jean.ortega@loud.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2183,18 +1786,17 @@
     },
     "LUA": {
       "name": "LUA",
-      "short": "Resident",
+      "short": "",
       "page": "",
       "aliases": [
-        "LUA",
-        "Resident"
+        "LUA"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "Resident 官方战队联系人",
+          "name": "LUA 官方战队联系人",
           "realName": "Genai@luagaming.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2211,11 +1813,9 @@
     },
     "LYON": {
       "name": "LYON",
-      "short": "Active",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "Inactive",
         "LYON"
       ],
       "regions": [
@@ -2223,7 +1823,7 @@
       ],
       "management": [
         {
-          "name": "Active 官方战队联系人",
+          "name": "LYON 官方战队联系人",
           "realName": "Alex Hwang <alex@lyonllc.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2233,19 +1833,11 @@
     },
     "MGNVIKINGSESPORTS": {
       "name": "MGN Vikings Esports",
-      "short": "NGO",
+      "short": "MVKE",
       "page": "",
       "aliases": [
-        "Dang",
-        "LE",
-        "LUONG",
         "MGN Vikings Esports",
-        "MVKE",
-        "NGO",
-        "NGUYEN",
-        "Nguyen",
-        "PHAN",
-        "VO"
+        "MVKE"
       ],
       "regions": [
         "LCP"
@@ -2262,23 +1854,17 @@
     },
     "MOVISTARKOI": {
       "name": "Movistar KOI",
-      "short": "MKOI",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bilous",
-        "LEC",
-        "MKOI",
-        "Movistar KOI",
-        "N/A",
-        "Pyun",
-        "Resident"
+        "Movistar KOI"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "MKOI 官方战队联系人",
+          "name": "Movistar KOI 官方战队联系人",
           "realName": "Luis Filgueira lec@oam.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2307,20 +1893,17 @@
     },
     "MOVISTARKOIFÉNIX": {
       "name": "Movistar KOI Fénix",
-      "short": "MKF",
+      "short": "",
       "page": "",
       "aliases": [
-        "Hansu",
-        "MKF",
-        "Movistar KOI Fénix",
-        "Resident"
+        "Movistar KOI Fénix"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "MKF 官方战队联系人",
+          "name": "Movistar KOI Fénix 官方战队联系人",
           "realName": "lfilgueira@oam.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2337,20 +1920,17 @@
     },
     "NATUSVINCERE": {
       "name": "Natus Vincere",
-      "short": "NAVI",
+      "short": "",
       "page": "",
       "aliases": [
-        "Lee",
-        "NAVI",
-        "Natus Vincere",
-        "Resident"
+        "Natus Vincere"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "NAVI 官方战队联系人",
+          "name": "Natus Vincere 官方战队联系人",
           "realName": "Yaroslav Klochko n1ghtend@navi-gaming.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2379,25 +1959,17 @@
     },
     "NEWMETA": {
       "name": "New Meta",
-      "short": "NM",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Fukuda",
-        "Iida",
-        "Jungle",
-        "Mid",
-        "Miyoshi",
-        "NM",
-        "New Meta",
-        "Ohashi"
+        "New Meta"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Miyoshi 官方战队联系人",
+          "name": "New Meta 官方战队联系人",
           "realName": "miyoshi@newmeta.co.jp",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2407,22 +1979,17 @@
     },
     "NOVEX": {
       "name": "NOVEX",
-      "short": "NX",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Mid",
-        "NOVEX",
-        "NX",
-        "Support"
+        "NOVEX"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Support 官方战队联系人",
+          "name": "NOVEX 官方战队联系人",
           "realName": "rikukomuro16@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2432,10 +1999,9 @@
     },
     "NRG": {
       "name": "NRG",
-      "short": "Active",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
         "NRG"
       ],
       "regions": [
@@ -2443,7 +2009,7 @@
       ],
       "management": [
         {
-          "name": "Active 官方战队联系人",
+          "name": "NRG 官方战队联系人",
           "realName": "James Kandel < james@nrg.gg >",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2453,22 +2019,10 @@
     },
     "NSREDFORCE": {
       "name": "NS REDFORCE",
-      "short": "NS",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bae",
-        "Choi",
-        "Eom",
-        "Hwnag",
-        "Hyun",
-        "Kim",
-        "Lee",
-        "NS",
-        "NS REDFORCE",
-        "Nam",
-        "Park",
-        "Son",
-        "Song"
+        "NS REDFORCE"
       ],
       "regions": [
         "KR"
@@ -2503,23 +2057,17 @@
     },
     "OHMYGOD": {
       "name": "Oh My God",
-      "short": "OMG",
+      "short": "",
       "page": "",
       "aliases": [
-        "HAI",
-        "JEONG",
-        "LEI",
-        "OMG",
-        "Oh My God",
-        "WANG",
-        "XU"
+        "Oh My God"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "OMG 官方战队联系人",
+          "name": "Oh My God 官方战队联系人",
           "realName": "26444250@qq.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2529,19 +2077,11 @@
     },
     "ONEROUNDSPECIALISTS": {
       "name": "One Round Specialists",
-      "short": "Top",
+      "short": "ORS",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "LAW",
-        "Mid",
-        "NG",
         "ORS",
-        "One Round Specialists",
-        "QIU",
-        "Support",
-        "Top"
+        "One Round Specialists"
       ],
       "regions": [
         "LCP"
@@ -2558,13 +2098,9 @@
     },
     "PAINGAMING": {
       "name": "paiN Gaming",
-      "short": "PAIN",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "Kim",
-        "PAIN",
-        "Resident",
         "paiN Gaming"
       ],
       "regions": [
@@ -2572,7 +2108,7 @@
       ],
       "management": [
         {
-          "name": "PAIN 官方战队联系人",
+          "name": "paiN Gaming 官方战队联系人",
           "realName": "Arthur Zarzur <arthur.curiati@pain.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2582,11 +2118,9 @@
     },
     "PAINGAMINGACADEMY": {
       "name": "paiN Gaming Academy",
-      "short": "PAIN",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "PAIN",
         "paiN Gaming Academy"
       ],
       "regions": [
@@ -2594,7 +2128,7 @@
       ],
       "management": [
         {
-          "name": "PAIN 官方战队联系人",
+          "name": "paiN Gaming Academy 官方战队联系人",
           "realName": "Arthur Zarzur <arthur.curiati@pain.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2604,19 +2138,17 @@
     },
     "PCIFICESPORTS": {
       "name": "PCIFIC Esports",
-      "short": "PCF",
+      "short": "",
       "page": "",
       "aliases": [
-        "PCF",
-        "PCIFIC Esports",
-        "TCL-LTR"
+        "PCIFIC Esports"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "PCF 官方战队联系人",
+          "name": "PCIFIC Esports 官方战队联系人",
           "realName": "altanfirtina@pcific.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2639,21 +2171,17 @@
     },
     "REDCANIDSKALUNGA": {
       "name": "RED Canids Kalunga",
-      "short": "RED",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "Inactive",
-        "RED",
-        "RED Canids Kalunga",
-        "Resident"
+        "RED Canids Kalunga"
       ],
       "regions": [
         "AME"
       ],
       "management": [
         {
-          "name": "RED 官方战队联系人",
+          "name": "RED Canids Kalunga 官方战队联系人",
           "realName": "Felippe Corradini <felippe@redcanids.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2663,11 +2191,9 @@
     },
     "REDCANIDSKALUNGAACADEMY": {
       "name": "RED Canids Kalunga Academy",
-      "short": "RED",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "RED",
         "RED Canids Kalunga Academy"
       ],
       "regions": [
@@ -2675,7 +2201,7 @@
       ],
       "management": [
         {
-          "name": "RED 官方战队联系人",
+          "name": "RED Canids Kalunga Academy 官方战队联系人",
           "realName": "Felippe Corradini <felippe@redcanids.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2685,27 +2211,17 @@
     },
     "RISINGGAMING": {
       "name": "Rising Gaming",
-      "short": "RGA",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "JEON",
-        "Jungle",
-        "Koyama",
-        "Mid",
-        "Mugita",
-        "RGA",
-        "Rising Gaming",
-        "Ryugo",
-        "Sugi",
-        "Support"
+        "Rising Gaming"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "Sugi 官方战队联系人",
+          "name": "Rising Gaming 官方战队联系人",
           "realName": "shiraishimoviestudio@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2715,11 +2231,9 @@
     },
     "RMDGAMING": {
       "name": "RMD Gaming",
-      "short": "RMD",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "RMD",
         "RMD Gaming"
       ],
       "regions": [
@@ -2727,7 +2241,7 @@
       ],
       "management": [
         {
-          "name": "RMD 官方战队联系人",
+          "name": "RMD Gaming 官方战队联系人",
           "realName": "Robison Martins <robisonmartins59@gmail.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2737,13 +2251,9 @@
     },
     "ROSSMANNCENTAURS": {
       "name": "Rossmann Centaurs",
-      "short": "ROSS",
+      "short": "",
       "page": "",
       "aliases": [
-        "PRM",
-        "PRM-LTR",
-        "ROSS",
-        "Resident",
         "Rossmann Centaurs"
       ],
       "regions": [
@@ -2751,7 +2261,7 @@
       ],
       "management": [
         {
-          "name": "ROSS 官方战队联系人",
+          "name": "Rossmann Centaurs 官方战队联系人",
           "realName": "leander.fueger@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2761,17 +2271,11 @@
     },
     "SAIGON1TAPDINO": {
       "name": "Saigon 1TAP Dino",
-      "short": "Top",
+      "short": "DINO",
       "page": "",
       "aliases": [
-        "Bot",
         "DINO",
-        "Jungle",
-        "Manager",
-        "Mid",
-        "Saigon 1TAP Dino",
-        "Support",
-        "Top"
+        "Saigon 1TAP Dino"
       ],
       "regions": [
         "LCP"
@@ -2788,18 +2292,11 @@
     },
     "SAIGON9GAMINGESPORTS": {
       "name": "Saigon 9gaming Esports",
-      "short": "Top",
+      "short": "9G",
       "page": "",
       "aliases": [
         "9G",
-        "Bot",
-        "Hoàng",
-        "Huỳnh",
-        "Jungle",
-        "Mid",
-        "Saigon 9gaming Esports",
-        "Support",
-        "Top"
+        "Saigon 9gaming Esports"
       ],
       "regions": [
         "LCP"
@@ -2816,18 +2313,11 @@
     },
     "SAIGONMVKACADEMY": {
       "name": "Saigon MVK Academy",
-      "short": "Top",
+      "short": "MVKA",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Lê",
         "MVKA",
-        "Mid",
-        "Phan",
-        "Saigon MVK Academy",
-        "Support",
-        "Top"
+        "Saigon MVK Academy"
       ],
       "regions": [
         "LCP"
@@ -2844,17 +2334,11 @@
     },
     "SAIGONWARRIORS": {
       "name": "Saigon Warriors",
-      "short": "Top",
+      "short": "SGW",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Mid",
         "SGW",
-        "Saigon Warriors",
-        "Support",
-        "Top",
-        "Trần"
+        "Saigon Warriors"
       ],
       "regions": [
         "LCP"
@@ -2871,18 +2355,10 @@
     },
     "SC": {
       "name": "SC",
-      "short": "Wójcicki",
+      "short": "",
       "page": "",
       "aliases": [
-        "Andrija",
-        "Gochev",
-        "Jérémy",
-        "Medjaldi",
-        "Pernot",
-        "SC",
-        "Sergeant",
-        "Strugov",
-        "Wójcicki"
+        "SC"
       ],
       "regions": [
         "EMEA"
@@ -2911,11 +2387,9 @@
     },
     "SENTINELS": {
       "name": "Sentinels",
-      "short": "SEN",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "SEN",
         "Sentinels"
       ],
       "regions": [
@@ -2923,7 +2397,7 @@
       ],
       "management": [
         {
-          "name": "SEN 官方战队联系人",
+          "name": "Sentinels 官方战队联系人",
           "realName": "Kevin Jeon<kevin@sentinels.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2933,16 +2407,11 @@
     },
     "SHADOWKEEPERSESPORTS": {
       "name": "Shadow Keepers Esports",
-      "short": "Top",
+      "short": "SHKP",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Mid",
         "SHKP",
-        "Shadow Keepers Esports",
-        "Support",
-        "Top"
+        "Shadow Keepers Esports"
       ],
       "regions": [
         "LCP"
@@ -2959,10 +2428,9 @@
     },
     "SHARKATTACK": {
       "name": "Shark Attack",
-      "short": "SA",
+      "short": "",
       "page": "",
       "aliases": [
-        "SA",
         "Shark Attack"
       ],
       "regions": [
@@ -2970,7 +2438,7 @@
       ],
       "management": [
         {
-          "name": "SA 官方战队联系人",
+          "name": "Shark Attack 官方战队联系人",
           "realName": "japone993@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -2987,22 +2455,17 @@
     },
     "SHENZHENNINJASINPYJAMAS": {
       "name": "Shenzhen NINJAS IN PYJAMAS",
-      "short": "NIP",
+      "short": "",
       "page": "",
       "aliases": [
-        "GU",
-        "HO",
-        "NIP",
-        "Shenzhen NINJAS IN PYJAMAS",
-        "YANG",
-        "ZOU"
+        "Shenzhen NINJAS IN PYJAMAS"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "NIP 官方战队联系人",
+          "name": "Shenzhen NINJAS IN PYJAMAS 官方战队联系人",
           "realName": "vlan@nipg.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3012,23 +2475,17 @@
     },
     "SHIFTERS": {
       "name": "Shifters",
-      "short": "SHFT",
+      "short": "",
       "page": "",
       "aliases": [
-        "Dziemian",
-        "LEC",
-        "Park",
-        "Resident",
-        "SHFT",
-        "Shifters",
-        "Shin"
+        "Shifters"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "SHFT 官方战队联系人",
+          "name": "Shifters 官方战队联系人",
           "realName": "Mathieu Débonnaire <debonnaire@bdsesport.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3051,11 +2508,9 @@
     },
     "SHOPIFYREBELLION": {
       "name": "Shopify Rebellion",
-      "short": "SR",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "SR",
         "Shopify Rebellion"
       ],
       "regions": [
@@ -3063,7 +2518,7 @@
       ],
       "management": [
         {
-          "name": "SR 官方战队联系人",
+          "name": "Shopify Rebellion 官方战队联系人",
           "realName": "David Han<david.han@shopify.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3073,17 +2528,11 @@
     },
     "SILLYSILLYGAMING": {
       "name": "SillySilly Gaming",
-      "short": "Top",
+      "short": "SSG",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Mid",
         "SSG",
-        "SillySilly Gaming",
-        "Support",
-        "Top",
-        "XU"
+        "SillySilly Gaming"
       ],
       "regions": [
         "LCP"
@@ -3100,11 +2549,9 @@
     },
     "SKGAMING": {
       "name": "SK Gaming",
-      "short": "SK",
+      "short": "",
       "page": "",
       "aliases": [
-        "Resident",
-        "SK",
         "SK Gaming"
       ],
       "regions": [
@@ -3112,7 +2559,7 @@
       ],
       "management": [
         {
-          "name": "SK 官方战队联系人",
+          "name": "SK Gaming 官方战队联系人",
           "realName": "Mitch Voorspoels <mitch@sk-gaming.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3141,17 +2588,9 @@
     },
     "SOLARY": {
       "name": "Solary",
-      "short": "SLY",
+      "short": "",
       "page": "",
       "aliases": [
-        "Berat",
-        "CIAJOLO",
-        "DONGSU",
-        "Danny",
-        "Felix",
-        "Kim",
-        "LFL",
-        "SLY",
         "Solary"
       ],
       "regions": [
@@ -3175,19 +2614,17 @@
     },
     "SUESPORTS": {
       "name": "SU Esports",
-      "short": "SU",
+      "short": "",
       "page": "",
       "aliases": [
-        "SU",
-        "SU Esports",
-        "TCL-LTR"
+        "SU Esports"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "SU 官方战队联系人",
+          "name": "SU Esports 官方战队联系人",
           "realName": "bahadirpolat@windowslive.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3204,22 +2641,17 @@
     },
     "SUZHOULNGESPORTS": {
       "name": "Suzhou LNG Esports",
-      "short": "LNG",
+      "short": "",
       "page": "",
       "aliases": [
-        "KIM",
-        "LEE",
-        "LI",
-        "LNG",
-        "Suzhou LNG Esports",
-        "XU"
+        "Suzhou LNG Esports"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "LNG 官方战队联系人",
+          "name": "Suzhou LNG Esports 官方战队联系人",
           "realName": "wanlei@lngesports.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3229,20 +2661,9 @@
     },
     "T1": {
       "name": "T1",
-      "short": "Moon",
+      "short": "T1",
       "page": "",
       "aliases": [
-        "Cheon",
-        "Choi",
-        "Kim",
-        "Lee",
-        "Lim",
-        "Moon",
-        "Mun",
-        "Ryu",
-        "Sehyoung",
-        "Seong",
-        "Sim",
         "T1"
       ],
       "regions": [
@@ -3250,14 +2671,8 @@
       ],
       "management": [
         {
-          "name": "Moon 官方战队联系人",
+          "name": "T1 官方战队联系人",
           "realName": "becker@t1.gg",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Choi 官方战队联系人",
-          "realName": "mun@t1.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -3303,14 +2718,9 @@
     },
     "TEAMHERETICS": {
       "name": "Team Heretics",
-      "short": "TH",
+      "short": "",
       "page": "",
       "aliases": [
-        "Byun",
-        "Kil",
-        "LEC",
-        "Resident",
-        "TH",
         "Team Heretics"
       ],
       "regions": [
@@ -3318,7 +2728,7 @@
       ],
       "management": [
         {
-          "name": "TH 官方战队联系人",
+          "name": "Team Heretics 官方战队联系人",
           "realName": "niklas@teamheretics.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3347,11 +2757,9 @@
     },
     "TEAMLIQUID": {
       "name": "Team Liquid",
-      "short": "TLAW",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "TLAW",
         "Team Liquid"
       ],
       "regions": [
@@ -3359,7 +2767,7 @@
       ],
       "management": [
         {
-          "name": "TLAW 官方战队联系人",
+          "name": "Team Liquid 官方战队联系人",
           "realName": "Jun Kang <dodo@teamliquid.com>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3369,13 +2777,9 @@
     },
     "TEAMORANGEGAMING": {
       "name": "TeamOrangeGaming",
-      "short": "TOG",
+      "short": "",
       "page": "",
       "aliases": [
-        "João",
-        "PRM-LTR",
-        "Resident",
-        "TOG",
         "TeamOrangeGaming"
       ],
       "regions": [
@@ -3383,7 +2787,7 @@
       ],
       "management": [
         {
-          "name": "TOG 官方战队联系人",
+          "name": "TeamOrangeGaming 官方战队联系人",
           "realName": "sport@teamorangegaming.one",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3400,10 +2804,9 @@
     },
     "TEAMPHOENIX": {
       "name": "Team Phoenix",
-      "short": "PHX",
+      "short": "",
       "page": "",
       "aliases": [
-        "PHX",
         "Team Phoenix"
       ],
       "regions": [
@@ -3411,7 +2814,7 @@
       ],
       "management": [
         {
-          "name": "PHX 官方战队联系人",
+          "name": "Team Phoenix 官方战队联系人",
           "realName": "kaangr1967@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3434,17 +2837,11 @@
     },
     "TEAMSECRETWHALES": {
       "name": "Team Secret Whales",
-      "short": "Nguyen",
+      "short": "TSW",
       "page": "",
       "aliases": [
-        "Chen",
-        "Hoàng",
-        "Lê",
-        "Nguyen",
         "TSW",
-        "Team Secret Whales",
-        "Tran",
-        "Trần"
+        "Team Secret Whales"
       ],
       "regions": [
         "LCP"
@@ -3461,11 +2858,9 @@
     },
     "TEAMSOLID": {
       "name": "Team Solid",
-      "short": "TSS",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "TSS",
         "Team Solid"
       ],
       "regions": [
@@ -3473,7 +2868,7 @@
       ],
       "management": [
         {
-          "name": "TSS 官方战队联系人",
+          "name": "Team Solid 官方战队联系人",
           "realName": "Marcos Guerra <marcos.guerra@teamsolid.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3483,22 +2878,17 @@
     },
     "TEAMVITALITY": {
       "name": "Team Vitality",
-      "short": "VIT",
+      "short": "",
       "page": "",
       "aliases": [
-        "An",
-        "LEC",
-        "Resident",
-        "Team Vitality",
-        "VIT",
-        "checked"
+        "Team Vitality"
       ],
       "regions": [
         "EMEA"
       ],
       "management": [
         {
-          "name": "VIT 官方战队联系人",
+          "name": "Team Vitality 官方战队联系人",
           "realName": "Till Werdermann: till.werdermann@vitality.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3527,23 +2917,17 @@
     },
     "THUNDERTALKGAMING": {
       "name": "THUNDER TALK GAMING",
-      "short": "TT",
+      "short": "",
       "page": "",
       "aliases": [
-        "AN",
-        "CHEN",
-        "KIM",
-        "LUO",
-        "THUNDER TALK GAMING",
-        "TT",
-        "WANG"
+        "THUNDER TALK GAMING"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "TT 官方战队联系人",
+          "name": "THUNDER TALK GAMING 官方战队联系人",
           "realName": "xiaochuyu@52tt.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3553,23 +2937,17 @@
     },
     "TOPESPORTS": {
       "name": "TOP ESPORTS",
-      "short": "TES",
+      "short": "",
       "page": "",
       "aliases": [
-        "CHENG",
-        "GAO",
-        "LIN",
-        "TES",
-        "TOP ESPORTS",
-        "WANG",
-        "YU"
+        "TOP ESPORTS"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "TES 官方战队联系人",
+          "name": "TOP ESPORTS 官方战队联系人",
           "realName": "guo.h@topsports.com.cn",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3579,21 +2957,11 @@
     },
     "TPHCMSNCYBERCOREESPORTS": {
       "name": "TPHCM SN CyberCore Esports",
-      "short": "Top",
+      "short": "SCBC",
       "page": "",
       "aliases": [
-        "Analyst",
-        "Bot",
-        "Jungle",
-        "Manager",
-        "Mid",
-        "Phí",
         "SCBC",
-        "Support",
-        "TPHCM SN CyberCore Esports",
-        "Top",
-        "Trần",
-        "Vương"
+        "TPHCM SN CyberCore Esports"
       ],
       "regions": [
         "LCP"
@@ -3610,11 +2978,9 @@
     },
     "UBALMAMATER": {
       "name": "UB Alma Mater",
-      "short": "UB",
+      "short": "",
       "page": "",
       "aliases": [
-        "Resident",
-        "UB",
         "UB Alma Mater"
       ],
       "regions": [
@@ -3622,7 +2988,7 @@
       ],
       "management": [
         {
-          "name": "UB 官方战队联系人",
+          "name": "UB Alma Mater 官方战队联系人",
           "realName": "icaralt@ub.edu",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3632,11 +2998,9 @@
     },
     "UCAMESPORTSCLUB": {
       "name": "UCAM Esports Club",
-      "short": "UCAM",
+      "short": "",
       "page": "",
       "aliases": [
-        "Resident",
-        "UCAM",
         "UCAM Esports Club"
       ],
       "regions": [
@@ -3644,7 +3008,7 @@
       ],
       "management": [
         {
-          "name": "UCAM 官方战队联系人",
+          "name": "UCAM Esports Club 官方战队联系人",
           "realName": "ayanez@esports.ucam.edu",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3667,22 +3031,17 @@
     },
     "ULTRAPRIME": {
       "name": "Ultra Prime",
-      "short": "UP",
+      "short": "",
       "page": "",
       "aliases": [
-        "PARK",
-        "SONG",
-        "UP",
-        "Ultra Prime",
-        "WU",
-        "XIA"
+        "Ultra Prime"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "UP 官方战队联系人",
+          "name": "Ultra Prime 官方战队联系人",
           "realName": "dab@ultprime.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3692,15 +3051,9 @@
     },
     "UNICORNSOFLOVESEXYEDITION": {
       "name": "Unicorns of Love - Sexy Edition",
-      "short": "USE",
+      "short": "",
       "page": "",
       "aliases": [
-        "Mallant",
-        "Messerer",
-        "PRM",
-        "PRM-LTR",
-        "Resident",
-        "USE",
         "Unicorns of Love - Sexy Edition"
       ],
       "regions": [
@@ -3708,7 +3061,7 @@
       ],
       "management": [
         {
-          "name": "USE 官方战队联系人",
+          "name": "Unicorns of Love - Sexy Edition 官方战队联系人",
           "realName": "vivien@mallant.de",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3731,19 +3084,9 @@
     },
     "UWINKS": {
       "name": "Uwinks",
-      "short": "UWS",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "Kaisei",
-        "Keito",
-        "LEE",
-        "Mid",
-        "Nagito",
-        "Shinji",
-        "Support",
-        "UWS",
         "Uwinks"
       ],
       "regions": [
@@ -3751,7 +3094,7 @@
       ],
       "management": [
         {
-          "name": "Shinji 官方战队联系人",
+          "name": "Uwinks 官方战队联系人",
           "realName": "guzmasou@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3761,18 +3104,9 @@
     },
     "VAREELYOUTH": {
       "name": "VAREEL YOUTH",
-      "short": "Top",
+      "short": "VLY",
       "page": "",
       "aliases": [
-        "Adachi",
-        "Analyst",
-        "Bot",
-        "Hosogai",
-        "Jungle",
-        "Mid",
-        "Soma",
-        "Support",
-        "Top",
         "VAREEL YOUTH",
         "VLY"
       ],
@@ -3791,13 +3125,9 @@
     },
     "VFBSTUTTGART": {
       "name": "VfB Stuttgart",
-      "short": "VfB",
+      "short": "",
       "page": "",
       "aliases": [
-        "Berg",
-        "PRM-LTR",
-        "Schaller",
-        "VfB",
         "VfB Stuttgart"
       ],
       "regions": [
@@ -3821,18 +3151,9 @@
     },
     "VIPERNIGHTRAIDER": {
       "name": "Viper Night Raider",
-      "short": "Top",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "KANG",
-        "Mid",
-        "Support",
-        "TSAI",
-        "TSANG",
-        "Top",
-        "VNR",
         "Viper Night Raider"
       ],
       "regions": [
@@ -3840,7 +3161,7 @@
       ],
       "management": [
         {
-          "name": "TSANG 官方战队联系人",
+          "name": "Viper Night Raider 官方战队联系人",
           "realName": "a1963268312@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3850,17 +3171,9 @@
     },
     "VITB": {
       "name": "VITB",
-      "short": "Mehdi",
+      "short": "",
       "page": "",
       "aliases": [
-        "Bistrian",
-        "Czajka",
-        "Drzyzga",
-        "Ismail",
-        "Mehdi",
-        "Merski",
-        "Piotr",
-        "Stadager",
         "VITB"
       ],
       "regions": [
@@ -3884,13 +3197,9 @@
     },
     "VIVOKEYDSTARS": {
       "name": "Vivo Keyd Stars",
-      "short": "VKS",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "Inactive",
-        "Resident",
-        "VKS",
         "Vivo Keyd Stars"
       ],
       "regions": [
@@ -3898,14 +3207,8 @@
       ],
       "management": [
         {
-          "name": "VKS 官方战队联系人",
+          "name": "Vivo Keyd Stars 官方战队联系人",
           "realName": "Hugo Tristao <hugo.tristao@keydstars.com.br>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Active 官方战队联系人",
-          "realName": "Edu Kim <ekim@keydstars.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -3914,11 +3217,9 @@
     },
     "VIVOKEYDSTARSACADEMY": {
       "name": "Vivo Keyd Stars Academy",
-      "short": "VKS",
+      "short": "",
       "page": "",
       "aliases": [
-        "Active",
-        "VKS",
         "Vivo Keyd Stars Academy"
       ],
       "regions": [
@@ -3926,14 +3227,8 @@
       ],
       "management": [
         {
-          "name": "VKS 官方战队联系人",
+          "name": "Vivo Keyd Stars Academy 官方战队联系人",
           "realName": "Hugo Tristao <hugo.tristao@keydstars.com.br>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Active 官方战队联系人",
-          "realName": "Edu Kim <ekim@keydstars.com.br>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -3942,15 +3237,9 @@
     },
     "WANGTING": {
       "name": "WangTing",
-      "short": "Top",
+      "short": "WTG",
       "page": "",
       "aliases": [
-        "Bot",
-        "Jungle",
-        "LIN",
-        "Mid",
-        "Support",
-        "Top",
         "WTG",
         "WangTing"
       ],
@@ -3969,22 +3258,17 @@
     },
     "WEIBOGAMING": {
       "name": "WeiboGaming",
-      "short": "WBG",
+      "short": "",
       "page": "",
       "aliases": [
-        "FU",
-        "LI",
-        "TANG",
-        "WBG",
-        "WeiboGaming",
-        "ZHAO"
+        "WeiboGaming"
       ],
       "regions": [
         "CN"
       ],
       "management": [
         {
-          "name": "WBG 官方战队联系人",
+          "name": "WeiboGaming 官方战队联系人",
           "realName": "chenyu22@weijing.weibo.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -3994,15 +3278,9 @@
     },
     "XIANTEAMWE": {
       "name": "Xi'an Team WE",
-      "short": "WE",
+      "short": "",
       "page": "",
       "aliases": [
-        "CHEN",
-        "KIM",
-        "MOON",
-        "SHI",
-        "WANG",
-        "WE",
         "Xi'an Team WE"
       ],
       "regions": [
@@ -4010,7 +3288,7 @@
       ],
       "management": [
         {
-          "name": "WE 官方战队联系人",
+          "name": "Xi'an Team WE 官方战队联系人",
           "realName": "smallorc@teamwe.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
@@ -4020,17 +3298,9 @@
     },
     "XUJIBASALT": {
       "name": "Xu Ji Basalt",
-      "short": "Top",
+      "short": "XJB",
       "page": "",
       "aliases": [
-        "Bot",
-        "CHENG",
-        "Jungle",
-        "LIU",
-        "Mid",
-        "Support",
-        "Top",
-        "WANG",
         "XJB",
         "Xu Ji Basalt"
       ],
@@ -4049,17 +3319,9 @@
     },
     "YANGYANGGAMING": {
       "name": "Yang Yang Gaming",
-      "short": "YYG",
+      "short": "",
       "page": "",
       "aliases": [
-        "Betouigt",
-        "Bot",
-        "DeShong",
-        "Jungle",
-        "Mid",
-        "Support",
-        "Tada",
-        "YYG",
         "Yang Yang Gaming"
       ],
       "regions": [
@@ -4067,7 +3329,7 @@
       ],
       "management": [
         {
-          "name": "DeShong 官方战队联系人",
+          "name": "Yang Yang Gaming 官方战队联系人",
           "realName": "jucducyt@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
