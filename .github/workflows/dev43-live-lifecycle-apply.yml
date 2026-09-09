@@ -1,0 +1,63 @@
+name: Apply dev43 live lifecycle wiring
+on:
+  push:
+    paths:
+      - '.github/workflows/dev43-live-lifecycle-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch lifecycle consumers and version
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def rep(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f'missing pattern in {path}: {old[:180]!r}')
+              p.write_text(s.replace(old, new, 1))
+
+          store='app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt'
+          rep(store,
+          '''    val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status\n    val postSourceStatus: StateFlow<String> = postMatchResolver.status\n''',
+          '''    val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status\n    val liveLifecycle: StateFlow<LiveLifecycleState> = liveDataSource.lifecycle\n    val postSourceStatus: StateFlow<String> = postMatchResolver.status\n''')
+
+          rep(store,
+          '''    private suspend fun syncLiveStatusIntoSchedule(status: LiveSourceStatus) {\n        val resolvedEventId = status.eventId.ifBlank { LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty() }\n        if (resolvedEventId.isBlank()) return\n        if (status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return\n\n        val center = _scheduleCenter.value\n''',
+          '''    private suspend fun syncLiveStatusIntoSchedule(status: LiveSourceStatus) {\n        val lifecycle = liveDataSource.lifecycle.value\n        val resolvedEventId = lifecycle.eventId.ifBlank {\n            status.eventId.ifBlank { LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty() }\n        }\n        if (resolvedEventId.isBlank()) return\n\n        // EVENT_LIVE/PRE_GAME/DRAFT/GAME_LOADING are real event states even without a game frame.\n        // This is the key fix for the old IG-day deadlock: currentMatch no longer depends on one\n        // provider successfully resolving a gameId first.\n        val eventActive = lifecycle.stage in setOf(\n            LiveLifecycleStage.EVENT_LIVE,\n            LiveLifecycleStage.PRE_GAME,\n            LiveLifecycleStage.DRAFT,\n            LiveLifecycleStage.GAME_LOADING,\n            LiveLifecycleStage.GAME_LIVE,\n            LiveLifecycleStage.BETWEEN_GAMES,\n            LiveLifecycleStage.DEGRADED\n        )\n        if (!eventActive && status.phase != LiveSourcePhase.LIVE && status.phase != LiveSourcePhase.BETWEEN_GAMES) return\n\n        val center = _scheduleCenter.value\n''')
+
+          rep(store,
+          '''        val detected = if (\n            status.phase == LiveSourcePhase.LIVE &&\n            key !in center.liveDetectedAtEpochMs\n        ) {\n''',
+          '''        val detected = if (\n            lifecycle.stage == LiveLifecycleStage.GAME_LIVE &&\n            key !in center.liveDetectedAtEpochMs\n        ) {\n''')
+
+          rep(store,
+          '''        if (statusTargetsMatch) {\n            when (status.phase) {\n                LiveSourcePhase.LIVE -> return ScheduleActivityState.GAME_LIVE\n                LiveSourcePhase.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES\n                else -> Unit\n            }\n        }\n\n        if (isLiveState(match)) return ScheduleActivityState.EVENT_LIVE\n''',
+          '''        if (statusTargetsMatch) {\n            when (liveDataSource.lifecycle.value.stage) {\n                LiveLifecycleStage.GAME_LIVE -> return ScheduleActivityState.GAME_LIVE\n                LiveLifecycleStage.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES\n                LiveLifecycleStage.EVENT_LIVE,\n                LiveLifecycleStage.PRE_GAME,\n                LiveLifecycleStage.DRAFT,\n                LiveLifecycleStage.GAME_LOADING,\n                LiveLifecycleStage.DEGRADED -> return ScheduleActivityState.EVENT_LIVE\n                else -> Unit\n            }\n            when (status.phase) {\n                LiveSourcePhase.LIVE -> return ScheduleActivityState.GAME_LIVE\n                LiveSourcePhase.BETWEEN_GAMES -> return ScheduleActivityState.BETWEEN_GAMES\n                else -> Unit\n            }\n        }\n\n        if (isLiveState(match)) return ScheduleActivityState.EVENT_LIVE\n''')
+
+          rep(store,
+          '''        ScheduleActivityState.EVENT_LIVE -> "赛事已开始 · 等待小局数据"\n''',
+          '''        ScheduleActivityState.EVENT_LIVE -> liveDataSource.lifecycle.value.message.ifBlank { "赛事已开始 · 等待小局数据" }\n''')
+
+          gradle='app/build.gradle.kts'
+          rep(gradle,
+          '''        versionCode = 42\n        versionName = "1.0.0-dev.42"\n''',
+          '''        versionCode = 43\n        versionName = "1.0.0-dev.43"\n''')
+          rep(gradle,
+          '''// dev.42: global Riot league scope (Worlds/MSI/major regions) + league-aware live provider routing.\n''',
+          '''// dev.43: event/game lifecycle state machine + 20s watchdog escalation; no endless parsing state.\n''')
+          PY
+      - name: Commit and push source changes
+        run: |
+          git config user.name 'riftlab-dev-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app
+          git commit -m 'feat: separate event-live from game-live with watchdog failover'
+          git push
