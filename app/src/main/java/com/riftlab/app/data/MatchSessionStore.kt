@@ -446,14 +446,16 @@ object MatchSessionStore {
         ScheduleActivityState.GAME_LIVE -> {
             val plannedLabel = formatLocalStart(match.startTimeIso)
             val detectedAt = _scheduleCenter.value.liveDetectedAtEpochMs[scheduleKey(match)]
-                ?: return@when "赛事计划 $plannedLabel · 小局进行中"
             val planned = plannedStartEpochMs(match)
-                ?: return@when "小局进行中"
-            val deltaMinutes = (detectedAt - planned) / 60_000L
-            when {
-                deltaMinutes >= 1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE +${deltaMinutes} 分钟"
-                deltaMinutes <= -1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE ${deltaMinutes} 分钟"
-                else -> "赛事计划 $plannedLabel · 小局进行中"
+            if (detectedAt == null || planned == null) {
+                "赛事计划 $plannedLabel · 小局进行中"
+            } else {
+                val deltaMinutes = (detectedAt - planned) / 60_000L
+                when {
+                    deltaMinutes >= 1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE +${deltaMinutes} 分钟"
+                    deltaMinutes <= -1L -> "赛事计划 $plannedLabel · 首次检测小局 LIVE ${deltaMinutes} 分钟"
+                    else -> "赛事计划 $plannedLabel · 小局进行中"
+                }
             }
         }
     }
