@@ -1,8 +1,21 @@
 {
   "schemaVersion": 1,
-  "initialized": false,
-  "initializedAt": "",
-  "lastRunAt": "",
-  "seen": {},
+  "initialized": true,
+  "initializedAt": "2026-09-09T02:02:31Z",
+  "lastRunAt": "2026-09-09T02:02:31Z",
+  "seen": {
+    "AL": [],
+    "BLG": [],
+    "TES": [],
+    "JDG": [],
+    "LGD": [],
+    "EDG": [],
+    "TT": [],
+    "IG": [],
+    "LNG": [],
+    "NIP": [],
+    "WBG": [],
+    "WE": []
+  },
   "events": []
 }
