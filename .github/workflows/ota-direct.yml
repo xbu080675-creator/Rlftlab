@@ -3,6 +3,14 @@ name: DEV OTA Direct
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'DEV_CHANGELOG.txt'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'signing/**'
+      - '.github/workflows/ota-direct.yml'
   workflow_dispatch:
 
 permissions:
