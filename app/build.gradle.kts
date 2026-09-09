@@ -95,3 +95,4 @@ dependencies {
 // Final dev.52 trigger after GCD mirror population and role-label verification.
 
 // dev.53: Bilibili official VOD lookup accepts reversed team order and retries negative search cache.
+// Final dev.53 trigger after validating KT vs T1 / T1 vs KT official VOD matching.
