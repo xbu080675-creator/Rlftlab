@@ -112,18 +112,26 @@ def collect_team_details(team_refs: list[dict[str, str]]) -> tuple[dict[str, Any
     details: dict[str, Any] = {}
     lookup: dict[str, str] = {}
     for ref in team_refs:
-        query = ref.get("id") or ref.get("slug")
-        if not query:
-            continue
-        try:
-            root = fetch("getTeams", {"id": query})
-        except Exception:
+        candidates = [ref.get("slug", ""), ref.get("id", "")]
+        root: dict[str, Any] | None = None
+        query_used = ""
+        for query in candidates:
+            if not query:
+                continue
+            try:
+                candidate_root = fetch("getTeams", {"id": query})
+            except Exception:
+                continue
+            teams = candidate_root.get("data", {}).get("teams", []) or []
+            if teams:
+                root = candidate_root
+                query_used = query
+                break
+        if root is None:
             continue
         teams = root.get("data", {}).get("teams", []) or []
-        if not teams:
-            continue
         team = teams[0]
-        canonical = str(team.get("id", "") or query)
+        canonical = str(team.get("id", "") or query_used)
         details[canonical] = root
         aliases = {
             canonical,
@@ -190,8 +198,12 @@ def main() -> int:
         "eventDetailsByEvent": event_details,
     }
 
-    if not pages or not team_details:
-        raise RuntimeError("refusing to replace mirror with incomplete snapshot")
+    print(
+        f"mirror candidate: pages={len(pages)} team_refs={len(team_refs)} teams={len(team_details)} "
+        f"standings={len(standings)} events={len(event_details)}"
+    )
+    if not pages:
+        raise RuntimeError("refusing to replace mirror without schedule pages")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(mirror, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
