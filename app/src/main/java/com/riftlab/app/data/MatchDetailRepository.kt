@@ -88,6 +88,7 @@ object MatchDetailRepository {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val resolver = LplHistoricalPostMatchResolver()
     private val awardsProvider = LplOfficialAwardsProvider()
+    private val globalAwardsProvider = GlobalVerifiedAwardsProvider()
     private val draftProvider = LplOfficialDraftProvider()
     private val opggProvider = OpggMatchSupplementProvider()
     private val teamAssetProvider = RiotTeamAssetProvider()
@@ -143,7 +144,9 @@ object MatchDetailRepository {
                 .orEmpty()
 
             val awards = when {
-                !lplMatch -> OfficialAwardsResult(status = "MVP / POG · 非 LPL 不调用 LPL/TJStats 接口")
+                !lplMatch -> runCatching { globalAwardsProvider.fetch(matchWithRiotAssets) }.getOrElse {
+                    OfficialAwardsResult(status = "全球 MVP / POG 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
+                }
                 bmid.isNotBlank() -> runCatching { awardsProvider.fetch(bmid) }.getOrElse {
                     OfficialAwardsResult(status = "MVP / POG 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
                 }
