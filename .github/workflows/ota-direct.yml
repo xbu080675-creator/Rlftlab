@@ -1,0 +1,90 @@
+name: DEV OTA Direct
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: riftlab-dev-ota-direct
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Build fixed-signed debug APK
+        run: gradle :app:assembleDebug
+      - name: Verify fixed dev signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" verify --print-certs "$APK"
+          DIGEST=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          EXPECTED="769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
+          echo "RiftLab dev signing SHA-256: $DIGEST"
+          test "$DIGEST" = "$EXPECTED"
+      - name: Publish dev-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n1)
+          VERSION_CODE=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n1)
+          SRC="app/build/outputs/apk/debug/app-debug.apk"
+          OUT="/tmp/RiftLab-${VERSION_NAME}.apk"
+          cp "$SRC" "$OUT"
+          SHA=$(sha256sum "$OUT" | awk '{print $1}')
+          CHANGELOG=$(python3 - <<'PY'
+          from pathlib import Path
+          text = Path('DEV_CHANGELOG.txt').read_text(encoding='utf-8').strip()
+          first = text.split('\n\n', 1)[0].replace('\n', ' ').strip()
+          if len(first) > 520:
+              first = first[:519].rstrip() + '…'
+          print(first)
+          PY
+          )
+          cat > /tmp/riftlab-release.txt <<EOF
+          RIFTLAB_UPDATE
+          versionName=$VERSION_NAME
+          versionCode=$VERSION_CODE
+          sha256=$SHA
+          channel=dev
+          changelog=$CHANGELOG
+          EOF
+
+          git tag -f dev-latest "$GITHUB_SHA"
+          git push -f origin refs/tags/dev-latest
+
+          if gh release view dev-latest >/dev/null 2>&1; then
+            gh release upload dev-latest "$OUT" --clobber
+            RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/dev-latest" --jq .id)
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/$RID" \
+              -f name="RiftLab $VERSION_NAME · DEV" \
+              -f body="$(cat /tmp/riftlab-release.txt)" \
+              -F prerelease=true \
+              -f target_commitish="$GITHUB_SHA" >/dev/null
+          else
+            gh release create dev-latest "$OUT" \
+              --verify-tag \
+              --title "RiftLab $VERSION_NAME · DEV" \
+              --notes-file /tmp/riftlab-release.txt \
+              --prerelease
+          fi
