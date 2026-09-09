@@ -60,6 +60,7 @@ internal class DynamicTeamDataProvider(
         val node = teams.optJSONObject(code) ?: return null
         val verifiedAt = node.optString("verifiedAt")
         val datasetUpdatedAt = root.optString("updatedAt")
+        val sourceCount = node.optJSONArray("sources")?.length() ?: 0
         val sourceLabel = buildString {
             append("RiftLab Dynamic Data")
             if (verifiedAt.isNotBlank()) append(" · verified ").append(verifiedAt)
@@ -67,7 +68,6 @@ internal class DynamicTeamDataProvider(
 
         val management = parseStaff(node.optJSONArray("management"), sourceLabel)
         val staff = parseStaff(node.optJSONArray("staff"), sourceLabel)
-        val teamLinks = parseSourcesAsLinks(node.optJSONArray("sources"), sourceLabel)
         val operators = parseOperators(node.optJSONArray("operators"))
         val corporate = node.optJSONObject("corporate")
         val legalEntity = corporate?.optString("legalEntity").orEmpty()
@@ -77,6 +77,7 @@ internal class DynamicTeamDataProvider(
         val statusBits = mutableListOf<String>()
         statusBits += sourceLabel
         if (datasetUpdatedAt.isNotBlank()) statusBits += "dataset $datasetUpdatedAt"
+        if (sourceCount > 0) statusBits += "来源 $sourceCount"
         if (operators.isNotBlank()) statusBits += "运营：$operators"
 
         val legalSummary = when {
@@ -88,7 +89,7 @@ internal class DynamicTeamDataProvider(
 
         return TeamDynamicSupplement(
             profile = TeamProfileSupplement(
-                teamLinks = teamLinks,
+                teamLinks = emptyList(),
                 playerLinks = emptyMap(),
                 management = management,
                 status = statusBits.joinToString(" · ")
@@ -156,25 +157,6 @@ internal class DynamicTeamDataProvider(
                         role = role,
                         source = item.optString("source").ifBlank { source },
                         realName = item.optString("realName")
-                    )
-                )
-            }
-        }
-    }
-
-    private fun parseSourcesAsLinks(rows: JSONArray?, source: String): List<EsportsSocialLink> {
-        if (rows == null) return emptyList()
-        return buildList {
-            for (index in 0 until rows.length()) {
-                val item = rows.optJSONObject(index) ?: continue
-                val url = item.optString("url").trim()
-                if (url.isBlank()) continue
-                add(
-                    EsportsSocialLink(
-                        platform = item.optString("type").ifBlank { "SOURCE" },
-                        url = url,
-                        label = item.optString("label").ifBlank { "来源" },
-                        source = source
                     )
                 )
             }
