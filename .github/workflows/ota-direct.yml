@@ -32,6 +32,13 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Bundle Riot mirror seed
+        shell: bash
+        run: |
+          if [ -f data/lpl/riot_persisted_mirror.json ]; then
+            mkdir -p app/src/main/assets
+            cp data/lpl/riot_persisted_mirror.json app/src/main/assets/riot_persisted_mirror.json
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
