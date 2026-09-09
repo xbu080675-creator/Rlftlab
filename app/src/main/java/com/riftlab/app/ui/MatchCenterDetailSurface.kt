@@ -27,16 +27,14 @@ import com.riftlab.app.data.ScheduledEsportsMatch
 
 private enum class CenterCompletedMatchPane(val label: String) {
     DETAIL("比赛详情"),
-    TIMELINE("时间轴"),
-    VOD("官方录像")
+    REPLAY("比赛回放")
 }
 
 /**
  * Inline match detail used by the event center.
  *
- * Every completed schedule match receives the same historical surfaces as the dedicated detail
- * activity. This intentionally does not depend on the home screen's POST tab or on being the most
- * recently completed series.
+ * Every completed schedule match gets one unified replay surface: official VOD + event timeline.
+ * This is available for every completed schedule match, not only the home screen's latest POST item.
  */
 @Composable
 internal fun MatchCenterDetailSurface(match: ScheduledEsportsMatch) {
@@ -54,8 +52,7 @@ internal fun MatchCenterDetailSurface(match: ScheduledEsportsMatch) {
         Spacer(Modifier.height(10.dp))
         when (pane) {
             CenterCompletedMatchPane.DETAIL -> MatchDetailContent()
-            CenterCompletedMatchPane.TIMELINE -> MatchTimelineContent()
-            CenterCompletedMatchPane.VOD -> MatchVodContent()
+            CenterCompletedMatchPane.REPLAY -> MatchReplayContent()
         }
     }
 }
