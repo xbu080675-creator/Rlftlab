@@ -41,6 +41,9 @@ jobs:
               cp "data/lpl/$name" "app/src/main/assets/$name"
             fi
           done
+          if [ -f "data/esports/esports_graph.json" ]; then
+            cp "data/esports/esports_graph.json" "app/src/main/assets/esports_graph.json"
+          fi
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
