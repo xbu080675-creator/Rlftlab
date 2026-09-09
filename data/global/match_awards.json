@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-10",
+  "description": "Verified global/overseas match awards. This mirror is separate from Riot schedule/telemetry because those endpoints do not consistently expose MVP/POG awards. Every record must carry its provenance and must never be presented as a Riot API field unless the source is Riot.",
+  "awards": [
+    {
+      "eventId": "113475871524050783",
+      "league": "Worlds",
+      "date": "2025-11-09",
+      "teams": ["T1", "KT"],
+      "seriesMvp": {
+        "playerName": "Gumayusi",
+        "team": "T1",
+        "role": "BOT",
+        "award": "Finals MVP",
+        "source": "Liquipedia · 2025 World Championship Grand Final",
+        "sourceUrl": "https://liquipedia.net/leagueoflegends/Match:ID_Wrd25KnOut_R03-M001"
+      }
+    }
+  ]
+}
