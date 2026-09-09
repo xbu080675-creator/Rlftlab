@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 54
-        versionName = "1.0.0-dev.54"
+        versionCode = 55
+        versionName = "1.0.0-dev.55"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -67,6 +67,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Cito REST + optional paid WebSocket transport. REST remains the fallback when WSS is not
+    // enabled by the account/plan.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Native match-VOD playback. Video bytes are streamed from the upstream CDN and are not cached
     // as RiftLab-owned media files.
     implementation("androidx.media3:media3-exoplayer:1.11.0")
@@ -100,3 +104,6 @@ dependencies {
 // dev.54: global completed-series operator archive from OP.GG terminal data; unblock Riot/OP.GG history backfill game enumeration; labelled global MVP Point fallback.
 // Final dev.54 CI/OTA trigger after global final-series and operator-history routing changes.
 // Final dev.54 verified-awards trigger: global MVP mirror wiring included in this build.
+
+// dev.55: Cito becomes a first-class full-chain provider: schedule/team/standings supplement,
+// quota-aware REST live fallback, optional WSS transport, raw provider archive, and global postgame backfill.

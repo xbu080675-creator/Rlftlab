@@ -18,10 +18,39 @@ import java.net.URL
 import java.time.Instant
 
 internal class LolEsportsScheduleDataSource(
-    private val client: LolEsportsApiClient = LolEsportsApiClient()
+    private val client: LolEsportsApiClient = LolEsportsApiClient(),
+    private val cito: CitoScheduleSupplementProvider = CitoScheduleSupplementProvider()
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
-        return TeamAssetCatalog.enrichMatches(client.fetchGlobalSchedule().map(::verifySeriesCompletion))
+        val riot = client.fetchGlobalSchedule().map(::verifySeriesCompletion)
+        val citoRows = runCatching { cito.fetch() }.getOrDefault(emptyList()).map(::verifySeriesCompletion)
+        val merged = mergeSchedule(riot, citoRows)
+        CitoArchiveCoordinator.observe(merged)
+        return TeamAssetCatalog.enrichMatches(merged)
+    }
+
+    private fun mergeSchedule(
+        riot: List<ScheduledEsportsMatch>,
+        citoRows: List<ScheduledEsportsMatch>
+    ): List<ScheduledEsportsMatch> {
+        if (citoRows.isEmpty()) return riot
+        val output = riot.toMutableList()
+        citoRows.forEach { candidate ->
+            val duplicate = output.any { existing -> sameSeries(existing, candidate) }
+            if (!duplicate) output += candidate
+        }
+        return output.sortedBy { parseStart(it.startTimeIso)?.toEpochMilli() ?: Long.MAX_VALUE }
+    }
+
+    private fun sameSeries(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
+        if (a.matchId.isNotBlank() && b.matchId.isNotBlank() && a.matchId == b.matchId) return true
+        if (a.eventId.isNotBlank() && b.eventId.isNotBlank() && a.eventId == b.eventId) return true
+        val aTeams = a.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
+        val bTeams = b.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
+        if (aTeams.size < 2 || aTeams != bTeams) return false
+        val aDay = a.startTimeIso.take(10)
+        val bDay = b.startTimeIso.take(10)
+        return aDay.isNotBlank() && aDay == bDay
     }
 
     /**
@@ -44,49 +73,67 @@ internal class LolEsportsScheduleDataSource(
         }
     }
 
-    private fun chooseLiveWatchTarget(matches: List<ScheduledEsportsMatch>): ScheduledEsportsMatch? {
-        matches.firstOrNull { isLiveState(it.state) }?.let { return it }
-
-        // Keep following a delayed/started series for up to 12 hours after its planned start.
-        // This prevents a later TBD match from replacing today's event just because Schedule
-        // has not advanced its state correctly.
-        val staleCutoff = System.currentTimeMillis() - 12 * 60 * 60 * 1000L
-        return matches.firstOrNull { match ->
-            !isCompletedState(match.state) &&
-                parseStart(match.startTimeIso)?.toEpochMilli()?.let { it >= staleCutoff } != false
-        }
-    }
-
     private fun normalizeState(value: String): String =
         value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
 
-    private fun isLiveState(value: String): Boolean {
-        val state = normalizeState(value)
-        return state.contains("progress") || state == "live"
-    }
-
-    private fun isCompletedState(match: ScheduledEsportsMatch): Boolean = isCompletedState(match.state)
-
-    private fun isCompletedState(value: String): Boolean {
-        val state = normalizeState(value)
-        return state.contains("complete") || state == "finished"
-    }
-
     private fun parseStart(value: String): Instant? = runCatching { Instant.parse(value) }.getOrNull()
+
+    private fun teamToken(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 }
 
 internal class LolEsportsStandingsDataSource(
-    private val client: LolEsportsStandingsClient = LolEsportsStandingsClient()
+    private val client: LolEsportsStandingsClient = LolEsportsStandingsClient(),
+    private val cito: CitoStandingsSupplementProvider = CitoStandingsSupplementProvider()
 ) : StandingsDataSource {
-    override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> = client.fetchGlobalTournaments()
-    override suspend fun fetchStandings(tournamentId: String): TournamentStandings? =
-        client.fetchTournamentStandings(tournamentId)
+    private val tournamentRefs = linkedMapOf<String, EsportsTournamentRef>()
+
+    override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> {
+        val tournaments = client.fetchGlobalTournaments()
+        tournamentRefs.clear()
+        tournaments.forEach { tournamentRefs[it.id] = it }
+        return tournaments
+    }
+
+    override suspend fun fetchStandings(tournamentId: String): TournamentStandings? {
+        val riot = runCatching { client.fetchTournamentStandings(tournamentId) }.getOrNull()
+        val hasRiotRows = riot?.stages?.any { stage ->
+            stage.sections.any { it.rankings.isNotEmpty() || it.matches.isNotEmpty() }
+        } == true
+        if (hasRiotRows) return riot
+        val tournament = tournamentRefs[tournamentId] ?: return riot
+        return runCatching { cito.fetch(tournament) }.getOrNull() ?: riot
+    }
 }
 
 internal class LolEsportsTeamDataSource(
-    private val client: LolEsportsApiClient = LolEsportsApiClient()
+    private val client: LolEsportsApiClient = LolEsportsApiClient(),
+    private val cito: CitoTeamSupplementProvider = CitoTeamSupplementProvider()
 ) : TeamDataSource {
-    override suspend fun fetchTeam(slug: String): EsportsTeamDetails? = client.fetchTeamDetails(slug)
+    override suspend fun fetchTeam(slug: String): EsportsTeamDetails? {
+        val riot = runCatching { client.fetchTeamDetails(slug) }.getOrNull()
+        val teamRef = riot?.let {
+            EsportsTeamRef(
+                id = it.id,
+                code = it.code,
+                name = it.name,
+                slug = it.slug,
+                imageUrl = it.imageUrl
+            )
+        } ?: EsportsTeamRef(id = "", code = slug.uppercase(), name = slug, slug = slug)
+        val citoDetails = runCatching { cito.fetch(teamRef) }.getOrNull()
+        if (riot == null) return citoDetails
+        if (citoDetails == null) return riot
+
+        val players = (riot.players + citoDetails.players)
+            .distinctBy { it.summonerName.uppercase().replace(Regex("[^A-Z0-9]+"), "") }
+        return riot.copy(
+            players = players,
+            imageUrl = riot.imageUrl.ifBlank { citoDetails.imageUrl },
+            staff = riot.staff.ifEmpty { citoDetails.staff },
+            management = riot.management.ifEmpty { citoDetails.management },
+            socialLinks = riot.socialLinks.ifEmpty { citoDetails.socialLinks }
+        )
+    }
 }
 
 internal class LolEsportsLiveDataSource(
