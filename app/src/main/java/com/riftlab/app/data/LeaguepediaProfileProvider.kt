@@ -15,9 +15,10 @@ internal data class TeamProfileSupplement(
  * after long retry delays. Keep management data local and deterministic instead of making the
  * user's network decide whether a team page has staff information.
  *
- * Snapshot date: 2026-09-09. Source: publicly indexed Leaguepedia organisation pages. Entries are
- * intentionally conservative: only people/roles with a current public listing are included. No
- * social handle is fabricated. The existing social-link model stays in place for a future
+ * Snapshot date: 2026-09-09. Source: publicly indexed Leaguepedia organisation pages plus manual
+ * current-status corrections. Entries are intentionally conservative: only people/roles treated
+ * as current management are included. Former owners/managers are not kept in the current roster.
+ * No social handle is fabricated. The existing social-link model stays in place for a future
  * China-friendly profile JSON mirror.
  */
 internal class LeaguepediaProfileProvider {
@@ -61,7 +62,6 @@ internal class LeaguepediaProfileProvider {
                 person("Vlone", "MANAGER", "Xiao Chu-Yu (肖楚愚)")
             ),
             "IG" to listOf(
-                person("WXZ", "OWNER", "Wang Si-Cong (王思聪)"),
                 person("facewind", "MANAGER", "Zheng Hao-Nan (郑浩楠)"),
                 person("xiaochen", "LEADER", "Wang Min-Chen (王敏晨)"),
                 person("Kezman", "SUPERVISOR", "Son Dae-young (손대영)")
