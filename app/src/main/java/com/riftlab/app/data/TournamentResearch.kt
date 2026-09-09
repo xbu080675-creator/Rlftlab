@@ -101,8 +101,8 @@ object TournamentResearchProvider {
         competitionTitle: String,
         matches: List<ScheduledEsportsMatch>
     ): String {
-        tournament?.startDate?.take(4)?.takeIf { it.all(Char::isDigit) }?.let { return it }
-        matches.firstOrNull()?.startTimeIso?.take(4)?.takeIf { it.all(Char::isDigit) }?.let { return it }
+        tournament?.startDate?.take(4)?.takeIf { it.all { ch -> ch.isDigit() } }?.let { return it }
+        matches.firstOrNull()?.startTimeIso?.take(4)?.takeIf { it.all { ch -> ch.isDigit() } }?.let { return it }
         Regex("(?:19|20)\\d{2}").find(competitionTitle)?.value?.let { return it }
         return "年份待确认"
     }
@@ -162,7 +162,7 @@ object TournamentResearchProvider {
         if (matches.isNotEmpty()) {
             val epochs = matches.mapNotNull { runCatching { Instant.parse(it.startTimeIso) }.getOrNull() }.sorted()
             val teams = matches.flatMap { it.teams }
-                .map { it.code.ifBlank { team -> it.name } }
+                .map { team -> team.code.ifBlank { team.name } }
                 .filter { it.isNotBlank() && !it.equals("TBD", true) }
                 .map { it.uppercase() }
                 .distinct()
@@ -188,7 +188,7 @@ object TournamentResearchProvider {
         }
 
         val stages = standings?.stages.orEmpty()
-            .map { it.name.ifBlank { stage -> it.slug } }
+            .map { stage -> stage.name.ifBlank { stage.slug } }
             .filter { it.isNotBlank() }
             .distinct()
         if (stages.isNotEmpty()) {
