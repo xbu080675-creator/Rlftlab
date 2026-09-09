@@ -62,7 +62,7 @@ internal class DynamicTeamDataProvider(
         if (remote != null) return remote
 
         // Non-LPL teams were previously sent into LPL-only snapshots, which guaranteed an empty
-        // management/coaching section. Use the global current-roster mirror / Leaguepedia resolver
+        // management/coaching section. Use the Riot GCD global staff mirror / conservative secondary resolver
         // instead. Riot getTeams remains the player-roster authority.
         if (code.isBlank()) {
             val global = runCatching { globalStaff.fetch(team, details) }
