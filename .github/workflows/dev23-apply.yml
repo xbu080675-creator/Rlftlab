@@ -1,0 +1,30 @@
+name: RiftLab dev23 one-shot migration
+
+on:
+  push:
+    paths:
+      - 'tools/dev23_patch.py'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply dev23 source migration
+        run: python tools/dev23_patch.py
+      - name: Remove one-shot files
+        run: rm -f tools/dev23_patch.py .github/workflows/dev23-apply.yml
+      - name: Commit migrated sources
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat: add championship points center"
+          git push
