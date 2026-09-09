@@ -1,6 +1,7 @@
 package com.riftlab.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CutCornerShape
@@ -31,18 +32,28 @@ internal fun TeamLogo(
 ) {
     val resolvedUrl = EsportsAssetCache.normalize(imageUrl)
         .ifBlank { EsportsAssetCache.team(code) }
+    val shape = CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)
+    val isAl = RiftTeamSkins.isAL(code)
 
     val fallback: @Composable () -> Unit = {
         Text(
             text = code.take(4).ifBlank { "—" },
-            color = RiftMuted,
+            color = if (isAl) RiftCyan else RiftMuted,
             fontSize = 8.sp,
             fontWeight = FontWeight.Bold
         )
     }
 
+    val framed = if (isAl) {
+        modifier
+            .background(RiftPanelAlt, shape)
+            .border(1.dp, RiftCyan.copy(alpha = 0.72f), shape)
+    } else {
+        modifier.background(RiftPanelAlt, shape)
+    }
+
     Box(
-        modifier.background(RiftPanelAlt, CutCornerShape(topEnd = 7.dp, bottomStart = 5.dp)),
+        framed,
         contentAlignment = Alignment.Center
     ) {
         if (resolvedUrl.isBlank()) {
