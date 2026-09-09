@@ -59,6 +59,8 @@ import com.riftlab.app.data.StandingsCenterStore
 import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TeamAssetCatalog
 import com.riftlab.app.data.TournamentStandings
+import com.riftlab.app.data.TournamentDrawSlot
+import com.riftlab.app.data.TournamentGovernanceProvider
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -71,6 +73,8 @@ private enum class EventCenterTab(val label: String) {
     STANDINGS("排名"),
     POINTS("积分"),
     BRACKET("淘汰赛"),
+    RULES("规则"),
+    DRAW("抽签"),
     TEAMS("战队")
 }
 
@@ -227,8 +231,11 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             EventCenterTab.POINTS -> ChampionshipPointsView(selectedBucket)
                             EventCenterTab.BRACKET -> BracketView(
                                 standings = selectedStandings,
-                                scheduleMatches = selectedBucket.matches
+                                scheduleMatches = selectedBucket.matches,
+                                bucket = selectedBucket
                             )
+                            EventCenterTab.RULES -> RulesView(selectedBucket, selectedStandings)
+                            EventCenterTab.DRAW -> DrawView(selectedBucket, selectedStandings)
                             EventCenterTab.TEAMS -> TeamsView(
                                 standings = selectedStandings,
                                 scheduleMatches = leagueWideTeamMatches(selectedBucket, center.matches),
@@ -326,15 +333,16 @@ private fun EventSummaryCard(
 
 @Composable
 private fun EventTabs(selected: Int, onSelect: (Int) -> Unit) {
-    Row(
+    LazyRow(
         Modifier.fillMaxWidth()
             .background(RiftPanelAlt, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        EventCenterTab.entries.forEachIndexed { index, tab ->
+        items(EventCenterTab.entries.size) { index ->
+            val tab = EventCenterTab.entries[index]
             Box(
-                Modifier.weight(1f)
+                Modifier.width(72.dp)
                     .clickable { onSelect(index) }
                     .background(
                         if (selected == index) RiftPanel else androidx.compose.ui.graphics.Color.Transparent,
@@ -952,7 +960,14 @@ private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
 }
 
 @Composable
-private fun BracketView(standings: TournamentStandings?, scheduleMatches: List<ScheduledEsportsMatch>) {
+private fun BracketView(
+    standings: TournamentStandings?,
+    scheduleMatches: List<ScheduledEsportsMatch>,
+    bucket: ScheduleCompetitionBucket
+) {
+    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, scheduleMatches) {
+        TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, scheduleMatches, standings)
+    }
     val stages = standings?.stages.orEmpty().filter { stage ->
         stage.sections.any { it.matches.isNotEmpty() } &&
             (stage.slug.contains("playoff", true) || stage.slug.contains("regional", true))
@@ -969,10 +984,17 @@ private fun BracketView(standings: TournamentStandings?, scheduleMatches: List<S
             }
             stage.sections.forEach { section ->
                 val matches = section.matches
+                val regionalStage = stage.slug.contains("regional", true) || stage.name.contains("regional", true) || stage.name.contains("资格", true)
+                val slotByMatch = if (regionalStage) governance.draw.slots.associateBy { it.bracketMatchId } else emptyMap()
                 items(matches.chunked(2), key = { chunk -> chunk.joinToString("-") { it.id } }) { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         pair.forEach { bracketMatch ->
-                            BracketMatchCard(bracketMatch, scheduleMatches, Modifier.weight(1f))
+                            BracketMatchCard(
+                                bracketMatch = bracketMatch,
+                                scheduleMatches = scheduleMatches,
+                                modifier = Modifier.weight(1f),
+                                verifiedOverride = slotByMatch[bracketMatch.id]
+                            )
                         }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
@@ -986,13 +1008,14 @@ private fun BracketView(standings: TournamentStandings?, scheduleMatches: List<S
 private fun BracketMatchCard(
     bracketMatch: StandingBracketMatch,
     scheduleMatches: List<ScheduledEsportsMatch>,
-    modifier: Modifier
+    modifier: Modifier,
+    verifiedOverride: TournamentDrawSlot? = null
 ) {
     val schedule = scheduleMatches.firstOrNull { it.matchId == bracketMatch.id || it.eventId == bracketMatch.id }
     val left = bracketMatch.teams.getOrNull(0)
     val right = bracketMatch.teams.getOrNull(1)
-    val leftCode = teamCode(left)
-    val rightCode = teamCode(right)
+    val leftCode = verifiedOverride?.left?.takeIf { it.isNotBlank() } ?: teamCode(left)
+    val rightCode = verifiedOverride?.right?.takeIf { it.isNotBlank() } ?: teamCode(right)
     val leftScore = scoreFor(left, schedule)
     val rightScore = scoreFor(right, schedule)
     val leftAsset = schedule?.teams?.firstOrNull { teamCode(it).equals(leftCode, true) }
@@ -1014,7 +1037,15 @@ private fun BracketMatchCard(
             centerFontSize = 14.sp,
             teamNameFontSize = 8.sp
         )
-        if (bracketMatch.previousMatchIds.isNotEmpty()) {
+        if (verifiedOverride != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "官方确认 · ${verifiedOverride.scheduledAt.ifBlank { verifiedOverride.status }}",
+                color = RiftCyan,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        } else if (bracketMatch.previousMatchIds.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             Text("承接上一轮", color = RiftMuted, fontSize = 8.sp)
         }
@@ -1026,6 +1057,103 @@ private fun BracketTeamLine(code: String, score: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(code, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(score, color = RiftCyan, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RulesView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
+    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+        TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val snapshot = governance.rules
+    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                    .border(1.dp, RiftCyan.copy(alpha = 0.35f), CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                    .padding(14.dp)
+            ) {
+                Text("TOURNAMENT RULEBOOK / 赛事规则", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(5.dp))
+                Text(snapshot.title, color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(snapshot.sourceSummary, color = RiftMuted, fontSize = 9.sp)
+            }
+        }
+        items(snapshot.items, key = { "${it.title}-${it.source}" }) { rule ->
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+                    .border(1.dp, if (rule.verified) RiftCyan.copy(alpha = 0.30f) else RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+                    .padding(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(rule.title, color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(if (rule.verified) "已核实" else "结构推导", color = if (rule.verified) RiftCyan else RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(5.dp))
+                Text(rule.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                Spacer(Modifier.height(5.dp))
+                Text("SOURCE · ${rule.source}", color = RiftMuted, fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
+    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+        TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val snapshot = governance.draw
+    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                    .border(1.dp, RiftCyan.copy(alpha = 0.35f), CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
+                    .padding(14.dp)
+            ) {
+                Text("DRAW / SLOT ASSIGNMENT · 抽签与签位", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(5.dp))
+                Text(snapshot.title, color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text(snapshot.note, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("SOURCE · ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 8.sp)
+            }
+        }
+        if (snapshot.slots.isEmpty()) {
+            item { EmptyData("官方抽签 / 签位尚未同步；不会根据排名自行猜测。") }
+        } else {
+            items(snapshot.slots, key = { "${it.label}-${it.bracketMatchId}-${it.left}-${it.right}" }) { slot ->
+                Column(
+                    Modifier.fillMaxWidth()
+                        .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+                        .border(1.dp, if (slot.verified) RiftCyan.copy(alpha = 0.28f) else RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(slot.label, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text(if (slot.verified) "已确认" else "待确认", color = if (slot.verified) RiftCyan else RiftMuted, fontSize = 8.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("${slot.left}  VS  ${slot.right}", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    if (slot.scheduledAt.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(slot.scheduledAt, color = RiftMuted, fontSize = 9.sp)
+                    }
+                    if (slot.status.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(slot.status, color = RiftMuted, fontSize = 9.sp)
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Text("SOURCE · ${slot.source}", color = RiftMuted, fontSize = 8.sp)
+                }
+            }
+        }
     }
 }
 

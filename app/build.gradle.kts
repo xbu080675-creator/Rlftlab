@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 55
-        versionName = "1.0.0-dev.55"
+        versionCode = 56
+        versionName = "1.0.0-dev.56"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -107,3 +107,5 @@ dependencies {
 
 // dev.55: Cito becomes a first-class full-chain provider: schedule/team/standings supplement,
 // quota-aware REST live fallback, optional WSS transport, raw provider archive, and global postgame backfill.
+
+// dev.56: tournament rulebook + draw/slot governance, verified LPL qualifier correction, and non-overwriting official confirmations.
