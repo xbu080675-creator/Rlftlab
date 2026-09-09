@@ -25,6 +25,7 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Direct Riot fetch runs outside the user's mobile carrier path.
       - name: Fetch Riot persisted data
         run: python3 tools/sync_riot_persisted_mirror.py
 
