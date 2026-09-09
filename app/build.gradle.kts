@@ -12,6 +12,14 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
     devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
+val otaCnManifestUrl = providers.gradleProperty("RIFTLAB_OTA_CN_MANIFEST_URL")
+    .orElse("")
+    .get()
+    .trim()
+val otaCnManifestLiteral = otaCnManifestUrl
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 android {
     namespace = "com.riftlab.app"
     compileSdk = 36
@@ -20,8 +28,9 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 57
-        versionName = "1.0.0-dev.57"
+        versionCode = 58
+        versionName = "1.0.0-dev.58"
+        buildConfigField("String", "OTA_CN_MANIFEST_URL", "\"$otaCnManifestLiteral\"")
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -112,3 +121,5 @@ dependencies {
 // Final dev.56 build/OTA trigger after governance UI integration.
 
 // dev.57: annual Tournament Research editions: version/update/rules/draw/schedule unified per year for international events and regional leagues.
+
+// dev.58: fix annual research compilation and add mainland-first dual-channel OTA with verified GitHub fallback.
