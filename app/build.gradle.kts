@@ -83,3 +83,4 @@ dependencies {
 // dev.48 verified build passed; publish through dev-latest OTA.
 
 // dev.49: clarify academy team names, restore global series score, isolate overseas timeline from Bilibili, and harden in-app official YouTube VOD playback.
+// Final dev.49 CI/OTA trigger after replay and academy-label fixes.
