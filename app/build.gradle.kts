@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 38
-        versionName = "1.0.0-dev.38"
+        versionCode = 39
+        versionName = "1.0.0-dev.39"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.38: persistent match lifecycle archive + dynamic operator telemetry across upcoming/live/final.
+// dev.39: phase-aware operator status; historical finals no longer look like live parsing/accumulation.
