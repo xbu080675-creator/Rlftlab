@@ -1,0 +1,31 @@
+name: RiftLab dev28 people entity migration
+
+on:
+  push:
+    paths:
+      - 'tools/dev28_people_patch.py'
+      - '.github/workflows/dev28-people-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 tools/dev28_people_patch.py
+      - run: python3 tools/sync_people_data.py --skip-avatar
+      - name: Commit migrated source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/Models.kt \
+                  app/src/main/java/com/riftlab/app/data/DynamicTeamDataProvider.kt \
+                  app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt \
+                  app/build.gradle.kts DEV_CHANGELOG.txt data/lpl/people.json
+          git commit -m "feat: add people entities avatars and career timelines"
+          git push
