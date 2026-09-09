@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 37
-        versionName = "1.0.0-dev.37"
+        versionCode = 38
+        versionName = "1.0.0-dev.38"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.37: merged replay timeline, sticky native player, fullscreen event-info overlay.
+// dev.38: persistent match lifecycle archive + dynamic operator telemetry across upcoming/live/final.
