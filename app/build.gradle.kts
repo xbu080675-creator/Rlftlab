@@ -80,4 +80,4 @@ dependencies {
 }
 
 // dev.48: subscription-driven homepage targeting, league-safe post-match routing, in-app official VOD playback with sensor fullscreen, startup/replay performance tuning.
-// dev.47 build/OTA verification trigger.
+// dev.48 build/OTA verification trigger.
