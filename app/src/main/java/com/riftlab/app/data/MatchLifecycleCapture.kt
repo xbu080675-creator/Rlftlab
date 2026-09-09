@@ -8,16 +8,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
- * Connects schedule/live/final flows to [MatchLifecycleArchive].
+ * Connects schedule/live/final/detail flows to [MatchLifecycleArchive].
  *
  * Nothing here depends on which screen is currently open. Once MatchSessionStore starts, every
- * schedule revision and every chosen live-provider frame is archived automatically.
+ * schedule revision and every chosen live-provider frame is archived automatically. Opening an old
+ * completed match also feeds its resolved final series into the same lifecycle archive.
  */
 object MatchLifecycleCapture {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var scheduleJob: Job? = null
     private var liveJob: Job? = null
     private var finalJob: Job? = null
+    private var detailJob: Job? = null
 
     fun start() {
         if (scheduleJob?.isActive != true) {
@@ -49,6 +51,17 @@ object MatchLifecycleCapture {
                     series ?: return@collect
                     val center = MatchSessionStore.scheduleCenter.value
                     val match = resolveSeriesMatch(center.matches, series) ?: return@collect
+                    MatchLifecycleArchive.observeCompletedSeries(match, series)
+                }
+            }
+        }
+
+        if (detailJob?.isActive != true) {
+            detailJob = scope.launch {
+                MatchDetailRepository.state.collect { state ->
+                    val match = state.match ?: return@collect
+                    MatchLifecycleArchive.observeScheduleMatch(match)
+                    val series = state.series ?: return@collect
                     MatchLifecycleArchive.observeCompletedSeries(match, series)
                 }
             }
