@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Color as AndroidColor
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -36,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.riftlab.app.data.BilibiliMatchVod
+import com.riftlab.app.data.BilibiliVodPart
+import com.riftlab.app.data.BilibiliVodRepository
 import com.riftlab.app.data.RiotVodLink
 import com.riftlab.app.data.RiotVodRepository
 import com.riftlab.app.data.ScheduledEsportsMatch
@@ -56,29 +61,70 @@ internal fun isLplReplayMatch(match: ScheduledEsportsMatch): Boolean =
         match.league.equals("LPL", ignoreCase = true) ||
         match.league.contains("PRO LEAGUE", ignoreCase = true)
 
+private enum class GlobalReplaySource { DOMESTIC_BILIBILI, GLOBAL_RIOT }
+
+/** Major international events with a China broadcast should try the official Bilibili archive first,
+ * while keeping Riot/YouTube as an independent selectable source. */
+internal fun prefersDomesticInternationalReplay(match: ScheduledEsportsMatch): Boolean {
+    val identity = listOf(match.leagueSlug, match.league, match.blockName).joinToString(" ").lowercase()
+    return listOf(
+        "worlds", "world championship", "全球总决赛",
+        "msi", "mid-season", "季中冠军赛",
+        "first stand", "first-stand", "first_stand", "全球先锋",
+        "esports world cup", "ewc",
+        "demacia", "德玛西亚杯"
+    ).any { identity.contains(it) }
+}
+
 @Composable
 internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
-    val state by RiotVodRepository.state.collectAsState()
-    val key = RiotVodRepository.keyFor(match)
-    LaunchedEffect(key) { RiotVodRepository.open(match) }
-    val links = state.links.takeIf { state.matchKey == key }.orEmpty()
-    val playedGames = remember(match, links) {
+    val riotState by RiotVodRepository.state.collectAsState()
+    val riotKey = RiotVodRepository.keyFor(match)
+    LaunchedEffect(riotKey) { RiotVodRepository.open(match) }
+    val links = riotState.links.takeIf { riotState.matchKey == riotKey }.orEmpty()
+
+    val preferDomestic = remember(match) { prefersDomesticInternationalReplay(match) }
+    val biliState by BilibiliVodRepository.state.collectAsState()
+    val biliKey = BilibiliVodRepository.keyFor(match)
+    LaunchedEffect(biliKey, preferDomestic) {
+        if (preferDomestic && biliKey.isNotBlank()) BilibiliVodRepository.open(match)
+    }
+    val biliVod = biliState.vod.takeIf { preferDomestic && biliState.matchKey == biliKey }
+
+    val playedGames = remember(match, links, biliVod?.parts) {
         val scoreGames = match.teams.sumOf { it.gameWins }.takeIf { it > 0 } ?: 0
-        val vodGames = links.map { it.game }.filter { it > 0 }.distinct().sorted()
+        val vodGames = buildList {
+            links.map { it.game }.filter { it > 0 }.forEach(::add)
+            biliVod?.parts.orEmpty().map { it.game }.filter { it > 0 }.forEach(::add)
+        }.distinct().sorted()
         when {
             vodGames.isNotEmpty() -> vodGames
             scoreGames > 0 -> (1..scoreGames).toList()
             else -> listOf(1)
         }
     }
-    var selectedGame by remember(key) { mutableIntStateOf(playedGames.firstOrNull() ?: 1) }
+    var selectedGame by remember(riotKey) { mutableIntStateOf(playedGames.firstOrNull() ?: 1) }
     LaunchedEffect(playedGames) {
         if (playedGames.isNotEmpty() && selectedGame !in playedGames) selectedGame = playedGames.first()
     }
+
+    var userSelectedSource by remember(riotKey) { mutableStateOf(false) }
+    var selectedSource by remember(riotKey) {
+        mutableStateOf(if (preferDomestic) GlobalReplaySource.DOMESTIC_BILIBILI else GlobalReplaySource.GLOBAL_RIOT)
+    }
+    LaunchedEffect(preferDomestic, biliState.matchKey, biliState.loading, biliVod) {
+        if (!preferDomestic) {
+            selectedSource = GlobalReplaySource.GLOBAL_RIOT
+        } else if (!userSelectedSource && biliState.matchKey == biliKey && !biliState.loading) {
+            selectedSource = if (biliVod != null) GlobalReplaySource.DOMESTIC_BILIBILI else GlobalReplaySource.GLOBAL_RIOT
+        }
+    }
+
     val selectedLink = links
         .filter { it.game == selectedGame }
         .sortedWith(compareByDescending<RiotVodLink> { it.isYoutube }.thenBy { it.locale != "en-US" })
         .firstOrNull()
+    val selectedBiliPart = biliVod?.parts?.firstOrNull { it.game == selectedGame }
 
     Column(Modifier.fillMaxSize()) {
         val shape = CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp)
@@ -88,21 +134,56 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                 .border(1.dp, RiftCyan.copy(alpha = 0.35f), shape)
                 .padding(12.dp)
         ) {
-            Text("GLOBAL OFFICIAL REPLAY / 海外官方回放", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (preferDomestic) "INTERNATIONAL OFFICIAL REPLAY / 国际赛事官方回放" else "GLOBAL OFFICIAL REPLAY / 海外官方回放",
+                color = RiftCyan,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(Modifier.height(4.dp))
             Text(
-                "海外赛区与国际赛事在 RiftLab 内播放 Riot / YouTube 官方 VOD；不请求、不解析 Bilibili，也不要求跳转 YouTube APP。",
+                if (preferDomestic)
+                    "全球性国际赛事优先匹配 B站国内官方完整录像，同时永久保留 Riot / YouTube 海外官方源；任一来源不可用都不会影响另一路。"
+                else
+                    "海外赛区使用 Riot / YouTube 官方 VOD；不把无国内版权的地区联赛误接到 Bilibili。",
                 color = RiftMuted,
                 fontSize = 9.sp,
                 lineHeight = 14.sp
             )
             Spacer(Modifier.height(5.dp))
             Text(
-                if (state.matchKey == key) state.status else "正在切换 Riot VOD…",
+                if (preferDomestic) {
+                    val domestic = if (biliState.matchKey == biliKey) biliState.status else "B站国内官方源 · 待匹配"
+                    val global = if (riotState.matchKey == riotKey) riotState.status else "Riot 海外官方源 · 待读取"
+                    "$domestic\n$global"
+                } else if (riotState.matchKey == riotKey) riotState.status else "正在切换 Riot VOD…",
                 color = RiftText,
                 fontSize = 9.sp,
+                lineHeight = 13.sp,
                 fontWeight = FontWeight.Medium
             )
+        }
+
+        if (preferDomestic) {
+            Spacer(Modifier.height(7.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ReplaySourceChip(
+                    label = "国内 B站官方 · 优先",
+                    selected = selectedSource == GlobalReplaySource.DOMESTIC_BILIBILI,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    userSelectedSource = true
+                    selectedSource = GlobalReplaySource.DOMESTIC_BILIBILI
+                }
+                ReplaySourceChip(
+                    label = "海外 Riot / YouTube",
+                    selected = selectedSource == GlobalReplaySource.GLOBAL_RIOT,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    userSelectedSource = true
+                    selectedSource = GlobalReplaySource.GLOBAL_RIOT
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -110,6 +191,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
             items(playedGames, key = { it }) { game ->
                 val gameLinks = links.filter { it.game == game }
                 val youtube = gameLinks.firstOrNull { it.isYoutube }
+                val biliPart = biliVod?.parts?.firstOrNull { it.game == game }
                 val selected = game == selectedGame
                 Column(
                     Modifier.width(156.dp)
@@ -120,10 +202,13 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                 ) {
                     Text("G$game", color = if (selected) RiftCyan else RiftText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        when {
-                            youtube != null -> "YouTube 官方 · APP 内嵌"
-                            gameLinks.isNotEmpty() -> "Riot VOD · 暂无可嵌入源"
-                            else -> "等待 Riot 官方 VOD"
+                        when (selectedSource) {
+                            GlobalReplaySource.DOMESTIC_BILIBILI -> if (biliPart != null) "B站国内官方 · APP 内播" else "等待国内官方源"
+                            GlobalReplaySource.GLOBAL_RIOT -> when {
+                                youtube != null -> "YouTube 官方 · APP 内嵌"
+                                gameLinks.isNotEmpty() -> "Riot VOD · 暂无可嵌入源"
+                                else -> "等待 Riot 官方 VOD"
+                            }
                         },
                         color = RiftMuted,
                         fontSize = 8.sp,
@@ -134,10 +219,50 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
         }
 
         Spacer(Modifier.height(8.dp))
-        OfficialReplayPlayer(selectedGame, selectedLink)
+        when (selectedSource) {
+            GlobalReplaySource.DOMESTIC_BILIBILI -> {
+                when {
+                    biliVod != null && selectedBiliPart != null -> {
+                        InternationalBilibiliReplayPlayer(biliVod, selectedBiliPart)
+                        InternationalBilibiliSourceCard(biliVod)
+                    }
+                    biliState.matchKey != biliKey || biliState.loading -> OfficialReplayPlaceholder("正在匹配 B站国内官方完整录像…")
+                    else -> OfficialReplayPlaceholder("该场暂未匹配到 B站国内官方完整录像。海外 Riot / YouTube 官方源仍保留，可切换继续播放。")
+                }
+            }
+            GlobalReplaySource.GLOBAL_RIOT -> OfficialReplayPlayer(selectedGame, selectedLink)
+        }
 
         Spacer(Modifier.height(8.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) { MatchTimelineContent() }
+    }
+}
+
+@Composable
+private fun ReplaySourceChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp)
+    Box(
+        modifier.clickable(onClick = onClick)
+            .background(if (selected) RiftPanel else RiftPanelAlt, shape)
+            .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.6f) else RiftLine, shape)
+            .padding(horizontal = 9.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = if (selected) RiftCyan else RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun OfficialReplayPlaceholder(message: String) {
+    val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+            .background(Color.Black, shape)
+            .border(1.dp, RiftLine, shape)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(message, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -192,27 +317,17 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
 private fun OfficialWebVideoPlayer(url: String) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
+    var sessionNonce by remember(url) { mutableIntStateOf(0) }
     val chromeClient = remember(context, activity) { EmbeddedVideoChromeClient(context, activity) }
-    val webView = remember(url) {
+    val webView = remember(context) {
         WebView(context).apply {
-            setBackgroundColor(AndroidColor.BLACK)
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
-            settings.mediaPlaybackRequiresUserGesture = false
-            settings.allowFileAccess = false
-            settings.allowContentAccess = false
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            settings.setSupportMultipleWindows(false)
-            settings.userAgentString = "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36"
-            webViewClient = WebViewClient()
-            webChromeClient = chromeClient
+            configureOfficialWebView(this, chromeClient)
         }
     }
 
     DisposableEffect(webView) {
         onDispose {
+            CookieManager.getInstance().flush()
             chromeClient.release()
             webView.stopLoading()
             webView.loadUrl("about:blank")
@@ -221,7 +336,7 @@ private fun OfficialWebVideoPlayer(url: String) {
         }
     }
 
-    LaunchedEffect(url, webView) {
+    LaunchedEffect(url, sessionNonce, webView) {
         webView.stopLoading()
         webView.loadUrl(
             url,
@@ -232,13 +347,71 @@ private fun OfficialWebVideoPlayer(url: String) {
         )
     }
 
-    AndroidView(
-        factory = { webView },
-        update = { },
-        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-            .background(Color.Black, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
-    )
+    Column {
+        AndroidView(
+            factory = { webView },
+            update = { },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                .background(Color.Black, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
+                .border(1.dp, RiftLine, CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp))
+        )
+        Text(
+            "遇到 YouTube“请登录确认不是机器人”？在 RiftLab 内打开官方 YouTube 会话完成正常验证 / 登录 ›",
+            color = RiftCyan,
+            fontSize = 8.sp,
+            lineHeight = 12.sp,
+            modifier = Modifier.clickable {
+                openYoutubeSessionDialog(context, activity) {
+                    sessionNonce += 1
+                }
+            }.padding(horizontal = 4.dp, vertical = 8.dp)
+        )
+    }
+}
+
+private fun configureOfficialWebView(webView: WebView, chromeClient: WebChromeClient) {
+    CookieManager.getInstance().apply {
+        setAcceptCookie(true)
+        setAcceptThirdPartyCookies(webView, true)
+    }
+    webView.setBackgroundColor(AndroidColor.BLACK)
+    webView.settings.javaScriptEnabled = true
+    webView.settings.domStorageEnabled = true
+    webView.settings.useWideViewPort = true
+    webView.settings.loadWithOverviewMode = true
+    webView.settings.mediaPlaybackRequiresUserGesture = false
+    webView.settings.allowFileAccess = false
+    webView.settings.allowContentAccess = false
+    webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+    webView.settings.javaScriptCanOpenWindowsAutomatically = false
+    webView.settings.setSupportMultipleWindows(false)
+    // Do not spoof Chrome: YouTube sees the real Android System WebView UA and the cookie/session matches it.
+    webView.webViewClient = WebViewClient()
+    webView.webChromeClient = chromeClient
+}
+
+private fun openYoutubeSessionDialog(context: Context, activity: Activity?, onClosed: () -> Unit) {
+    val sessionChrome = EmbeddedVideoChromeClient(context, activity)
+    val sessionWebView = WebView(context).apply {
+        configureOfficialWebView(this, sessionChrome)
+        loadUrl("https://www.youtube.com/")
+    }
+    Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen).apply {
+        setContentView(
+            sessionWebView,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
+        setOnDismissListener {
+            CookieManager.getInstance().flush()
+            sessionChrome.release()
+            sessionWebView.stopLoading()
+            sessionWebView.loadUrl("about:blank")
+            sessionWebView.removeAllViews()
+            sessionWebView.destroy()
+            onClosed()
+        }
+        show()
+    }
 }
 
 private class EmbeddedVideoChromeClient(private val context: Context, private val activity: Activity?) : WebChromeClient() {

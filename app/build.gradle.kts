@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 50
-        versionName = "1.0.0-dev.50"
+        versionCode = 51
+        versionName = "1.0.0-dev.51"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -87,3 +87,5 @@ dependencies {
 
 // dev.50: retire LDL from current subscriptions, promote Worlds 2026, add Demacia Cup Global Invitational and WSCL international catalog entries.
 // Final dev.50 trigger: schedule center opens at directory/subscribed league instead of auto-jumping to NSCL or another active competition.
+
+// dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.

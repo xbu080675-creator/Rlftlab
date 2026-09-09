@@ -288,6 +288,21 @@ private fun ReplaySourceCard(vod: BilibiliMatchVod) {
 }
 
 @Composable
+internal fun InternationalBilibiliReplayPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart) {
+    StickyNativeReplayPlayer(
+        vod = vod,
+        part = part,
+        startSecond = part.gameStartOffsetSeconds,
+        anchors = emptyList()
+    )
+}
+
+@Composable
+internal fun InternationalBilibiliSourceCard(vod: BilibiliMatchVod) {
+    ReplaySourceCard(vod)
+}
+
+@Composable
 private fun ReplayAnchorRow(anchor: ReplayAnchor, onSeek: () -> Unit) {
     Row(
         Modifier.fillMaxWidth()
