@@ -46,6 +46,7 @@ import com.riftlab.app.data.TeamHistoryRef
 import com.riftlab.app.data.TeamOrganizationRef
 import com.riftlab.app.data.TeamLineageRef
 import com.riftlab.app.data.TeamHonorRef
+import com.riftlab.app.data.TeamResultRef
 import com.riftlab.app.data.TeamAlumniRef
 
 private val TEAM_ROLES = listOf("TOP", "JUG", "MID", "BOT", "SUP")
@@ -208,8 +209,14 @@ internal fun TeamDetailContent(
         }
 
         if (archive.honors.isNotEmpty()) {
-            item { TeamSectionTitle("HONORS / 战队荣誉") }
+            item { TeamSectionTitle("HONORS / 冠军荣誉") }
             items(archive.honors, key = { "honor-${it.year}-${it.event}-${it.placement}" }) { honor -> TeamHonorRow(honor) }
+        }
+
+        if (archive.results.isNotEmpty()) {
+            item { TeamSectionTitle("RESULTS / 赛事成绩") }
+            items(archive.results, key = { "result-${it.id}" }) { result -> TeamResultRow(result) }
+            item { TeamSourceNote("冠军荣誉与完整赛事成绩分离；前身战队成绩不自动并入当前品牌。") }
         }
 
         if (archive.lineage.isNotEmpty()) {
@@ -473,6 +480,28 @@ private fun TeamHonorRow(honor: TeamHonorRef) {
             if (honor.tier.isNotBlank()) Text(honor.tier, color = RiftMuted, fontSize = 7.sp)
         }
         Text(honor.placement, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun TeamResultRow(result: TeamResultRef) {
+    Row(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(result.year, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(46.dp))
+        Column(Modifier.weight(1f)) {
+            Text(result.event, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            val meta = listOf(result.stage, result.tier).filter { it.isNotBlank() }.joinToString(" · ")
+            if (meta.isNotBlank()) Text(meta, color = RiftMuted, fontSize = 7.sp)
+        }
+        Text(
+            result.placement,
+            color = if (result.isTitle) RiftCyan else RiftText,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
