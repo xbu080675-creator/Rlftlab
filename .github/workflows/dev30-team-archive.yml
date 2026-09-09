@@ -1,0 +1,52 @@
+name: DEV30 Team Archive Apply
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/dev30-team-archive.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: riftlab-dev30-team-archive
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply dev30 migration
+        run: python3 tools/dev30_apply.py
+      - name: Validate JSON
+        run: |
+          python3 -m json.tool data/lpl/team_profiles.json >/dev/null
+          python3 -m json.tool data/lpl/people.json >/dev/null
+          python3 -m json.tool data/lpl/team_archive.json >/dev/null
+          git diff --check
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Compile dev30
+        run: gradle :app:compileDebugKotlin
+      - name: Commit dev30
+        run: |
+          git config user.name "riftlab-dev-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f tools/dev30_apply.py .github/workflows/dev30-team-archive.yml
+          git add -A
+          git commit -m "feat: rebuild team pages as audited archives"
+          git push
