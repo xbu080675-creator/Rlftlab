@@ -1,0 +1,27 @@
+name: Apply RiftLab dev57 tournament research
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev57-tournament-research-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply annual tournament research patch
+        run: python3 tools/apply_dev57_tournament_research.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt app/build.gradle.kts
+          git commit -m "feat: add annual tournament research editions (dev.57)"
+          git pull --rebase origin main
+          git push origin HEAD:main
