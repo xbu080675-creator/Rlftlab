@@ -25,42 +25,42 @@ import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
 
-private enum class CenterCompletedMatchPane(val label: String) {
+private enum class CenterMatchPane(val label: String) {
     DETAIL("比赛详情"),
-    REPLAY("比赛回放")
+    OPERATIONS("运营数据"),
+    REPLAY("进程 / 回放")
 }
 
 /**
  * Inline match detail used by the event center.
  *
- * Every completed schedule match gets one unified replay surface: official VOD + event timeline.
- * This is available for every completed schedule match, not only the home screen's latest POST item.
+ * Every match phase gets the operator data plane. Upcoming matches keep dynamic schedule revisions,
+ * live matches expose continuously changing telemetry, and completed matches keep the same archived
+ * frames plus the official replay surface.
  */
 @Composable
 internal fun MatchCenterDetailSurface(match: ScheduledEsportsMatch) {
-    if (MatchSessionStore.schedulePhase(match) != ScheduleMatchPhase.COMPLETED) {
-        MatchDetailContent()
-        return
-    }
-
+    val completed = MatchSessionStore.schedulePhase(match) == ScheduleMatchPhase.COMPLETED
     var pane by remember(match.eventId, match.matchId) {
-        mutableStateOf(CenterCompletedMatchPane.DETAIL)
+        mutableStateOf(CenterMatchPane.DETAIL)
     }
 
     Column {
-        CompletedMatchPaneTabs(pane) { pane = it }
+        MatchPaneTabs(pane, completed) { pane = it }
         Spacer(Modifier.height(10.dp))
         when (pane) {
-            CenterCompletedMatchPane.DETAIL -> MatchDetailContent()
-            CenterCompletedMatchPane.REPLAY -> MatchReplayContent()
+            CenterMatchPane.DETAIL -> MatchDetailContent()
+            CenterMatchPane.OPERATIONS -> MatchOperationsContent()
+            CenterMatchPane.REPLAY -> if (completed) MatchReplayContent() else MatchTimelineContent()
         }
     }
 }
 
 @Composable
-private fun CompletedMatchPaneTabs(
-    selected: CenterCompletedMatchPane,
-    onSelect: (CenterCompletedMatchPane) -> Unit
+private fun MatchPaneTabs(
+    selected: CenterMatchPane,
+    completed: Boolean,
+    onSelect: (CenterMatchPane) -> Unit
 ) {
     Row(
         Modifier.fillMaxWidth()
@@ -68,10 +68,14 @@ private fun CompletedMatchPaneTabs(
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        CenterCompletedMatchPane.entries.forEach { pane ->
+        CenterMatchPane.entries.forEach { pane ->
             val active = pane == selected
+            val label = when (pane) {
+                CenterMatchPane.REPLAY -> if (completed) "比赛回放" else "时间轴"
+                else -> pane.label
+            }
             Text(
-                pane.label,
+                label,
                 color = if (active) RiftCyan else RiftMuted,
                 fontSize = 10.sp,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
