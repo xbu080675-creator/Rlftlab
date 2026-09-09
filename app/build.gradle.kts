@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 36
-        versionName = "1.0.0-dev.36"
+        versionCode = 37
+        versionName = "1.0.0-dev.37"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -79,4 +79,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.36: native Bilibili VOD playback + completed-match history tabs across the event center.
+// dev.37: merged replay timeline, sticky native player, fullscreen event-info overlay.
