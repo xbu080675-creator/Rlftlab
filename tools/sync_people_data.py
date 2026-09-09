@@ -18,7 +18,14 @@ DATA = ROOT / "data" / "lpl"
 PROFILES_PATH = DATA / "team_profiles.json"
 PEOPLE_PATH = DATA / "people.json"
 BING_RSS = "https://www.bing.com/search?format=rss&q={}"
-USER_AGENT = "RiftLab-PeopleSync/1.0 (+https://github.com/xbu080675-creator/Rlftlab)"
+USER_AGENT = "RiftLab-PeopleSync/1.1 (+https://github.com/xbu080675-creator/Rlftlab)"
+
+AVATAR_PRIORITY = {
+    "TEAM_OFFICIAL": 100,
+    "VERIFIED_SOCIAL": 90,
+    "RIFTLAB_MIRROR": 80,
+    "ESPORTS_CHARTS": 40,
+}
 
 
 def now_iso() -> str:
@@ -81,14 +88,22 @@ def aliases_for(row: dict[str, Any]) -> list[str]:
 def lookup_person_id(people: dict[str, Any], team_code: str, row: dict[str, Any]) -> str:
     lookup = people.setdefault("lookup", {})
     for alias in aliases_for(row):
-        key = f"{team_code}|{token(alias)}"
-        if key in lookup:
-            return str(lookup[key])
+        team_key = f"{team_code}|{token(alias)}"
+        global_key = f"*|{token(alias)}"
+        if team_key in lookup:
+            return str(lookup[team_key])
+        if global_key in lookup:
+            return str(lookup[global_key])
     return stable_person_id(str(row.get("name", "")), str(row.get("realName", "")), team_code)
 
 
-def employment_key(team: str, role: str) -> tuple[str, str]:
-    return team.upper(), role.upper()
+def employment_base_key(team: str, role: str, current: bool) -> tuple[str, str, bool]:
+    return team.upper(), role.upper(), bool(current)
+
+
+def stint_id(team: str, role: str, current: bool, since: str, until: str, source: str) -> str:
+    raw = f"{team.upper()}|{role.upper()}|{int(current)}|{since}|{until}|{source}".encode("utf-8")
+    return "st_" + hashlib.sha1(raw).hexdigest()[:12]
 
 
 def upsert_employment(person: dict[str, Any], team_code: str, row: dict[str, Any], current: bool) -> None:
@@ -96,20 +111,46 @@ def upsert_employment(person: dict[str, Any], team_code: str, row: dict[str, Any
     if not role:
         return
     entries = person.setdefault("employments", [])
-    key = employment_key(team_code, role)
-    match = next(
-        (
-            item for item in entries
-            if employment_key(str(item.get("team", "")), str(item.get("role", ""))) == key
-        ),
-        None,
-    )
     source = str(row.get("source", "")).strip()
     display_role = str(row.get("displayRole", "")).strip()
-    since = str(row.get("since", row.get("from", ""))).strip()
-    until = str(row.get("until", row.get("to", ""))).strip()
+    since = str(row.get("since", row.get("from", row.get("startDate", "")))).strip()
+    until = str(row.get("until", row.get("to", row.get("endDate", "")))).strip()
+    key = employment_base_key(team_code, role, current)
+
+    candidates = [
+        item for item in entries
+        if employment_base_key(
+            str(item.get("team", "")),
+            str(item.get("role", "")),
+            bool(item.get("current", False)),
+        ) == key
+    ]
+
+    match: dict[str, Any] | None = None
+    if current:
+        # One current stint for the same team/role is updated in-place. A historical
+        # stint with the same role is deliberately a different row.
+        match = candidates[0] if candidates else None
+    else:
+        # Repeated historical stints are kept separately whenever dates or source
+        # distinguish them. This is important for people who leave and later return.
+        for item in candidates:
+            item_since = str(item.get("startDate", "")).strip()
+            item_until = str(item.get("endDate", "")).strip()
+            item_source = str(item.get("source", "")).strip()
+            if since or until:
+                if item_since == since and item_until == until:
+                    match = item
+                    break
+            elif source and item_source == source:
+                match = item
+                break
+        if match is None and not since and not until and not source and len(candidates) == 1:
+            match = candidates[0]
+
     if match is None:
         match = {
+            "stintId": stint_id(team_code, role, current, since, "" if current else until, source),
             "team": team_code,
             "role": role,
             "displayRole": display_role,
@@ -120,6 +161,7 @@ def upsert_employment(person: dict[str, Any], team_code: str, row: dict[str, Any
         }
         entries.append(match)
     else:
+        match.setdefault("stintId", stint_id(team_code, role, current, since, "" if current else until, source))
         match["displayRole"] = display_role or str(match.get("displayRole", ""))
         match["current"] = current
         if since:
@@ -148,33 +190,63 @@ def parse_rss_results(xml_text: str) -> list[tuple[str, str, str]]:
     return results
 
 
-def avatar_from_escharts(person: dict[str, Any]) -> dict[str, Any] | None:
+def page_matches_person(page: str, name: str, latin_real: str) -> bool:
+    plain = clean(re.sub(r"<[^>]+>", " ", page))
+    name_token = token(name)
+    real_token = token(latin_real)
+    name_hit = bool(name_token and name_token in token(plain))
+    real_hit = bool(real_token and real_token in token(plain))
+    # Short/generic handles such as May, Ben, River need real-name confirmation.
+    if len(name_token) <= 4 and real_token:
+        return name_hit and real_hit
+    if real_token:
+        return name_hit or real_hit
+    return name_hit
+
+
+def avatar_search_queries(person: dict[str, Any]) -> list[str]:
     name = str(person.get("displayName", "")).strip()
     real_name = str(person.get("realName", "")).strip()
     team = best_current_team(person)
-    terms = [name]
     latin_real = re.sub(r"[（(].*?[）)]", "", real_name).strip()
+    queries: list[str] = []
+    if name:
+        queries.append(f'site:escharts.com/players "{name}"')
+        if team:
+            queries.append(f'site:escharts.com/players "{name}" {team}')
     if latin_real and latin_real.lower() != name.lower():
-        terms.append(latin_real)
-    if team:
-        terms.append(team)
-    query = 'site:escharts.com/players ' + " ".join(f'"{term}"' for term in terms if term)
-    rss = fetch_text(BING_RSS.format(urllib.parse.quote_plus(query)))
-    candidates = parse_rss_results(rss)
-    for title, link, desc in candidates[:5]:
+        queries.append(f'site:escharts.com/players "{latin_real}"')
+    return list(dict.fromkeys(queries))
+
+
+def avatar_from_escharts(person: dict[str, Any]) -> dict[str, Any] | None:
+    name = str(person.get("displayName", "")).strip()
+    real_name = str(person.get("realName", "")).strip()
+    latin_real = re.sub(r"[（(].*?[）)]", "", real_name).strip()
+
+    candidates: list[tuple[str, str, str]] = []
+    seen_links: set[str] = set()
+    for query in avatar_search_queries(person):
+        try:
+            rss = fetch_text(BING_RSS.format(urllib.parse.quote_plus(query)))
+        except Exception:
+            continue
+        for candidate in parse_rss_results(rss)[:8]:
+            if candidate[1] not in seen_links:
+                seen_links.add(candidate[1])
+                candidates.append(candidate)
+
+    for title, link, desc in candidates:
         if "escharts.com/players/" not in link.lower():
             continue
-        merged = f"{title} {desc}".lower()
-        if name and name.lower() not in merged and token(name) not in token(merged):
+        merged = f"{title} {desc}"
+        if name and token(name) not in token(merged) and latin_real and token(latin_real) not in token(merged):
             continue
         try:
             page = fetch_text(link, timeout=12)
         except Exception:
             continue
-        plain = clean(re.sub(r"<[^>]+>", " ", page))
-        if name and name.lower() not in plain.lower():
-            continue
-        if latin_real and token(latin_real) not in token(plain):
+        if not page_matches_person(page, name, latin_real):
             continue
         image = ""
         for pattern in (
@@ -196,9 +268,29 @@ def avatar_from_escharts(person: dict[str, Any]) -> dict[str, Any] | None:
             "source": "ESPORTS_CHARTS",
             "sourceUrl": link,
             "verifiedAt": today(),
-            "priority": 40,
+            "priority": AVATAR_PRIORITY["ESPORTS_CHARTS"],
         }
     return None
+
+
+def maybe_take_row_avatar(person: dict[str, Any], row: dict[str, Any]) -> None:
+    image = str(row.get("imageUrl", row.get("avatarUrl", ""))).strip()
+    if not image.startswith("http"):
+        return
+    source = str(row.get("avatarSource", row.get("imageSource", "TEAM_OFFICIAL"))).strip().upper() or "TEAM_OFFICIAL"
+    source_url = str(row.get("avatarSourceUrl", row.get("sourceUrl", row.get("source", "")))).strip()
+    priority = AVATAR_PRIORITY.get(source, 70)
+    current = person.get("avatar") or {}
+    current_priority = int(current.get("priority", 0) or 0)
+    if current.get("url") and current_priority > priority:
+        return
+    person["avatar"] = {
+        "url": image,
+        "source": source,
+        "sourceUrl": source_url,
+        "verifiedAt": today(),
+        "priority": priority,
+    }
 
 
 def build_people(profiles: dict[str, Any], people: dict[str, Any]) -> dict[str, Any]:
@@ -236,6 +328,7 @@ def build_people(profiles: dict[str, Any], people: dict[str, Any]) -> dict[str, 
                 if row.get("realName"):
                     person["realName"] = str(row.get("realName"))
                 person["aliases"] = list(dict.fromkeys(list(person.get("aliases", [])) + aliases_for(row)))
+                maybe_take_row_avatar(person, row)
                 upsert_employment(person, team_code, row, current=True)
 
         for row in team.get("history", []) or []:
@@ -255,6 +348,7 @@ def build_people(profiles: dict[str, Any], people: dict[str, Any]) -> dict[str, 
                 },
             )
             person["aliases"] = list(dict.fromkeys(list(person.get("aliases", [])) + aliases_for(row)))
+            maybe_take_row_avatar(person, row)
             upsert_employment(person, team_code, row, current=False)
 
     lookup: dict[str, str] = {}
@@ -291,6 +385,14 @@ def validate(people: dict[str, Any]) -> None:
                 raise ValueError(f"{pid} invalid employment")
 
 
+def unresolved_sort_key(entry: tuple[str, dict[str, Any]]) -> tuple[int, str, str]:
+    _, person = entry
+    probe = person.get("avatarProbe") or {}
+    attempts = int(probe.get("attempts", 0) or 0)
+    last = str(probe.get("lastAttemptAt", ""))
+    return attempts, last, str(person.get("displayName", "")).lower()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-avatar", action="store_true")
@@ -309,22 +411,23 @@ def main() -> int:
             "people": {},
         },
     )
-    before = json.dumps(people, ensure_ascii=False, sort_keys=True)
+
+    before_core = json.dumps({k: v for k, v in people.items() if k != "updatedAt"}, ensure_ascii=False, sort_keys=True)
     people = build_people(profiles, people)
 
     attempts = 0
     if not args.skip_avatar:
-        for pid, person in sorted(people.get("people", {}).items()):
-            avatar = person.get("avatar") or {}
-            if avatar.get("url"):
-                continue
-            probe = person.setdefault("avatarProbe", {})
-            previous_attempts = int(probe.get("attempts", 0) or 0)
-            if previous_attempts >= 4:
-                continue
+        unresolved = [
+            item for item in people.get("people", {}).items()
+            if not (item[1].get("avatar") or {}).get("url")
+            and int((item[1].get("avatarProbe") or {}).get("attempts", 0) or 0) < 4
+        ]
+        for pid, person in sorted(unresolved, key=unresolved_sort_key):
             if attempts >= max(0, args.max_avatar_lookups):
                 break
             attempts += 1
+            probe = person.setdefault("avatarProbe", {})
+            previous_attempts = int(probe.get("attempts", 0) or 0)
             probe["lastAttemptAt"] = now_iso()
             probe["attempts"] = previous_attempts + 1
             try:
@@ -338,10 +441,13 @@ def main() -> int:
                 probe.pop("lastError", None)
                 print(f"[avatar] {pid} {person.get('displayName')} <- {resolved['sourceUrl']}")
 
-    people["updatedAt"] = now_iso()
+    after_core = json.dumps({k: v for k, v in people.items() if k != "updatedAt"}, ensure_ascii=False, sort_keys=True)
+    changed = before_core != after_core or not PEOPLE_PATH.exists()
+    if changed:
+        people["updatedAt"] = now_iso()
+
     validate(people)
-    after = json.dumps(people, ensure_ascii=False, sort_keys=True)
-    if before != after or not PEOPLE_PATH.exists():
+    if changed:
         dump_json(PEOPLE_PATH, people)
         print(f"people_changed=true people={len(people.get('people', {}))} avatar_attempts={attempts}")
     else:
