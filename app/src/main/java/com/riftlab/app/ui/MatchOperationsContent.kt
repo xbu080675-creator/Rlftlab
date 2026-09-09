@@ -271,7 +271,7 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
 }
 
 @Composable
-private fun TeamMetricColumn(
+private fun androidx.compose.foundation.layout.RowScope.TeamMetricColumn(
     team: String,
     gold: Int,
     kills: Int,
@@ -453,7 +453,7 @@ private fun OperatorValueRow(label: String, value: String) {
 }
 
 @Composable
-private fun OperatorPanel(accent: Boolean = false, content: @Composable Column.() -> Unit) {
+private fun OperatorPanel(accent: Boolean = false, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val shape = CutCornerShape(topEnd = 14.dp, bottomStart = 9.dp)
     Column(
         Modifier.fillMaxWidth()
