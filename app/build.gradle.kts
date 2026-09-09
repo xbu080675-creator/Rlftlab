@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 33
-        versionName = "1.0.0-dev.33"
+        versionCode = 34
+        versionName = "1.0.0-dev.34"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.33: all current LPL club skins + system light/dark appearance.
+// dev.34: persistent scrubbable match timeline + team-aware RiftScreen overlay theme.
