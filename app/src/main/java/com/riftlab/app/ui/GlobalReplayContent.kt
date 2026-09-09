@@ -121,9 +121,9 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                     Text("G$game", color = if (selected) RiftCyan else RiftText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     Text(
                         when {
-                            youtube != null -> "YouTube 官方 · 内嵌"
-                            gameLinks.isNotEmpty() -> "Riot 官方 VOD · 内嵌"
-                            else -> "Riot 官方页 · 内嵌"
+                            youtube != null -> "YouTube 官方 · APP 内嵌"
+                            gameLinks.isNotEmpty() -> "Riot VOD · 暂无可嵌入源"
+                            else -> "等待 Riot 官方 VOD"
                         },
                         color = RiftMuted,
                         fontSize = 8.sp,
@@ -134,7 +134,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
         }
 
         Spacer(Modifier.height(8.dp))
-        OfficialReplayPlayer(match, selectedGame, selectedLink)
+        OfficialReplayPlayer(selectedGame, selectedLink)
 
         Spacer(Modifier.height(8.dp))
         Box(Modifier.weight(1f).fillMaxWidth()) { MatchTimelineContent() }
@@ -142,21 +142,28 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
 }
 
 @Composable
-private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: RiotVodLink?) {
+private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
     val embed = link?.embedUrl.orEmpty()
-    val sourceUrl = embed
     val youtubeEmbed = embed.isNotBlank()
     Column {
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "G$game · ${if (youtubeEmbed) "YOUTUBE OFFICIAL EMBED" else "RIOT OFFICIAL VOD"}",
-                color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)
+                "G$game · ${if (youtubeEmbed) "YOUTUBE OFFICIAL EMBED" else "OFFICIAL VOD PENDING"}",
+                color = RiftText,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
-            Text("APP 内播放 · 全屏可旋转", color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.End)
+            Text(
+                if (youtubeEmbed) "APP 内播放 · 全屏可旋转" else "等待可嵌入官方源",
+                color = RiftMuted,
+                fontSize = 8.sp,
+                textAlign = TextAlign.End
+            )
         }
         Spacer(Modifier.height(5.dp))
         if (youtubeEmbed) {
-            OfficialWebVideoPlayer(sourceUrl, true)
+            OfficialWebVideoPlayer(embed)
         } else {
             val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
             Column(
@@ -170,7 +177,10 @@ private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: 
                 Text("该局官方 VOD 暂无可嵌入视频源", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(
                     "Riot EventDetails 当前没有返回可直接嵌入的 YouTube 参数。RiftLab 不再把整个 LoL Esports 网页伪装成播放器，也不会改用 Bilibili。",
-                    color = RiftMuted, fontSize = 8.sp, lineHeight = 13.sp, textAlign = TextAlign.Center,
+                    color = RiftMuted,
+                    fontSize = 8.sp,
+                    lineHeight = 13.sp,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 6.dp)
                 )
             }
@@ -179,11 +189,11 @@ private fun OfficialReplayPlayer(match: ScheduledEsportsMatch, game: Int, link: 
 }
 
 @Composable
-private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
+private fun OfficialWebVideoPlayer(url: String) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val chromeClient = remember(context, activity) { EmbeddedVideoChromeClient(context, activity) }
-    val webView = remember(url, youtubeEmbed) {
+    val webView = remember(url) {
         WebView(context).apply {
             setBackgroundColor(AndroidColor.BLACK)
             settings.javaScriptEnabled = true
@@ -211,19 +221,15 @@ private fun OfficialWebVideoPlayer(url: String, youtubeEmbed: Boolean) {
         }
     }
 
-    LaunchedEffect(url, youtubeEmbed, webView) {
+    LaunchedEffect(url, webView) {
         webView.stopLoading()
-        if (youtubeEmbed) {
-            webView.loadUrl(
-                url,
-                mapOf(
-                    "Referer" to "https://lolesports.com/",
-                    "Origin" to "https://lolesports.com"
-                )
+        webView.loadUrl(
+            url,
+            mapOf(
+                "Referer" to "https://lolesports.com/",
+                "Origin" to "https://lolesports.com"
             )
-        } else {
-            webView.loadUrl(url)
-        }
+        )
     }
 
     AndroidView(
