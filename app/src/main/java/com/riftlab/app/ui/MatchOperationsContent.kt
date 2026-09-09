@@ -97,6 +97,17 @@ internal fun MatchOperationsContent() {
         ?: frames.lastOrNull()?.snapshot
         ?: finalSnapshot
 
+    val visibleStatus = when (phase) {
+        ScheduleMatchPhase.UPCOMING -> "赛前赛程持续同步 · 等待开赛"
+        ScheduleMatchPhase.LIVE -> liveStatus.message
+        ScheduleMatchPhase.COMPLETED -> when {
+            frames.size >= 2 -> "历史过程已归档 · G$selectedGame ${frames.size} 个状态帧"
+            finalSnapshot != null -> "历史终局已归档 · 当前上游未提供这一局的连续过程帧"
+            finalSeries != null -> "历史系列赛终局已归档 · 正在等待所选小局终局数据"
+            else -> "正在恢复历史终局数据…"
+        }
+    }
+
     LazyColumn(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -105,7 +116,7 @@ internal fun MatchOperationsContent() {
             OperatorHeader(
                 match = match,
                 phase = phase,
-                status = liveStatus.message,
+                status = visibleStatus,
                 record = record
             )
         }
@@ -120,8 +131,8 @@ internal fun MatchOperationsContent() {
             }
             currentSnapshot != null -> {
                 item { LiveStatePanel(currentSnapshot, phase, frames.size) }
-                item { GoldHistoryPanel(currentSnapshot, frames) }
-                item { PlayerOperatorTable(currentSnapshot) }
+                item { GoldHistoryPanel(currentSnapshot, frames, phase) }
+                item { PlayerOperatorTable(currentSnapshot, phase) }
             }
             else -> {
                 item {
@@ -236,7 +247,11 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("G${snapshot.game} · ${formatOperatorClock(snapshot.elapsedSeconds)}", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text("$frameCount FRAMES", color = RiftMuted, fontSize = 8.sp)
+            Text(
+                if (phase == ScheduleMatchPhase.COMPLETED && frameCount == 0) "FINAL ONLY" else "$frameCount FRAMES",
+                color = RiftMuted,
+                fontSize = 8.sp
+            )
         }
         Spacer(Modifier.height(9.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -265,7 +280,13 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
             )
         }
         Spacer(Modifier.height(8.dp))
-        Text(snapshot.latestEvent.ifBlank { "等待下一帧" }, color = RiftMuted, fontSize = 8.sp)
+        Text(
+            snapshot.latestEvent.ifBlank {
+                if (phase == ScheduleMatchPhase.COMPLETED) "终局快照" else "等待下一帧"
+            },
+            color = RiftMuted,
+            fontSize = 8.sp
+        )
         Text(snapshot.source, color = RiftMuted, fontSize = 7.sp, modifier = Modifier.padding(top = 3.dp))
     }
 }
@@ -291,7 +312,11 @@ private fun androidx.compose.foundation.layout.RowScope.TeamMetricColumn(
 }
 
 @Composable
-private fun GoldHistoryPanel(current: LiveSnapshot, frames: List<MatchLifecycleFrame>) {
+private fun GoldHistoryPanel(
+    current: LiveSnapshot,
+    frames: List<MatchLifecycleFrame>,
+    phase: ScheduleMatchPhase
+) {
     val snapshots = remember(frames, current) {
         val archived = frames.map { it.snapshot }.filter { it.game == current.game }
         if (archived.lastOrNull()?.elapsedSeconds == current.elapsedSeconds) archived else archived + current
@@ -300,14 +325,29 @@ private fun GoldHistoryPanel(current: LiveSnapshot, frames: List<MatchLifecycleF
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("ECONOMY OVER TIME", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Text("经济随比赛时间动态变化", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (phase == ScheduleMatchPhase.COMPLETED) "历史经济过程" else "经济随比赛时间动态变化",
+                    color = RiftText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
             Text("${snapshots.size} points", color = RiftMuted, fontSize = 8.sp)
         }
         Spacer(Modifier.height(8.dp))
         if (snapshots.size < 2) {
             Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
-                Text("正在积累实时经济帧…", color = RiftMuted, fontSize = 9.sp)
+                Text(
+                    when (phase) {
+                        ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"
+                        ScheduleMatchPhase.COMPLETED -> "该历史小局当前只有终局快照，暂无连续经济帧；RiftLab 不会用终局数据伪造过程曲线。"
+                        ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"
+                    },
+                    color = RiftMuted,
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
             }
         } else {
             GoldHistoryChart(snapshots)
@@ -387,13 +427,18 @@ private fun GoldHistoryChart(points: List<LiveSnapshot>) {
 }
 
 @Composable
-private fun PlayerOperatorTable(snapshot: LiveSnapshot) {
+private fun PlayerOperatorTable(snapshot: LiveSnapshot, phase: ScheduleMatchPhase) {
     val blue = snapshot.bluePlayers.sortedBy { roleOrder(it.role) }
     val red = snapshot.redPlayers.sortedBy { roleOrder(it.role) }
     if (blue.isEmpty() && red.isEmpty()) return
 
     OperatorPanel {
-        Text("PLAYER STATE / 选手实时状态", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(
+            if (phase == ScheduleMatchPhase.COMPLETED) "PLAYER STATE / 选手终局状态" else "PLAYER STATE / 选手实时状态",
+            color = RiftCyan,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(Modifier.height(6.dp))
         val count = max(blue.size, red.size)
         repeat(count) { index ->
