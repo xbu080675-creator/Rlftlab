@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import com.riftlab.app.RiftLabApplication
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -41,12 +42,12 @@ internal class DynamicTeamDataProvider(
     companion object {
         private const val CACHE_TTL_MS = 30L * 60L * 1000L
         private val ENDPOINTS = listOf(
-            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/team_profiles.json",
-            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/team_profiles.json"
+            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/team_profiles.json",
+            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/team_profiles.json"
         )
         private val PEOPLE_ENDPOINTS = listOf(
-            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/people.json",
-            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/people.json"
+            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/lpl/people.json",
+            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/lpl/people.json"
         )
 
         private data class CachedDirectory(val fetchedAt: Long, val root: JSONObject)
@@ -129,6 +130,12 @@ internal class DynamicTeamDataProvider(
                 }
             }.onFailure { lastError = it }
         }
+        loadBundled("team_profiles.json")?.let { root ->
+            if (root.optInt("schemaVersion", 0) > 0 && root.optJSONObject("teams") != null) {
+                cache.set(CachedDirectory(now, root))
+                return root
+            }
+        }
         throw lastError ?: IllegalStateException("team directory unavailable")
     }
 
@@ -148,8 +155,18 @@ internal class DynamicTeamDataProvider(
                 }
             }.onFailure { lastError = it }
         }
+        loadBundled("people.json")?.let { root ->
+            if (root.optInt("schemaVersion", 0) > 0 && root.optJSONObject("people") != null) {
+                peopleCache.set(CachedDirectory(now, root))
+                return root
+            }
+        }
         throw lastError ?: IllegalStateException("people directory unavailable")
     }
+
+    private fun loadBundled(name: String): JSONObject? = runCatching {
+        RiftLabApplication.appContext.assets.open(name).bufferedReader().use { JSONObject(it.readText()) }
+    }.getOrNull()
 
     private fun getJson(endpoint: String): JSONObject {
         val hourBucket = System.currentTimeMillis() / 3_600_000L

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-team-directory",
-  "updatedAt": "2026-09-09T03:00:00Z",
+  "updatedAt": "2026-09-09T04:45:00Z",
   "refreshPolicy": {
     "appTtlMinutes": 30,
     "sourceMonitorHours": 3,
@@ -52,6 +52,11 @@
         }
       ],
       "operators": [
+        {
+          "name": "All Gamers",
+          "role": "PARENT_ORG",
+          "source": "AG.AL / All Gamers public organization record"
+        },
         {
           "name": "AG电子竞技俱乐部",
           "role": "PARENT_ORG",
@@ -111,7 +116,13 @@
           "realName": "Zhuang Yibin"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "哔哩哔哩 / Bilibili",
+          "role": "OWNER_OR_PARENT",
+          "source": "Bilibili Gaming public history"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -181,7 +192,13 @@
           "realName": "Zhao Yetong"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "滔搏 / Topsports",
+          "role": "OWNER_OR_PARENT",
+          "source": "Top Esports public history"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -256,7 +273,13 @@
           "realName": "Jia Zizheng"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "京东 / JD.com",
+          "role": "OWNER_OR_PARENT",
+          "source": "JD Gaming public history"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -291,7 +314,13 @@
           "realName": "Xia Hanxi"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "LGD电子竞技俱乐部 / LGD Gaming",
+          "role": "OPERATOR",
+          "source": "LGD public club record"
+        }
+      ],
       "sources": []
     },
     "EDG": {
@@ -330,7 +359,13 @@
           "realName": "Liu Zhengyang"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "超竞集团 / EDG电子竞技俱乐部",
+          "role": "OPERATOR_OR_PARENT",
+          "source": "EDG public organization record"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -370,7 +405,13 @@
           "realName": "Lien Hsiu-chi"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "趣丸科技 / TT电竞",
+          "role": "OWNER_OR_OPERATOR",
+          "source": "趣丸集团官网 TT电竞公开信息"
+        }
+      ],
       "sources": []
     },
     "IG": {
@@ -417,11 +458,13 @@
       "operators": [
         {
           "name": "氧望体育",
-          "role": "OPERATOR"
+          "role": "OPERATOR",
+          "source": "iG 2024-11-30 重组公告"
         },
         {
           "name": "虎牙直播",
-          "role": "STRATEGIC_PARTNER"
+          "role": "STRATEGIC_PARTNER",
+          "source": "iG 2024-11-30 重组公告"
         }
       ],
       "history": [
@@ -483,7 +526,13 @@
           "realName": "Huang Yihong"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "李宁 / Li-Ning",
+          "role": "OWNER_OR_PARENT",
+          "source": "LNG public history"
+        }
+      ],
       "sources": []
     },
     "NIP": {
@@ -507,7 +556,13 @@
           "realName": "Shin Min-sung"
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "NIP Group",
+          "role": "OWNER_OR_OPERATOR",
+          "source": "NIP Group official history"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -547,7 +602,13 @@
           "realName": ""
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "微博 / Weibo Corporation",
+          "role": "OWNER_OR_PARENT",
+          "source": "WBG official/public history"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",
@@ -602,7 +663,18 @@
           "realName": ""
         }
       ],
-      "operators": [],
+      "operators": [
+        {
+          "name": "WE电子竞技俱乐部 / Team WE",
+          "role": "OPERATOR",
+          "source": "WE官方微博"
+        },
+        {
+          "name": "西安曲江",
+          "role": "CO_BRAND_HOME_PARTNER",
+          "source": "西安曲江WE官方微博命名"
+        }
+      ],
       "sources": [
         {
           "type": "TEAM_OFFICIAL",

@@ -16,8 +16,14 @@ import com.riftlab.app.data.RiotPersistedMirror
  * network response in an evictable disk cache for later visits/offline reuse.
  */
 class RiftLabApplication : Application(), ImageLoaderFactory {
+    companion object {
+        lateinit var appContext: android.content.Context
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        appContext = applicationContext
         RiotPersistedMirror.initialize(this)
     }
 

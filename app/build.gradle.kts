@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 29
-        versionName = "1.0.0-dev.29"
+        versionCode = 30
+        versionName = "1.0.0-dev.30"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.29: resilient Riot persisted mirror and non-blocking team dynamic data fallback.
+// dev.30: full Team Archive schema, audited organization lineage and bundled dynamic team seeds.

@@ -21,6 +21,7 @@ internal data class TeamDetailState(
     val staffStatus: String = "教练组尚未同步",
     val profileStatus: String = "管理层 / 社交资料尚未同步",
     val organizationSummary: String = "",
+    val archive: TeamArchiveSupplement = TeamArchiveSupplement(),
     val history: List<TeamHistoryRef> = emptyList(),
     val profileSourceMode: String = "",
     val errorMessage: String? = null
@@ -32,11 +33,13 @@ internal object TeamDetailRepository {
     private val source: TeamDataSource = LolEsportsTeamDataSource()
     private val assetProvider = RiotTeamAssetProvider()
     private val dynamicProvider = DynamicTeamDataProvider()
+    private val archiveProvider = TeamArchiveProvider()
     private val lineupProvider = OpggMatchSupplementProvider()
     private val cache = linkedMapOf<String, EsportsTeamDetails>()
     private val imageCache = linkedMapOf<String, String>()
     private val starterCache = linkedMapOf<String, Set<String>>()
     private val historyCache = linkedMapOf<String, List<TeamHistoryRef>>()
+    private val archiveCache = linkedMapOf<String, TeamArchiveSupplement>()
     private var loadJob: Job? = null
     private var profileRefreshJob: Job? = null
     private var lastMatches: List<ScheduledEsportsMatch> = emptyList()
@@ -81,6 +84,7 @@ internal object TeamDetailRepository {
                 lineupStatus = if (cachedStarters.size >= 5) "OP.GG · 最近正式比赛实际出场阵容" else "暂无已结束比赛用于判定当前首发",
                 staffStatus = if (cached.staff.isNotEmpty()) "教练组 · 已缓存，后台检查动态目录" else "教练组尚未同步",
                 profileStatus = "管理层 · 已缓存，后台检查 RiftLab Dynamic Data",
+                archive = archiveCache[key] ?: TeamArchiveSupplement(),
                 history = historyCache[key].orEmpty(),
                 profileSourceMode = "cache"
             )
@@ -153,6 +157,8 @@ internal object TeamDetailRepository {
                     )
                 }
 
+            val archiveSupplement = runCatching { archiveProvider.fetch(effectiveTeam, dynamicBase) }
+                .getOrElse { archiveCache[key] ?: TeamArchiveSupplement(sourceMode = "error") }
             val staffSupplement = dynamicSupplement.staff
             val profileSupplement = dynamicSupplement.profile
             val staff = staffSupplement.staff.ifEmpty { cached?.staff.orEmpty() }
@@ -174,6 +180,7 @@ internal object TeamDetailRepository {
             cache[key] = details
             if (starters.size >= 5) starterCache[key] = starters
             historyCache[key] = dynamicSupplement.history
+            archiveCache[key] = archiveSupplement
             if (image.isNotBlank()) {
                 imageCache[key] = image
                 EsportsAssetCache.putTeam(image, *aliases)
@@ -206,6 +213,7 @@ internal object TeamDetailRepository {
                 staffStatus = if (staff.isNotEmpty() && staffSupplement.staff.isEmpty()) "教练组 · 本地缓存" else staffSupplement.status,
                 profileStatus = profileSupplement.status,
                 organizationSummary = dynamicSupplement.organizationSummary,
+                archive = archiveSupplement,
                 history = dynamicSupplement.history,
                 profileSourceMode = dynamicSupplement.sourceMode,
                 errorMessage = detailResult.exceptionOrNull()?.message
@@ -223,6 +231,7 @@ internal object TeamDetailRepository {
         profileRefreshJob?.cancel()
         profileRefreshJob = scope.launch {
             val dynamic = runCatching { dynamicProvider.fetch(team, cached) }.getOrNull() ?: return@launch
+            val archive = runCatching { archiveProvider.fetch(team, cached) }.getOrElse { archiveCache[key] ?: TeamArchiveSupplement() }
             val updated = cached.copy(
                 staff = dynamic.staff.staff.ifEmpty { cached.staff },
                 management = dynamic.profile.management.ifEmpty { cached.management },
@@ -230,6 +239,7 @@ internal object TeamDetailRepository {
             )
             cache[key] = updated
             historyCache[key] = dynamic.history
+            archiveCache[key] = archive
 
             val current = _state.value
             val currentTeam = current.team ?: return@launch
@@ -248,6 +258,7 @@ internal object TeamDetailRepository {
                 staffStatus = dynamic.staff.status,
                 profileStatus = dynamic.profile.status,
                 organizationSummary = dynamic.organizationSummary,
+                archive = archive,
                 history = dynamic.history,
                 profileSourceMode = dynamic.sourceMode
             )

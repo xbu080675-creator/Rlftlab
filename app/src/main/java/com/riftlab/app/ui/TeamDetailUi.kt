@@ -43,6 +43,10 @@ import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.data.TeamDetailRepository
 import com.riftlab.app.data.TeamHistoryRef
+import com.riftlab.app.data.TeamOrganizationRef
+import com.riftlab.app.data.TeamLineageRef
+import com.riftlab.app.data.TeamHonorRef
+import com.riftlab.app.data.TeamAlumniRef
 
 private val TEAM_ROLES = listOf("TOP", "JUG", "MID", "BOT", "SUP")
 
@@ -110,9 +114,26 @@ internal fun TeamDetailContent(
             item { TeamSourceNote(state.profileStatus) }
         }
 
-        if (state.organizationSummary.isNotBlank()) {
+        val archive = state.archive
+        val identity = archive.identity
+        if (identity.foundedAt.isNotBlank() || identity.lolDivisionFoundedAt.isNotBlank()) {
+            item { TeamSectionTitle("TEAM ARCHIVE / 战队档案") }
+            item { TeamArchiveCard(identity.foundedAt, identity.lolDivisionFoundedAt, identity.region, identity.city, archive.updatedAt) }
+        }
+
+        val orgRows = (archive.operators + archive.parentOrganizations).distinctBy { "${it.name}|${it.role}" }
+        if (orgRows.isNotEmpty() || state.organizationSummary.isNotBlank()) {
             item { TeamSectionTitle("ORGANIZATION / 当前运营") }
-            item { TeamStatus("运营主体：${state.organizationSummary}") }
+            if (orgRows.isNotEmpty()) {
+                items(orgRows, key = { "org-${it.name}-${it.role}" }) { org -> TeamOrganizationRow(org) }
+            } else {
+                item { TeamStatus("运营主体：${state.organizationSummary}") }
+            }
+        }
+
+        if (archive.peopleInCharge.isNotEmpty()) {
+            item { TeamSectionTitle("RESPONSIBLE / 负责人") }
+            items(archive.peopleInCharge, key = { "responsible-${it.name}-${it.role}" }) { org -> TeamOrganizationRow(org) }
         }
 
         if (state.loading && roster.isEmpty()) {
@@ -179,6 +200,21 @@ internal fun TeamDetailContent(
                 TeamHistoryRow(legacy)
             }
             item { TeamSourceNote("RiftLab 历史档案称号，不代表俱乐部官方现任职务或官方授予头衔。") }
+        }
+
+        if (archive.alumni.isNotEmpty()) {
+            item { TeamSectionTitle("ALUMNI / 历史人员") }
+            items(archive.alumni, key = { "alumni-${it.name}-${it.role}-${it.leftAt}" }) { alumni -> TeamAlumniRow(alumni) }
+        }
+
+        if (archive.honors.isNotEmpty()) {
+            item { TeamSectionTitle("HONORS / 战队荣誉") }
+            items(archive.honors, key = { "honor-${it.year}-${it.event}-${it.placement}" }) { honor -> TeamHonorRow(honor) }
+        }
+
+        if (archive.lineage.isNotEmpty()) {
+            item { TeamSectionTitle("LINEAGE / 战队沿革与前身") }
+            items(archive.lineage, key = { "lineage-${it.name}-${it.from}-${it.relation}" }) { lineage -> TeamLineageRow(lineage) }
         }
 
         item { TeamSectionTitle("COACHING STAFF / 教练组") }
@@ -392,6 +428,107 @@ private fun TeamHistoryRow(history: TeamHistoryRef) {
             Text("曾任${staffRoleLabel(history.formerRole)}", color = RiftMuted, fontSize = 8.sp)
         }
     }
+}
+
+@Composable
+private fun TeamArchiveCard(foundedAt: String, lolFoundedAt: String, region: String, city: String, updatedAt: String) {
+    Column(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        if (foundedAt.isNotBlank()) Text("俱乐部 / 当前品牌成立 · $foundedAt", color = RiftText, fontSize = 10.sp)
+        if (lolFoundedAt.isNotBlank()) Text("英雄联盟谱系起点 · $lolFoundedAt", color = RiftText, fontSize = 10.sp)
+        val place = listOf(region, city).filter { it.isNotBlank() }.joinToString(" · ")
+        if (place.isNotBlank()) Text("地区 · $place", color = RiftMuted, fontSize = 9.sp)
+        if (updatedAt.isNotBlank()) Text("档案核验 · $updatedAt", color = RiftMuted, fontSize = 8.sp)
+    }
+}
+
+@Composable
+private fun TeamOrganizationRow(org: TeamOrganizationRef) {
+    Row(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(org.name, color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            if (org.source.isNotBlank()) Text(org.source, color = RiftMuted, fontSize = 7.sp, maxLines = 2)
+        }
+        Text(org.displayRole.ifBlank { organizationRoleLabel(org.role) }, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun TeamHonorRow(honor: TeamHonorRef) {
+    Row(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftCyan.copy(alpha = 0.25f), CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(honor.year, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(46.dp))
+        Column(Modifier.weight(1f)) {
+            Text(honor.event, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            if (honor.tier.isNotBlank()) Text(honor.tier, color = RiftMuted, fontSize = 7.sp)
+        }
+        Text(honor.placement, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun TeamLineageRow(lineage: TeamLineageRef) {
+    Column(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(11.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(lineage.name, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(lineageRelationLabel(lineage.relation), color = RiftCyan, fontSize = 8.sp)
+        }
+        val range = listOf(lineage.from, lineage.to.ifBlank { "至今" }).filter { it.isNotBlank() }.joinToString(" → ")
+        if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 8.sp)
+        if (lineage.operator.isNotBlank()) Text("所属 / 运营 · ${lineage.operator}", color = RiftMuted, fontSize = 8.sp)
+        if (lineage.note.isNotBlank()) Text(lineage.note, color = RiftMuted, fontSize = 8.sp)
+        if (lineage.scope.isNotBlank()) Text("范围 · ${lineage.scope}", color = RiftMuted, fontSize = 7.sp)
+    }
+}
+
+@Composable
+private fun TeamAlumniRow(alumni: TeamAlumniRef) {
+    Row(
+        Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
+            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(alumni.name, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            if (alumni.realName.isNotBlank()) Text(alumni.realName, color = RiftMuted, fontSize = 8.sp)
+            val range = listOf(alumni.joinedAt, alumni.leftAt).filter { it.isNotBlank() }.joinToString(" → ")
+            if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 8.sp)
+        }
+        Text(staffRoleLabel(alumni.role), color = RiftCyan, fontSize = 9.sp)
+    }
+}
+
+private fun organizationRoleLabel(role: String): String = when (playerToken(role)) {
+    "PARENTORG", "OWNERORPARENT" -> "上层组织"
+    "OPERATOR", "OWNEROROPERATOR", "OPERATORORPARENT" -> "运营主体"
+    "STRATEGICPARTNER" -> "战略合作"
+    "COBRANDHOMEPARTNER" -> "联合命名 / 主场"
+    else -> staffRoleLabel(role)
+}
+
+private fun lineageRelationLabel(value: String): String = when (playerToken(value)) {
+    "CURRENT" -> "当前"
+    "REBRANDED" -> "更名"
+    "ACQUIREDANDREBRANDED" -> "收购 / 更名"
+    "SLOTACQUIRED" -> "席位继承"
+    "MERGERANDREBRAND" -> "合并 / 更名"
+    "ORGACQUIRED" -> "组织收购"
+    "ORGPREDECESSOR" -> "组织前身"
+    "ORGCONTINUITY" -> "品牌延续"
+    else -> value.replace('_', ' ')
 }
 
 @Composable
