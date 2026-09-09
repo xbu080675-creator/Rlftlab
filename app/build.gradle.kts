@@ -20,8 +20,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 31
-        versionName = "1.0.0-dev.31"
+        versionCode = 32
+        versionName = "1.0.0-dev.32"
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -74,4 +74,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.31: organization-centric esports graph and complete tournament result records.
+// dev.32: first club-exclusive skin — Anyone's Legend (AL), on reusable team skin tokens.
