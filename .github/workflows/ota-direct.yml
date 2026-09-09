@@ -48,7 +48,9 @@ jobs:
         with:
           gradle-version: '9.6.0'
       - name: Build fixed-signed debug APK
-        run: gradle :app:assembleDebug
+        env:
+          RIFTLAB_OTA_CN_MANIFEST_URL: ${{ vars.RIFTLAB_OTA_CN_MANIFEST_URL }}
+        run: gradle :app:assembleDebug -PRIFTLAB_OTA_CN_MANIFEST_URL="${RIFTLAB_OTA_CN_MANIFEST_URL:-}"
       - name: Verify fixed dev signature
         shell: bash
         run: |
@@ -60,27 +62,38 @@ jobs:
           EXPECTED="769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
           echo "RiftLab dev signing SHA-256: $DIGEST"
           test "$DIGEST" = "$EXPECTED"
-      - name: Publish dev-latest
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare OTA package and metadata
         shell: bash
         run: |
           set -euo pipefail
           VERSION_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n1)
           VERSION_CODE=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -n1)
           SRC="app/build/outputs/apk/debug/app-debug.apk"
-          OUT="/tmp/RiftLab-${VERSION_NAME}.apk"
+          APK_NAME="RiftLab-${VERSION_NAME}.apk"
+          OUT="/tmp/${APK_NAME}"
           cp "$SRC" "$OUT"
           SHA=$(sha256sum "$OUT" | awk '{print $1}')
-          CHANGELOG=$(python3 - <<'PY'
-          from pathlib import Path
-          text = Path('DEV_CHANGELOG.txt').read_text(encoding='utf-8').strip()
-          first = text.split('\n\n', 1)[0].replace('\n', ' ').strip()
-          if len(first) > 520:
-              first = first[:519].rstrip() + '…'
-          print(first)
+          SIZE=$(stat -c '%s' "$OUT")
+          CHANGELOG=$(python3 -c "from pathlib import Path; t=Path('DEV_CHANGELOG.txt').read_text(encoding='utf-8').strip(); s=t.split('\\n\\n',1)[0].replace('\\n',' ').strip(); print((s[:519].rstrip()+'…') if len(s)>520 else s)")
+          python3 - "$VERSION_NAME" "$VERSION_CODE" "$APK_NAME" "$SHA" "$SIZE" "$CHANGELOG" <<'PY'
+          import json, sys
+          from datetime import datetime, timezone
+          version_name, version_code, apk_name, sha256, size, changelog = sys.argv[1:]
+          payload = {
+              "schemaVersion": 1,
+              "channel": "dev",
+              "versionName": version_name,
+              "versionCode": int(version_code),
+              "apk": apk_name,
+              "sha256": sha256,
+              "size": int(size),
+              "publishedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+              "changelog": changelog,
+          }
+          with open('/tmp/latest.json', 'w', encoding='utf-8') as f:
+              json.dump(payload, f, ensure_ascii=False, separators=(',', ':'))
+              f.write('\n')
           PY
-          )
           cat > /tmp/riftlab-release.txt <<EOF
           RIFTLAB_UPDATE
           versionName=$VERSION_NAME
@@ -89,27 +102,74 @@ jobs:
           channel=dev
           changelog=$CHANGELOG
           EOF
-
+          echo "RIFTLAB_VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "RIFTLAB_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "RIFTLAB_APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
+          echo "RIFTLAB_APK_PATH=$OUT" >> "$GITHUB_ENV"
+      - name: Publish dev-latest GitHub fallback
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
           git tag -f dev-latest "$GITHUB_SHA"
           git push -f origin refs/tags/dev-latest
-
           if gh release view dev-latest >/dev/null 2>&1; then
             RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/dev-latest" --jq .id)
-            gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate \
-              --jq '.[] | select(.name | endswith(".apk")) | .id' | \
+            gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate --jq '.[] | select(.name | endswith(".apk")) | .id' |
               while read -r AID; do
                 [ -n "$AID" ] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$AID"
               done
-            gh release upload dev-latest "$OUT"
+            gh release upload dev-latest "$RIFTLAB_APK_PATH"
             gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/$RID" \
-              -f name="RiftLab $VERSION_NAME · DEV" \
+              -f name="RiftLab $RIFTLAB_VERSION_NAME · DEV" \
               -f body="$(cat /tmp/riftlab-release.txt)" \
               -F prerelease=true \
               -f target_commitish="$GITHUB_SHA" >/dev/null
           else
-            gh release create dev-latest "$OUT" \
+            gh release create dev-latest "$RIFTLAB_APK_PATH" \
               --verify-tag \
-              --title "RiftLab $VERSION_NAME · DEV" \
+              --title "RiftLab $RIFTLAB_VERSION_NAME · DEV" \
               --notes-file /tmp/riftlab-release.txt \
               --prerelease
           fi
+      - name: Publish mainland S3-compatible OTA mirror
+        continue-on-error: true
+        env:
+          OTA_CN_MANIFEST_URL: ${{ vars.RIFTLAB_OTA_CN_MANIFEST_URL }}
+          OTA_CN_S3_ENDPOINT: ${{ vars.RIFTLAB_OTA_CN_S3_ENDPOINT }}
+          OTA_CN_BUCKET: ${{ vars.RIFTLAB_OTA_CN_BUCKET }}
+          OTA_CN_PREFIX: ${{ vars.RIFTLAB_OTA_CN_PREFIX }}
+          OTA_CN_REGION: ${{ vars.RIFTLAB_OTA_CN_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.RIFTLAB_OTA_CN_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.RIFTLAB_OTA_CN_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(OTA_CN_MANIFEST_URL OTA_CN_S3_ENDPOINT OTA_CN_BUCKET OTA_CN_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY)
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "::notice::Mainland OTA mirror is not fully configured; skipping upload."
+              exit 0
+            fi
+          done
+          python3 -m pip install --user --quiet awscli
+          export PATH="$HOME/.local/bin:$PATH"
+          aws configure set default.s3.addressing_style virtual
+          PREFIX="${OTA_CN_PREFIX:-riftlab/dev}"
+          PREFIX="${PREFIX#/}"
+          PREFIX="${PREFIX%/}"
+          APK_KEY="${PREFIX:+$PREFIX/}$RIFTLAB_APK_NAME"
+          MANIFEST_KEY="${PREFIX:+$PREFIX/}latest.json"
+          aws s3 cp "$RIFTLAB_APK_PATH" "s3://$OTA_CN_BUCKET/$APK_KEY" \
+            --endpoint-url "$OTA_CN_S3_ENDPOINT" --region "$OTA_CN_REGION" \
+            --content-type "application/vnd.android.package-archive" \
+            --cache-control "public,max-age=31536000,immutable" --no-progress
+          aws s3 cp /tmp/latest.json "s3://$OTA_CN_BUCKET/$MANIFEST_KEY" \
+            --endpoint-url "$OTA_CN_S3_ENDPOINT" --region "$OTA_CN_REGION" \
+            --content-type "application/json; charset=utf-8" \
+            --cache-control "no-cache,no-store,must-revalidate" --no-progress
+          curl -fsSL --retry 2 --connect-timeout 8 -H 'Cache-Control: no-cache' \
+            "${OTA_CN_MANIFEST_URL}?ci=${GITHUB_RUN_ID}" |
+            python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d["versionCode"]) == int(sys.argv[1]); print("CN manifest verified", d["versionName"], d["sha256"])' \
+            "$RIFTLAB_VERSION_CODE"
