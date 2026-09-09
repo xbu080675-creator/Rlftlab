@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "monitor": "official-announcement-search",
   "teams": {
-    "AL": {"officialName":"AL英雄联盟","weiboProfile":"","accountMarkers":["AL英雄联盟","Anyone's Legend"]},
-    "BLG": {"officialName":"BLG电子竞技俱乐部","weiboProfile":"https://weibo.com/u/5926660141","accountMarkers":["5926660141","BLG电子竞技俱乐部"]},
-    "TES": {"officialName":"滔搏电子竞技俱乐部","weiboProfile":"https://weibo.com/2144gaming","accountMarkers":["2144gaming","滔搏电子竞技俱乐部"]},
-    "JDG": {"officialName":"JDG京东电子竞技俱乐部","weiboProfile":"https://weibo.com/jdgaming","accountMarkers":["jdgaming","6174976862","JDG京东电子竞技俱乐部"]},
-    "LGD": {"officialName":"LGD英雄联盟","weiboProfile":"","accountMarkers":["LGD英雄联盟","LGD电子竞技俱乐部"]},
-    "EDG": {"officialName":"EDG电子竞技俱乐部","weiboProfile":"https://weibo.com/edgteam","accountMarkers":["edgteam","EDG电子竞技俱乐部"]},
-    "TT": {"officialName":"TT英雄联盟","weiboProfile":"","accountMarkers":["TT英雄联盟","TT电子竞技俱乐部"]},
-    "IG": {"officialName":"iG电子竞技俱乐部","weiboProfile":"https://weibo.com/igaming","accountMarkers":["igaming","2099708877","iG电子竞技俱乐部"]},
-    "LNG": {"officialName":"LNG电子竞技俱乐部","weiboProfile":"","accountMarkers":["LNG电子竞技俱乐部"]},
-    "NIP": {"officialName":"NIP电子竞技俱乐部","weiboProfile":"https://weibo.com/u/6420953344","accountMarkers":["6420953344","NIP电子竞技俱乐部"]},
-    "WBG": {"officialName":"WBG英雄联盟分部","weiboProfile":"https://weibo.com/tbgclub","accountMarkers":["tbgclub","WBG英雄联盟分部"]},
-    "WE": {"officialName":"WE电子竞技俱乐部","weiboProfile":"https://weibo.com/teamwe","accountMarkers":["teamwe","1869429662","WE电子竞技俱乐部"]}
+    "AL": {"officialName":"AL英雄联盟","weiboProfile":"","leaguepediaTeam":"Anyone's Legend","accountMarkers":["AL英雄联盟","Anyone's Legend"]},
+    "BLG": {"officialName":"BLG电子竞技俱乐部","weiboProfile":"https://weibo.com/u/5926660141","leaguepediaTeam":"Bilibili Gaming","accountMarkers":["5926660141","BLG电子竞技俱乐部"]},
+    "TES": {"officialName":"滔搏电子竞技俱乐部","weiboProfile":"https://weibo.com/2144gaming","leaguepediaTeam":"Top Esports","accountMarkers":["2144gaming","滔搏电子竞技俱乐部"]},
+    "JDG": {"officialName":"JDG京东电子竞技俱乐部","weiboProfile":"https://weibo.com/jdgaming","leaguepediaTeam":"JD Gaming","accountMarkers":["jdgaming","6174976862","JDG京东电子竞技俱乐部"]},
+    "LGD": {"officialName":"LGD英雄联盟","weiboProfile":"","leaguepediaTeam":"LGD Gaming","accountMarkers":["LGD英雄联盟","LGD电子竞技俱乐部"]},
+    "EDG": {"officialName":"EDG电子竞技俱乐部","weiboProfile":"https://weibo.com/edgteam","leaguepediaTeam":"EDward Gaming","accountMarkers":["edgteam","EDG电子竞技俱乐部"]},
+    "TT": {"officialName":"TT英雄联盟","weiboProfile":"","leaguepediaTeam":"ThunderTalk Gaming","accountMarkers":["TT英雄联盟","TT电子竞技俱乐部"]},
+    "IG": {"officialName":"iG电子竞技俱乐部","weiboProfile":"https://weibo.com/igaming","leaguepediaTeam":"Invictus Gaming","accountMarkers":["igaming","2099708877","iG电子竞技俱乐部"]},
+    "LNG": {"officialName":"LNG电子竞技俱乐部","weiboProfile":"","leaguepediaTeam":"LNG Esports","accountMarkers":["LNG电子竞技俱乐部"]},
+    "NIP": {"officialName":"NIP电子竞技俱乐部","weiboProfile":"https://weibo.com/u/6420953344","leaguepediaTeam":"Ninjas in Pyjamas.CN","accountMarkers":["6420953344","NIP电子竞技俱乐部"]},
+    "WBG": {"officialName":"WBG英雄联盟分部","weiboProfile":"https://weibo.com/tbgclub","leaguepediaTeam":"Weibo Gaming","accountMarkers":["tbgclub","WBG英雄联盟分部"]},
+    "WE": {"officialName":"WE电子竞技俱乐部","weiboProfile":"https://weibo.com/teamwe","leaguepediaTeam":"Team WE","accountMarkers":["teamwe","1869429662","WE电子竞技俱乐部"]}
   }
 }
