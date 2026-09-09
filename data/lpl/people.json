@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "",
+  "updatedAt": "2026-09-09T02:53:03Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -11,6 +11,2081 @@
     ],
     "note": "Only store remote references and provenance; do not copy third-party image files into the repository."
   },
-  "lookup": {},
-  "people": {}
+  "lookup": {
+    "*|1874": "p_fbd748bc1382",
+    "*|333": "p_8860ab7e64ed",
+    "*|694": "p_ffe3022a88cf",
+    "*|AARON": "p_31f8db771047",
+    "*|ANING": "p_2fbca4feb73a",
+    "*|ANJIE": "p_d8a8fab9b54e",
+    "*|BENNY": "p_90770ef3f786",
+    "*|BIGBIAO": "p_dc67e7f9683b",
+    "*|BIGSAM": "p_55d7576c3d84",
+    "*|BIGWEI": "p_89f13f7d0ed7",
+    "*|BOBO": "p_92af2fc724df",
+    "*|BORENJIE": "p_114c8955ba46",
+    "*|BRUCE": "p_d96264ed7a8e",
+    "*|BZ": "p_5e76e045f30a",
+    "*|CHANGPOHAO": "p_da67a7af42ed",
+    "*|CHELIZI": "p_10ed13cd8db9",
+    "*|CHENAINING": "p_2fbca4feb73a",
+    "*|CHENAINING陈爱宁": "p_2fbca4feb73a",
+    "*|CHENLIXIN": "p_fbd748bc1382",
+    "*|CHENLONG": "p_cf4eb7c57030",
+    "*|CHIEH": "p_18239c72b686",
+    "*|CHOICE": "p_af21144ea1b2",
+    "*|CLEARLOVE": "p_54524d1a33ee",
+    "*|CLUO": "p_e3fad4e4f943",
+    "*|CONDI": "p_b4b7bb002cdc",
+    "*|CUIHU崔虎": "p_dbb7ce475987",
+    "*|DAENY": "p_7a7db024c3ab",
+    "*|DENGBAOXING": "p_1e0b667c97eb",
+    "*|DENGBAOXING邓宝兴": "p_1e0b667c97eb",
+    "*|DESPA": "p_4c30bca85580",
+    "*|DESPA1R": "p_4c30bca85580",
+    "*|EDZHU": "p_fef1b920a8b3",
+    "*|FACEWIND": "p_44274eb98cc2",
+    "*|FEI": "p_2b515c4c32b2",
+    "*|FUCHIENWEI": "p_89f13f7d0ed7",
+    "*|FURY": "p_f6bc5b0eb7a6",
+    "*|GUOHAO": "p_281c0eef6f64",
+    "*|GUOHAO郭皓": "p_281c0eef6f64",
+    "*|HAO": "p_281c0eef6f64",
+    "*|HELPER": "p_458c2e1aae9b",
+    "*|HEXIN": "p_ffe3022a88cf",
+    "*|HUANGYIHONG": "p_8860ab7e64ed",
+    "*|HUBIAO": "p_dc67e7f9683b",
+    "*|HUBIAO胡彪": "p_dc67e7f9683b",
+    "*|HUGE": "p_116390fb1a49",
+    "*|JIANGCHEN": "p_6ad542a4bd5e",
+    "*|JIAZIZHENG": "p_a7d639342b82",
+    "*|JINCAN": "p_7c32729bcbfc",
+    "*|JINGUANGHUA": "p_5395c68837ae",
+    "*|JINJIN": "p_5395c68837ae",
+    "*|JIXING": "p_31f8db771047",
+    "*|JIXING姬星": "p_31f8db771047",
+    "*|JUSTINKENNA": "p_eeebad408688",
+    "*|KAKA": "p_3961c88383ad",
+    "*|KARMA": "p_8860ab7e64ed",
+    "*|KIM": "p_3268aa682aa7",
+    "*|KIMJEONGSOO": "p_3268aa682aa7",
+    "*|KIMJEONGSOO김정수": "p_3268aa682aa7",
+    "*|KWONYOUNGJAE": "p_458c2e1aae9b",
+    "*|LANBAIQING": "p_868dab6d3580",
+    "*|LANBAIQING蓝柏清": "p_868dab6d3580",
+    "*|LAZI": "p_1e0b667c97eb",
+    "*|LEEJINYONG": "p_f6bc5b0eb7a6",
+    "*|LEO": "p_b8e41f78d1c9",
+    "*|LICHIEH": "p_18239c72b686",
+    "*|LIENHSIUCHI": "p_90770ef3f786",
+    "*|LIET": "p_9a7dff67be20",
+    "*|LINTAO": "p_3961c88383ad",
+    "*|LINTAO林涛": "p_3961c88383ad",
+    "*|LIQILIN": "p_082ffa3b7fe9",
+    "*|LIQILIN李麒麟": "p_082ffa3b7fe9",
+    "*|LIUYIFEI": "p_70f62b2e22dc",
+    "*|LIUYIFEI刘一非": "p_70f62b2e22dc",
+    "*|LIUZHENGYANG": "p_9a7dff67be20",
+    "*|LIXIAOFEN": "p_759b3e9f5c90",
+    "*|LIXIAOFEN李晓峰": "p_759b3e9f5c90",
+    "*|LLH": "p_868dab6d3580",
+    "*|LUJIANGCHENG": "p_41c3070d8cce",
+    "*|LUJIANGCHENG吕江城": "p_41c3070d8cce",
+    "*|MAIZIJIAN": "p_47f521f14696",
+    "*|MAY": "p_114c8955ba46",
+    "*|MEDUSA": "p_95106816f90a",
+    "*|MILK": "p_377c367d3fa3",
+    "*|MINGKAI": "p_54524d1a33ee",
+    "*|MINGZHE": "p_33fbff666e7b",
+    "*|MNI": "p_04dbae4765c4",
+    "*|NAMDONGHYUN": "p_164438580ea1",
+    "*|NONAME": "p_c48d27887dea",
+    "*|PANFEI": "p_2b515c4c32b2",
+    "*|PANFEI潘飞": "p_2b515c4c32b2",
+    "*|PENGFANG": "p_04dbae4765c4",
+    "*|PEWPEW": "p_7c32729bcbfc",
+    "*|POPPY": "p_da67a7af42ed",
+    "*|QIAOSIYU": "p_377c367d3fa3",
+    "*|QIAOSIYU乔思昱": "p_377c367d3fa3",
+    "*|RIVER": "p_e7101912c31f",
+    "*|SEEK": "p_dbb7ce475987",
+    "*|SHAOXIAOHANG": "p_af21144ea1b2",
+    "*|SHAOXIAOHANG邵晓航": "p_af21144ea1b2",
+    "*|SHINDONGWOOK": "p_3333703a038e",
+    "*|SHINE": "p_3333703a038e",
+    "*|SHINMINSUNG": "p_e3fad4e4f943",
+    "*|SHIXIAOXI": "p_55d7576c3d84",
+    "*|SHIXIAOXI石晓曦": "p_55d7576c3d84",
+    "*|SHUANGQUAN": "p_958f3756184e",
+    "*|SHUANGQUAN爽全": "p_958f3756184e",
+    "*|SHUIJING": "p_51dd3cd81931",
+    "*|SKY": "p_759b3e9f5c90",
+    "*|SMALLORC": "p_335b5d2543bc",
+    "*|SONDAEYOUNG손대영": "p_57c5772c75be",
+    "*|TABE": "p_67e0c3d88193",
+    "*|TEACHERMA": "p_6ad542a4bd5e",
+    "*|TSELIN": "p_80686f7e6a59",
+    "*|VLONE": "p_a75f8ccb91e5",
+    "*|VUS": "p_33e22e92a66c",
+    "*|VUS5O": "p_33e22e92a66c",
+    "*|WANGLIANGYI王良毅": "p_f29046d5df65",
+    "*|WANGMINCHEN": "p_ce60a1acd047",
+    "*|WANGMINCHEN王敏晨": "p_ce60a1acd047",
+    "*|WANGSICONG": "p_71bb62f7a7f3",
+    "*|WANGSICONG王思聪": "p_71bb62f7a7f3",
+    "*|WANGYANG": "p_e7101912c31f",
+    "*|WANGYIFAN": "p_8ef4ac2a3d12",
+    "*|WANGYIFAN王一帆": "p_8ef4ac2a3d12",
+    "*|WANLEI": "p_4c311333dd84",
+    "*|WANLEI万磊": "p_4c311333dd84",
+    "*|WLY": "p_f29046d5df65",
+    "*|WONGPAKKAN": "p_67e0c3d88193",
+    "*|WUSHUO": "p_33e22e92a66c",
+    "*|WUSHUO吴硕": "p_33e22e92a66c",
+    "*|WXZ": "p_71bb62f7a7f3",
+    "*|XIAHANXI": "p_10ed13cd8db9",
+    "*|XIANGRENJIE": "p_b4b7bb002cdc",
+    "*|XIAOBAI": "p_fdae96419edb",
+    "*|XIAOCHEN": "p_ce60a1acd047",
+    "*|XIAOCHUYU": "p_a75f8ccb91e5",
+    "*|XIAOCHUYU肖楚愚": "p_a75f8ccb91e5",
+    "*|XIASU": "p_cf4eb7c57030",
+    "*|YANGDAEIN": "p_7a7db024c3ab",
+    "*|YANGZHONGHE": "p_fdae96419edb",
+    "*|YIL": "p_d40ab0b453ee",
+    "*|YOU": "p_0a022bc0869b",
+    "*|YOUCHANGXIN": "p_0a022bc0869b",
+    "*|YOUCHANGXIN尤长鑫": "p_0a022bc0869b",
+    "*|YOUSENYU": "p_d96264ed7a8e",
+    "*|YOUSENYU尤森煜": "p_d96264ed7a8e",
+    "*|YUANXI": "p_da0f7a07baf2",
+    "*|YUANXI袁玺": "p_da0f7a07baf2",
+    "*|YUZZ": "p_c42240e7824a",
+    "*|ZENGXINYI": "p_47f521f14696",
+    "*|ZHANGWEI": "p_335b5d2543bc",
+    "*|ZHANGWEI张伟": "p_335b5d2543bc",
+    "*|ZHANGXINGRAN": "p_2d35f95cfa60",
+    "*|ZHANGXINYU": "p_c42240e7824a",
+    "*|ZHANGXINYU张新宇": "p_c42240e7824a",
+    "*|ZHANGYU": "p_33fbff666e7b",
+    "*|ZHAOYETONG": "p_5e76e045f30a",
+    "*|ZHAOZELIN": "p_80686f7e6a59",
+    "*|ZHAOZHAO": "p_d8e0402e0972",
+    "*|ZHENGHAONAN": "p_44274eb98cc2",
+    "*|ZHENGHAONAN郑浩楠": "p_44274eb98cc2",
+    "*|ZHOULIPENG": "p_4c30bca85580",
+    "*|ZHOUQILIN": "p_c48d27887dea",
+    "*|ZHUANGYIBIN": "p_661a2f091ec2",
+    "*|ZHUYIHANG": "p_fef1b920a8b3",
+    "*|ZHUYIHANG朱一航": "p_fef1b920a8b3",
+    "*|ZIZHENG": "p_a7d639342b82",
+    "*|ZOOM": "p_2d35f95cfa60",
+    "*|ZYB": "p_661a2f091ec2",
+    "*|万磊": "p_4c311333dd84",
+    "*|乔思昱": "p_377c367d3fa3",
+    "*|刘一非": "p_70f62b2e22dc",
+    "*|吕江城": "p_41c3070d8cce",
+    "*|吴硕": "p_33e22e92a66c",
+    "*|姬星": "p_31f8db771047",
+    "*|安杰": "p_d8a8fab9b54e",
+    "*|尤森煜": "p_d96264ed7a8e",
+    "*|尤长鑫": "p_0a022bc0869b",
+    "*|崔虎": "p_dbb7ce475987",
+    "*|张伟": "p_335b5d2543bc",
+    "*|张新宇": "p_c42240e7824a",
+    "*|朱一航": "p_fef1b920a8b3",
+    "*|李晓峰": "p_759b3e9f5c90",
+    "*|李麒麟": "p_082ffa3b7fe9",
+    "*|林涛": "p_3961c88383ad",
+    "*|潘飞": "p_2b515c4c32b2",
+    "*|爽全": "p_958f3756184e",
+    "*|王一帆": "p_8ef4ac2a3d12",
+    "*|王思聪": "p_71bb62f7a7f3",
+    "*|王敏晨": "p_ce60a1acd047",
+    "*|王良毅": "p_f29046d5df65",
+    "*|石晓曦": "p_55d7576c3d84",
+    "*|肖楚愚": "p_a75f8ccb91e5",
+    "*|胡彪": "p_dc67e7f9683b",
+    "*|蓝柏清": "p_868dab6d3580",
+    "*|袁玺": "p_da0f7a07baf2",
+    "*|邓宝兴": "p_1e0b667c97eb",
+    "*|邵晓航": "p_af21144ea1b2",
+    "*|郑浩楠": "p_44274eb98cc2",
+    "*|郭皓": "p_281c0eef6f64",
+    "*|陈爱宁": "p_2fbca4feb73a",
+    "AL|BIGWEI": "p_89f13f7d0ed7",
+    "AL|BORENJIE": "p_114c8955ba46",
+    "AL|DESPA": "p_4c30bca85580",
+    "AL|DESPA1R": "p_4c30bca85580",
+    "AL|FUCHIENWEI": "p_89f13f7d0ed7",
+    "AL|JIANGCHEN": "p_6ad542a4bd5e",
+    "AL|JINCAN": "p_7c32729bcbfc",
+    "AL|MAY": "p_114c8955ba46",
+    "AL|MINGZHE": "p_33fbff666e7b",
+    "AL|PEWPEW": "p_7c32729bcbfc",
+    "AL|TEACHERMA": "p_6ad542a4bd5e",
+    "AL|ZHANGYU": "p_33fbff666e7b",
+    "AL|ZHOULIPENG": "p_4c30bca85580",
+    "BLG|BEN": "p_164438580ea1",
+    "BLG|CHIEH": "p_18239c72b686",
+    "BLG|DAENY": "p_7a7db024c3ab",
+    "BLG|LICHIEH": "p_18239c72b686",
+    "BLG|NAMDONGHYUN": "p_164438580ea1",
+    "BLG|YANGDAEIN": "p_7a7db024c3ab",
+    "BLG|YOU": "p_0a022bc0869b",
+    "BLG|YOUCHANGXIN": "p_0a022bc0869b",
+    "BLG|YOUCHANGXIN尤长鑫": "p_0a022bc0869b",
+    "BLG|YUANXI": "p_da0f7a07baf2",
+    "BLG|YUANXI袁玺": "p_da0f7a07baf2",
+    "BLG|YUZZ": "p_c42240e7824a",
+    "BLG|ZHANGXINYU": "p_c42240e7824a",
+    "BLG|ZHANGXINYU张新宇": "p_c42240e7824a",
+    "BLG|ZHUANGYIBIN": "p_661a2f091ec2",
+    "BLG|ZYB": "p_661a2f091ec2",
+    "BLG|尤长鑫": "p_0a022bc0869b",
+    "BLG|张新宇": "p_c42240e7824a",
+    "BLG|袁玺": "p_da0f7a07baf2",
+    "EDG|AARON": "p_31f8db771047",
+    "EDG|BRUCE": "p_d96264ed7a8e",
+    "EDG|EDZHU": "p_fef1b920a8b3",
+    "EDG|JASPER": "p_8ef4ac2a3d12",
+    "EDG|JIXING": "p_31f8db771047",
+    "EDG|JIXING姬星": "p_31f8db771047",
+    "EDG|LIET": "p_9a7dff67be20",
+    "EDG|LIUZHENGYANG": "p_9a7dff67be20",
+    "EDG|MNI": "p_04dbae4765c4",
+    "EDG|PENGFANG": "p_04dbae4765c4",
+    "EDG|WANGYIFAN": "p_8ef4ac2a3d12",
+    "EDG|WANGYIFAN王一帆": "p_8ef4ac2a3d12",
+    "EDG|YOUSENYU": "p_d96264ed7a8e",
+    "EDG|YOUSENYU尤森煜": "p_d96264ed7a8e",
+    "EDG|ZHUYIHANG": "p_fef1b920a8b3",
+    "EDG|ZHUYIHANG朱一航": "p_fef1b920a8b3",
+    "EDG|姬星": "p_31f8db771047",
+    "EDG|尤森煜": "p_d96264ed7a8e",
+    "EDG|朱一航": "p_fef1b920a8b3",
+    "EDG|王一帆": "p_8ef4ac2a3d12",
+    "IG|ANJIE": "p_d8a8fab9b54e",
+    "IG|FACEWIND": "p_44274eb98cc2",
+    "IG|FURY": "p_f6bc5b0eb7a6",
+    "IG|HELPER": "p_458c2e1aae9b",
+    "IG|KEZMAN": "p_6f2a8d6e11a2",
+    "IG|KWONYOUNGJAE": "p_458c2e1aae9b",
+    "IG|LEEJINYONG": "p_f6bc5b0eb7a6",
+    "IG|SONDAEYOUNG": "p_6f2a8d6e11a2",
+    "IG|SONDAEYOUNG손대영": "p_57c5772c75be",
+    "IG|WANGMINCHEN": "p_ce60a1acd047",
+    "IG|WANGMINCHEN王敏晨": "p_ce60a1acd047",
+    "IG|WANGSICONG": "p_71bb62f7a7f3",
+    "IG|WANGSICONG王思聪": "p_71bb62f7a7f3",
+    "IG|WXZ": "p_71bb62f7a7f3",
+    "IG|XIAOCHEN": "p_ce60a1acd047",
+    "IG|ZHENGHAONAN": "p_44274eb98cc2",
+    "IG|ZHENGHAONAN郑浩楠": "p_44274eb98cc2",
+    "IG|安杰": "p_d8a8fab9b54e",
+    "IG|王思聪": "p_71bb62f7a7f3",
+    "IG|王敏晨": "p_ce60a1acd047",
+    "IG|郑浩楠": "p_44274eb98cc2",
+    "JDG|333": "p_8860ab7e64ed",
+    "JDG|CHENLONG": "p_cf4eb7c57030",
+    "JDG|CHOICE": "p_af21144ea1b2",
+    "JDG|CUIHU": "p_116390fb1a49",
+    "JDG|CUIHU崔虎": "p_dbb7ce475987",
+    "JDG|FEI": "p_2b515c4c32b2",
+    "JDG|HUANGYIHONG": "p_8860ab7e64ed",
+    "JDG|HUGE": "p_116390fb1a49",
+    "JDG|JIAZIZHENG": "p_a7d639342b82",
+    "JDG|KARMA": "p_8860ab7e64ed",
+    "JDG|LANBAIQING": "p_868dab6d3580",
+    "JDG|LANBAIQING蓝柏清": "p_868dab6d3580",
+    "JDG|LLH": "p_868dab6d3580",
+    "JDG|PANFEI": "p_2b515c4c32b2",
+    "JDG|PANFEI潘飞": "p_2b515c4c32b2",
+    "JDG|SEEK": "p_dbb7ce475987",
+    "JDG|SHAOXIAOHANG": "p_af21144ea1b2",
+    "JDG|SHAOXIAOHANG邵晓航": "p_af21144ea1b2",
+    "JDG|TABE": "p_67e0c3d88193",
+    "JDG|VUS": "p_33e22e92a66c",
+    "JDG|VUS5O": "p_33e22e92a66c",
+    "JDG|WONGPAKKAN": "p_67e0c3d88193",
+    "JDG|WUSHUO": "p_33e22e92a66c",
+    "JDG|WUSHUO吴硕": "p_33e22e92a66c",
+    "JDG|XIAOBAI": "p_fdae96419edb",
+    "JDG|XIASU": "p_cf4eb7c57030",
+    "JDG|YANGZHONGHE": "p_fdae96419edb",
+    "JDG|ZHANGXINGRAN": "p_2d35f95cfa60",
+    "JDG|ZIZHENG": "p_a7d639342b82",
+    "JDG|ZOOM": "p_2d35f95cfa60",
+    "JDG|吴硕": "p_33e22e92a66c",
+    "JDG|崔虎": "p_dbb7ce475987",
+    "JDG|潘飞": "p_2b515c4c32b2",
+    "JDG|蓝柏清": "p_868dab6d3580",
+    "JDG|邵晓航": "p_af21144ea1b2",
+    "LGD|1874": "p_fbd748bc1382",
+    "LGD|BIGBIAO": "p_dc67e7f9683b",
+    "LGD|CHELIZI": "p_10ed13cd8db9",
+    "LGD|CHENLIXIN": "p_fbd748bc1382",
+    "LGD|HUBIAO": "p_dc67e7f9683b",
+    "LGD|HUBIAO胡彪": "p_dc67e7f9683b",
+    "LGD|JUSTINKENNA": "p_eeebad408688",
+    "LGD|XIAHANXI": "p_10ed13cd8db9",
+    "LGD|胡彪": "p_dc67e7f9683b",
+    "LNG|333": "p_8860ab7e64ed",
+    "LNG|HUANGYIHONG": "p_8860ab7e64ed",
+    "LNG|JASPER": "p_4c311333dd84",
+    "LNG|KAKA": "p_3961c88383ad",
+    "LNG|KARMA": "p_8860ab7e64ed",
+    "LNG|LINTAO": "p_3961c88383ad",
+    "LNG|LINTAO林涛": "p_3961c88383ad",
+    "LNG|LIQILIN": "p_082ffa3b7fe9",
+    "LNG|LIQILIN李麒麟": "p_082ffa3b7fe9",
+    "LNG|SHUANGQUAN": "p_958f3756184e",
+    "LNG|SHUANGQUAN爽全": "p_958f3756184e",
+    "LNG|WANGLIANGYI": "p_d40ab0b453ee",
+    "LNG|WANLEI": "p_4c311333dd84",
+    "LNG|WANLEI万磊": "p_4c311333dd84",
+    "LNG|YIL": "p_d40ab0b453ee",
+    "LNG|万磊": "p_4c311333dd84",
+    "LNG|李麒麟": "p_082ffa3b7fe9",
+    "LNG|林涛": "p_3961c88383ad",
+    "LNG|爽全": "p_958f3756184e",
+    "NIP|ANING": "p_2fbca4feb73a",
+    "NIP|CHENAINING": "p_2fbca4feb73a",
+    "NIP|CHENAINING陈爱宁": "p_2fbca4feb73a",
+    "NIP|CLUO": "p_e3fad4e4f943",
+    "NIP|MAIZIJIAN": "p_47f521f14696",
+    "NIP|SHINMINSUNG": "p_e3fad4e4f943",
+    "NIP|ZENGXINYI": "p_47f521f14696",
+    "NIP|陈爱宁": "p_2fbca4feb73a",
+    "TES|BOBO": "p_92af2fc724df",
+    "TES|BZ": "p_5e76e045f30a",
+    "TES|CHANGPOHAO": "p_da67a7af42ed",
+    "TES|DENGBAOXING": "p_1e0b667c97eb",
+    "TES|DENGBAOXING邓宝兴": "p_1e0b667c97eb",
+    "TES|GUOHAO": "p_281c0eef6f64",
+    "TES|GUOHAO郭皓": "p_281c0eef6f64",
+    "TES|HAO": "p_281c0eef6f64",
+    "TES|LAZI": "p_1e0b667c97eb",
+    "TES|LEO": "p_b8e41f78d1c9",
+    "TES|POPPY": "p_da67a7af42ed",
+    "TES|RIVER": "p_e7101912c31f",
+    "TES|SHUIJING": "p_51dd3cd81931",
+    "TES|WANGLIANGYI": "p_f29046d5df65",
+    "TES|WANGLIANGYI王良毅": "p_f29046d5df65",
+    "TES|WANGYANG": "p_e7101912c31f",
+    "TES|WLY": "p_f29046d5df65",
+    "TES|ZHAOYETONG": "p_5e76e045f30a",
+    "TES|王良毅": "p_f29046d5df65",
+    "TES|邓宝兴": "p_1e0b667c97eb",
+    "TES|郭皓": "p_281c0eef6f64",
+    "TT|BEN": "p_41c3070d8cce",
+    "TT|BENNY": "p_90770ef3f786",
+    "TT|LIENHSIUCHI": "p_90770ef3f786",
+    "TT|LIUYIFEI": "p_70f62b2e22dc",
+    "TT|LIUYIFEI刘一非": "p_70f62b2e22dc",
+    "TT|LUJIANGCHENG": "p_41c3070d8cce",
+    "TT|LUJIANGCHENG吕江城": "p_41c3070d8cce",
+    "TT|NONAME": "p_c48d27887dea",
+    "TT|VLONE": "p_a75f8ccb91e5",
+    "TT|XIAOCHUYU": "p_a75f8ccb91e5",
+    "TT|XIAOCHUYU肖楚愚": "p_a75f8ccb91e5",
+    "TT|ZHOUQILIN": "p_c48d27887dea",
+    "TT|刘一非": "p_70f62b2e22dc",
+    "TT|吕江城": "p_41c3070d8cce",
+    "TT|肖楚愚": "p_a75f8ccb91e5",
+    "WBG|CLEARLOVE": "p_54524d1a33ee",
+    "WBG|KIM": "p_3268aa682aa7",
+    "WBG|KIMJEONGSOO": "p_3268aa682aa7",
+    "WBG|KIMJEONGSOO김정수": "p_3268aa682aa7",
+    "WBG|MEDUSA": "p_95106816f90a",
+    "WBG|MINGKAI": "p_54524d1a33ee",
+    "WBG|SHINDONGWOOK": "p_3333703a038e",
+    "WBG|SHINE": "p_3333703a038e",
+    "WBG|TSELIN": "p_80686f7e6a59",
+    "WBG|ZHAOZELIN": "p_80686f7e6a59",
+    "WE|694": "p_ffe3022a88cf",
+    "WE|BIGSAM": "p_55d7576c3d84",
+    "WE|CONDI": "p_b4b7bb002cdc",
+    "WE|HEXIN": "p_ffe3022a88cf",
+    "WE|JINGUANGHUA": "p_5395c68837ae",
+    "WE|JINJIN": "p_5395c68837ae",
+    "WE|LIXIAOFEN": "p_759b3e9f5c90",
+    "WE|LIXIAOFEN李晓峰": "p_759b3e9f5c90",
+    "WE|MILK": "p_377c367d3fa3",
+    "WE|QIAOSIYU": "p_377c367d3fa3",
+    "WE|QIAOSIYU乔思昱": "p_377c367d3fa3",
+    "WE|SHIXIAOXI": "p_55d7576c3d84",
+    "WE|SHIXIAOXI石晓曦": "p_55d7576c3d84",
+    "WE|SKY": "p_759b3e9f5c90",
+    "WE|SMALLORC": "p_335b5d2543bc",
+    "WE|XIANGRENJIE": "p_b4b7bb002cdc",
+    "WE|ZHANGWEI": "p_335b5d2543bc",
+    "WE|ZHANGWEI张伟": "p_335b5d2543bc",
+    "WE|ZHAOZHAO": "p_d8e0402e0972",
+    "WE|乔思昱": "p_377c367d3fa3",
+    "WE|张伟": "p_335b5d2543bc",
+    "WE|李晓峰": "p_759b3e9f5c90",
+    "WE|石晓曦": "p_55d7576c3d84"
+  },
+  "people": {
+    "p_33fbff666e7b": {
+      "displayName": "MingZhe",
+      "realName": "Zhang Yu",
+      "aliases": [
+        "MingZhe",
+        "Zhang Yu"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_89f13f7d0ed7": {
+      "displayName": "BigWei",
+      "realName": "Fu Chien-wei",
+      "aliases": [
+        "BigWei",
+        "Fu Chien-wei"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_7c32729bcbfc": {
+      "displayName": "Pewpew",
+      "realName": "Jin Can",
+      "aliases": [
+        "Pewpew",
+        "Jin Can"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_6ad542a4bd5e": {
+      "displayName": "Teacherma",
+      "realName": "Jiang Chen",
+      "aliases": [
+        "Teacherma",
+        "Jiang Chen"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_4c30bca85580": {
+      "displayName": "Despa1r",
+      "realName": "Zhou Lipeng",
+      "aliases": [
+        "Despa1r",
+        "Despa",
+        "Zhou Lipeng"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_114c8955ba46": {
+      "displayName": "May",
+      "realName": "Bo Renjie",
+      "aliases": [
+        "May",
+        "Bo Renjie"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "AL",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_da0f7a07baf2": {
+      "displayName": "袁玺",
+      "realName": "Yuan Xi (袁玺)",
+      "aliases": [
+        "袁玺",
+        "Yuan Xi (袁玺)",
+        "Yuan Xi"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "ESPORTS_DIRECTOR_AND_MANAGER",
+          "displayRole": "赛训总监 / 经理",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": "人民电竞 2024-12-06；2026-08-09 公开身份持续称 BLG 经理"
+        }
+      ]
+    },
+    "p_0a022bc0869b": {
+      "displayName": "You",
+      "realName": "You Chang-Xin (尤长鑫)",
+      "aliases": [
+        "You",
+        "You Chang-Xin (尤长鑫)",
+        "You Chang-Xin",
+        "尤长鑫"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "MANAGER",
+          "displayRole": "经理",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": "2026 第二赛段 BLG 经理公开记录；截至当前未发现明确离任证据"
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_c42240e7824a": {
+      "displayName": "YUZZ",
+      "realName": "Zhang Xin-Yu (张新宇)",
+      "aliases": [
+        "YUZZ",
+        "Zhang Xin-Yu (张新宇)",
+        "Zhang Xin-Yu",
+        "张新宇"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_7a7db024c3ab": {
+      "displayName": "Daeny",
+      "realName": "Yang Dae-in",
+      "aliases": [
+        "Daeny",
+        "Yang Dae-in"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_164438580ea1": {
+      "displayName": "Ben",
+      "realName": "Nam Dong-hyun",
+      "aliases": [
+        "Ben",
+        "Nam Dong-hyun"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:03Z",
+        "attempts": 1
+      }
+    },
+    "p_18239c72b686": {
+      "displayName": "Chieh",
+      "realName": "Li Chieh",
+      "aliases": [
+        "Chieh",
+        "Li Chieh"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:03Z",
+        "attempts": 1
+      }
+    },
+    "p_661a2f091ec2": {
+      "displayName": "Zyb",
+      "realName": "Zhuang Yibin",
+      "aliases": [
+        "Zyb",
+        "Zhuang Yibin"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "BLG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_281c0eef6f64": {
+      "displayName": "Hao",
+      "realName": "Guo Hao (郭皓)",
+      "aliases": [
+        "Hao",
+        "Guo Hao (郭皓)",
+        "Guo Hao",
+        "郭皓"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "CEO",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_f29046d5df65": {
+      "displayName": "wly",
+      "realName": "Wang Liang-Yi (王良毅)",
+      "aliases": [
+        "wly",
+        "Wang Liang-Yi (王良毅)",
+        "Wang Liang-Yi",
+        "王良毅"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_1e0b667c97eb": {
+      "displayName": "Lazi",
+      "realName": "Deng Bao-Xing (邓宝兴)",
+      "aliases": [
+        "Lazi",
+        "Deng Bao-Xing (邓宝兴)",
+        "Deng Bao-Xing",
+        "邓宝兴"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {}
+    },
+    "p_da67a7af42ed": {
+      "displayName": "Poppy",
+      "realName": "Chang Po-hao",
+      "aliases": [
+        "Poppy",
+        "Chang Po-hao"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_e7101912c31f": {
+      "displayName": "River",
+      "realName": "Wang Yang",
+      "aliases": [
+        "River",
+        "Wang Yang"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_51dd3cd81931": {
+      "displayName": "Shuijing",
+      "realName": "",
+      "aliases": [
+        "Shuijing"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_92af2fc724df": {
+      "displayName": "Bobo",
+      "realName": "",
+      "aliases": [
+        "Bobo"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_b8e41f78d1c9": {
+      "displayName": "Leo",
+      "realName": "",
+      "aliases": [
+        "Leo"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_5e76e045f30a": {
+      "displayName": "BZ",
+      "realName": "Zhao Yetong",
+      "aliases": [
+        "BZ",
+        "Zhao Yetong"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TES",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_af21144ea1b2": {
+      "displayName": "Choice",
+      "realName": "Shao Xiao-Hang (邵晓航)",
+      "aliases": [
+        "Choice",
+        "Shao Xiao-Hang (邵晓航)",
+        "Shao Xiao-Hang",
+        "邵晓航"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "CEO",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_868dab6d3580": {
+      "displayName": "LLH",
+      "realName": "Lan Bai-Qing (蓝柏清)",
+      "aliases": [
+        "LLH",
+        "Lan Bai-Qing (蓝柏清)",
+        "Lan Bai-Qing",
+        "蓝柏清"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "ESPORTS_DIRECTOR",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_2b515c4c32b2": {
+      "displayName": "Fei",
+      "realName": "Pan Fei (潘飞)",
+      "aliases": [
+        "Fei",
+        "Pan Fei (潘飞)",
+        "Pan Fei",
+        "潘飞"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "GENERAL_MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_dbb7ce475987": {
+      "displayName": "Seek",
+      "realName": "Cui Hu (崔虎)",
+      "aliases": [
+        "Seek",
+        "Cui Hu (崔虎)",
+        "Cui Hu",
+        "崔虎"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_33e22e92a66c": {
+      "displayName": "Vus5o",
+      "realName": "Wu Shuo (吴硕)",
+      "aliases": [
+        "Vus5o",
+        "Vus",
+        "Wu Shuo (吴硕)",
+        "Wu Shuo",
+        "吴硕"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_67e0c3d88193": {
+      "displayName": "Tabe",
+      "realName": "Wong Pak Kan",
+      "aliases": [
+        "Tabe",
+        "Wong Pak Kan"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_cf4eb7c57030": {
+      "displayName": "Xiasu",
+      "realName": "Chen Long",
+      "aliases": [
+        "Xiasu",
+        "Chen Long"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_2d35f95cfa60": {
+      "displayName": "Zoom",
+      "realName": "Zhang Xingran",
+      "aliases": [
+        "Zoom",
+        "Zhang Xingran"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_fdae96419edb": {
+      "displayName": "Xiaobai",
+      "realName": "Yang Zhonghe",
+      "aliases": [
+        "Xiaobai",
+        "Yang Zhonghe"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_116390fb1a49": {
+      "displayName": "Huge",
+      "realName": "Cui Hu",
+      "aliases": [
+        "Huge",
+        "Cui Hu"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_8860ab7e64ed": {
+      "displayName": "333",
+      "realName": "Huang Yihong",
+      "aliases": [
+        "Karma",
+        "Huang Yihong",
+        "333"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        },
+        {
+          "team": "LNG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_a7d639342b82": {
+      "displayName": "Zizheng",
+      "realName": "Jia Zizheng",
+      "aliases": [
+        "Zizheng",
+        "Jia Zizheng"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "JDG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_dc67e7f9683b": {
+      "displayName": "Bigbiao",
+      "realName": "Hu Biao (胡彪)",
+      "aliases": [
+        "Bigbiao",
+        "Hu Biao (胡彪)",
+        "Hu Biao",
+        "胡彪"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LGD",
+          "role": "VICE_PRESIDENT",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_eeebad408688": {
+      "displayName": "Justin Kenna",
+      "realName": "Justin Kenna",
+      "aliases": [
+        "Justin Kenna"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LGD",
+          "role": "CO_OWNER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_fbd748bc1382": {
+      "displayName": "1874",
+      "realName": "Chen Lixin",
+      "aliases": [
+        "1874",
+        "Chen Lixin"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LGD",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_10ed13cd8db9": {
+      "displayName": "Chelizi",
+      "realName": "Xia Hanxi",
+      "aliases": [
+        "Chelizi",
+        "Xia Hanxi"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LGD",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_fef1b920a8b3": {
+      "displayName": "Ed Zhu",
+      "realName": "Zhu Yi-Hang (朱一航)",
+      "aliases": [
+        "Ed Zhu",
+        "Zhu Yi-Hang (朱一航)",
+        "Zhu Yi-Hang",
+        "朱一航"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "FOUNDER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_31f8db771047": {
+      "displayName": "Aaron",
+      "realName": "Ji Xing (姬星)",
+      "aliases": [
+        "Aaron",
+        "Ji Xing (姬星)",
+        "Ji Xing",
+        "姬星"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "MANAGING_DIRECTOR",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_8ef4ac2a3d12": {
+      "displayName": "Jasper",
+      "realName": "Wang Yi-Fan (王一帆)",
+      "aliases": [
+        "Jasper",
+        "Wang Yi-Fan (王一帆)",
+        "Wang Yi-Fan",
+        "王一帆"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "DEPUTY_MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_d96264ed7a8e": {
+      "displayName": "Bruce",
+      "realName": "You Sen-Yu (尤森煜)",
+      "aliases": [
+        "Bruce",
+        "You Sen-Yu (尤森煜)",
+        "You Sen-Yu",
+        "尤森煜"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_04dbae4765c4": {
+      "displayName": "Mni",
+      "realName": "Peng Fang",
+      "aliases": [
+        "Mni",
+        "Peng Fang"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_9a7dff67be20": {
+      "displayName": "Liet",
+      "realName": "Liu Zhengyang",
+      "aliases": [
+        "Liet",
+        "Liu Zhengyang"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "EDG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_70f62b2e22dc": {
+      "displayName": "Liu Yi-Fei",
+      "realName": "Liu Yi-Fei (刘一非)",
+      "aliases": [
+        "Liu Yi-Fei",
+        "Liu Yi-Fei (刘一非)",
+        "刘一非"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TT",
+          "role": "CEO",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_41c3070d8cce": {
+      "displayName": "Ben",
+      "realName": "Lu Jiang-Cheng (吕江城)",
+      "aliases": [
+        "Ben",
+        "Lu Jiang-Cheng (吕江城)",
+        "Lu Jiang-Cheng",
+        "吕江城"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TT",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_a75f8ccb91e5": {
+      "displayName": "Vlone",
+      "realName": "Xiao Chu-Yu (肖楚愚)",
+      "aliases": [
+        "Vlone",
+        "Xiao Chu-Yu (肖楚愚)",
+        "Xiao Chu-Yu",
+        "肖楚愚"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TT",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_c48d27887dea": {
+      "displayName": "NoName",
+      "realName": "Zhou Qilin",
+      "aliases": [
+        "NoName",
+        "Zhou Qilin"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TT",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_90770ef3f786": {
+      "displayName": "Benny",
+      "realName": "Lien Hsiu-chi",
+      "aliases": [
+        "Benny",
+        "Lien Hsiu-chi"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "TT",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_d8a8fab9b54e": {
+      "displayName": "An Jie",
+      "realName": "安杰",
+      "aliases": [
+        "An Jie",
+        "安杰"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "CHAIRMAN",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_44274eb98cc2": {
+      "displayName": "facewind",
+      "realName": "Zheng Hao-Nan (郑浩楠)",
+      "aliases": [
+        "facewind",
+        "Zheng Hao-Nan (郑浩楠)",
+        "Zheng Hao-Nan",
+        "郑浩楠"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_ce60a1acd047": {
+      "displayName": "xiaochen",
+      "realName": "Wang Min-Chen (王敏晨)",
+      "aliases": [
+        "xiaochen",
+        "Wang Min-Chen (王敏晨)",
+        "Wang Min-Chen",
+        "王敏晨"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_57c5772c75be": {
+      "displayName": "Kezman",
+      "realName": "Son Dae-young (손대영)",
+      "aliases": [
+        "Kezman",
+        "Son Dae-young (손대영)",
+        "Son Dae-young"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "SUPERVISOR",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_458c2e1aae9b": {
+      "displayName": "Helper",
+      "realName": "Kwon Young-jae",
+      "aliases": [
+        "Helper",
+        "Kwon Young-jae"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_f6bc5b0eb7a6": {
+      "displayName": "Fury",
+      "realName": "Lee Jin-yong",
+      "aliases": [
+        "Fury",
+        "Lee Jin-yong"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_6f2a8d6e11a2": {
+      "displayName": "Kezman",
+      "realName": "Son Dae-young",
+      "aliases": [
+        "Kezman",
+        "Son Dae-young"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "SUPERVISOR",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_71bb62f7a7f3": {
+      "displayName": "WXZ",
+      "realName": "Wang Si-Cong (王思聪)",
+      "aliases": [
+        "WXZ",
+        "Wang Si-Cong (王思聪)",
+        "Wang Si-Cong",
+        "王思聪"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "IG",
+          "role": "FOUNDER",
+          "displayRole": "",
+          "current": false,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_082ffa3b7fe9": {
+      "displayName": "Li Qi-Lin",
+      "realName": "Li Qi-Lin (李麒麟)",
+      "aliases": [
+        "Li Qi-Lin",
+        "Li Qi-Lin (李麒麟)",
+        "李麒麟"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LNG",
+          "role": "OWNER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-09T02:53:02Z",
+        "attempts": 1
+      }
+    },
+    "p_958f3756184e": {
+      "displayName": "Shuang Quan",
+      "realName": "Shuang Quan (爽全)",
+      "aliases": [
+        "Shuang Quan",
+        "Shuang Quan (爽全)",
+        "爽全"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LNG",
+          "role": "FOUNDER_AND_CEO",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_3961c88383ad": {
+      "displayName": "kaka",
+      "realName": "Lin Tao (林涛)",
+      "aliases": [
+        "kaka",
+        "Lin Tao (林涛)",
+        "Lin Tao",
+        "林涛"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LNG",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_4c311333dd84": {
+      "displayName": "Jasper",
+      "realName": "Wan Lei (万磊)",
+      "aliases": [
+        "Jasper",
+        "Wan Lei (万磊)",
+        "Wan Lei",
+        "万磊"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LNG",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_d40ab0b453ee": {
+      "displayName": "YiL",
+      "realName": "Wang Liangyi",
+      "aliases": [
+        "YiL",
+        "Wang Liangyi"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "LNG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_2fbca4feb73a": {
+      "displayName": "Aning",
+      "realName": "Chen Ai-Ning (陈爱宁)",
+      "aliases": [
+        "Aning",
+        "Chen Ai-Ning (陈爱宁)",
+        "Chen Ai-Ning",
+        "陈爱宁"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "NIP",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_47f521f14696": {
+      "displayName": "Maizijian",
+      "realName": "Zeng Xinyi",
+      "aliases": [
+        "Maizijian",
+        "Zeng Xinyi"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "NIP",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_e3fad4e4f943": {
+      "displayName": "Cluo",
+      "realName": "Shin Min-sung",
+      "aliases": [
+        "Cluo",
+        "Shin Min-sung"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "NIP",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_3268aa682aa7": {
+      "displayName": "KIM",
+      "realName": "Kim Jeong-soo (김정수)",
+      "aliases": [
+        "KIM",
+        "Kim Jeong-soo (김정수)",
+        "Kim Jeong-soo"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WBG",
+          "role": "SUPERVISOR",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_3333703a038e": {
+      "displayName": "Shine",
+      "realName": "Shin Dong-wook",
+      "aliases": [
+        "Shine",
+        "Shin Dong-wook"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WBG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_54524d1a33ee": {
+      "displayName": "Clearlove",
+      "realName": "Ming Kai",
+      "aliases": [
+        "Clearlove",
+        "Ming Kai"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WBG",
+          "role": "HEAD_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_80686f7e6a59": {
+      "displayName": "Tselin",
+      "realName": "Zhao Zelin",
+      "aliases": [
+        "Tselin",
+        "Zhao Zelin"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WBG",
+          "role": "COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_95106816f90a": {
+      "displayName": "Medusa",
+      "realName": "",
+      "aliases": [
+        "Medusa"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WBG",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_335b5d2543bc": {
+      "displayName": "Smallorc",
+      "realName": "Zhang Wei (张伟)",
+      "aliases": [
+        "Smallorc",
+        "Zhang Wei (张伟)",
+        "Zhang Wei",
+        "张伟"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "CEO",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_759b3e9f5c90": {
+      "displayName": "Sky",
+      "realName": "Li Xiao-Fen (李晓峰)",
+      "aliases": [
+        "Sky",
+        "Li Xiao-Fen (李晓峰)",
+        "Li Xiao-Fen",
+        "李晓峰"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "GENERAL_MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_55d7576c3d84": {
+      "displayName": "Bigsam",
+      "realName": "Shi Xiao-Xi (石晓曦)",
+      "aliases": [
+        "Bigsam",
+        "Shi Xiao-Xi (石晓曦)",
+        "Shi Xiao-Xi",
+        "石晓曦"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "LEADER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_377c367d3fa3": {
+      "displayName": "milk",
+      "realName": "Qiao Si-Yu (乔思昱)",
+      "aliases": [
+        "milk",
+        "Qiao Si-Yu (乔思昱)",
+        "Qiao Si-Yu",
+        "乔思昱"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "MANAGER",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_b4b7bb002cdc": {
+      "displayName": "Condi",
+      "realName": "Xiang Renjie",
+      "aliases": [
+        "Condi",
+        "Xiang Renjie"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_5395c68837ae": {
+      "displayName": "JinJin",
+      "realName": "Jin Guanghua",
+      "aliases": [
+        "JinJin",
+        "Jin Guanghua"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_ffe3022a88cf": {
+      "displayName": "694",
+      "realName": "He Xin",
+      "aliases": [
+        "694",
+        "He Xin"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "ASSISTANT_COACH",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    },
+    "p_d8e0402e0972": {
+      "displayName": "zhaozhao",
+      "realName": "",
+      "aliases": [
+        "zhaozhao"
+      ],
+      "avatar": {},
+      "employments": [
+        {
+          "team": "WE",
+          "role": "ANALYST",
+          "displayRole": "",
+          "current": true,
+          "startDate": "",
+          "endDate": "",
+          "source": ""
+        }
+      ]
+    }
+  }
 }
