@@ -1210,6 +1210,7 @@ private fun researchEvidenceLabel(value: ResearchEvidence): String = when (value
     ResearchEvidence.PENDING -> "待同步"
 }
 
+@Composable
 private fun researchEvidenceColor(value: ResearchEvidence) = when (value) {
     ResearchEvidence.VERIFIED -> RiftCyan
     ResearchEvidence.PROVIDER -> RiftText
@@ -1473,7 +1474,7 @@ private fun addAnnualResearchPlaceholders(
 private fun researchEditionYear(bucket: ScheduleCompetitionBucket): Int? {
     bucket.tournament?.startDate?.take(4)?.toIntOrNull()?.let { return it }
     bucket.matches.firstOrNull()?.let(::matchStartDate)?.year?.let { return it }
-    return Regex("(?:19|20)\d{2}").find(bucket.title)?.value?.toIntOrNull()
+    return Regex("""(?:19|20)\d{2}""").find(bucket.title)?.value?.toIntOrNull()
 }
 
 private fun sameLeague(match: ScheduledEsportsMatch, tournament: EsportsTournamentRef): Boolean {
