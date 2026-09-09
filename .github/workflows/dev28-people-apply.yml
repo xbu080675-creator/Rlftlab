@@ -18,7 +18,6 @@ jobs:
         with:
           fetch-depth: 0
       - run: python3 tools/dev28_people_patch.py
-      - run: python3 tools/sync_people_data.py --skip-avatar
       - name: Commit migrated source
         run: |
           git config user.name "github-actions[bot]"
@@ -26,6 +25,7 @@ jobs:
           git add app/src/main/java/com/riftlab/app/data/Models.kt \
                   app/src/main/java/com/riftlab/app/data/DynamicTeamDataProvider.kt \
                   app/src/main/java/com/riftlab/app/ui/TeamDetailUi.kt \
-                  app/build.gradle.kts DEV_CHANGELOG.txt data/lpl/people.json
+                  app/build.gradle.kts DEV_CHANGELOG.txt
           git commit -m "feat: add people entities avatars and career timelines"
+          git pull --rebase origin main
           git push
