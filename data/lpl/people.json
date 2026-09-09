@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "dataset": "riftlab-lpl-person-directory",
+  "updatedAt": "",
+  "avatarPolicy": {
+    "priority": [
+      "TEAM_OFFICIAL",
+      "VERIFIED_SOCIAL",
+      "RIFTLAB_MIRROR",
+      "ESPORTS_CHARTS"
+    ],
+    "note": "Only store remote references and provenance; do not copy third-party image files into the repository."
+  },
+  "lookup": {},
+  "people": {}
+}
