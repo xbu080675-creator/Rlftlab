@@ -51,6 +51,9 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                 Text("${state.latestVersionName} · code ${state.latestVersionCode}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
 
+            if (state.sourceLabel.isNotBlank()) {
+                Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 9.sp)
+            }
             Text(state.status, color = if (state.available) RiftCyan else RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
 
             if (state.changelog.isNotBlank()) {
