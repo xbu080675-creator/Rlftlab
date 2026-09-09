@@ -1,0 +1,27 @@
+name: Apply RiftLab dev54 verified awards
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev54-verified-awards-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire verified global awards
+        run: python3 tools/apply_dev54_verified_awards.py
+      - name: Commit wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/MatchDetailRepository.kt
+          git commit -m "feat: resolve verified global MVP awards"
+          git pull --rebase origin main
+          git push origin HEAD:main
