@@ -47,8 +47,8 @@ jobs:
           // dev.67 icon-only release: keep the generated launcher artwork as text in Git and decode
           // it into build/generated so the exact generated WebP is packaged without adding binary blobs.
           val launcherIconB64 = file("src/main/icon/riftlab_launcher.webp.b64")
-          val generatedLauncherResDir = layout.buildDirectory.dir("generated/riftlabLauncher/res")
-          val generatedLauncherIcon = generatedLauncherResDir.get().file("drawable-nodpi/ic_launcher_riftlab.webp").asFile
+          val generatedLauncherResDir = layout.buildDirectory.dir("generated/riftlabLauncher/res").get().asFile
+          val generatedLauncherIcon = generatedLauncherResDir.resolve("drawable-nodpi/ic_launcher_riftlab.webp")
           if (launcherIconB64.exists()) {
               generatedLauncherIcon.parentFile.mkdirs()
               val bytes = Base64.getDecoder().decode(launcherIconB64.readText().filterNot(Char::isWhitespace))
