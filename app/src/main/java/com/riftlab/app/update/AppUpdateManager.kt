@@ -69,7 +69,6 @@ internal object AppUpdateManager {
         "https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json"
     private const val GITHUB_RELEASE_PATH_PREFIX =
         "/xbu080675-creator/Rlftlab/releases/download/dev-latest/"
-    private const val SOURCE_GITHUB = "GitHub 直连"
     private const val SOURCE_ACCELERATED = "GitHub 更新加速"
     private const val DEV_SIGNER_SHA256 =
         "769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
@@ -285,7 +284,9 @@ internal object AppUpdateManager {
         }
 
         val failure = lastError ?: error("没有可用的 GitHub 更新传输通道")
-        if (firstError != null && firstError !== failure) failure.addSuppressed(firstError)
+        firstError?.let { first ->
+            if (first !== failure) failure.addSuppressed(first)
+        }
         throw failure
     }
 
@@ -313,7 +314,7 @@ internal object AppUpdateManager {
                 connection.setRequestProperty("Cache-Control", "no-cache")
                 connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
                 if (transport.accelerated) {
-                    // This is request-scoped acceleration only. Do not leave a reusable proxy connection.
+                    // Request-scoped acceleration only: never install a VPN or system proxy.
                     connection.setRequestProperty("Connection", "close")
                 }
                 if (existing > 0L) {
@@ -322,7 +323,7 @@ internal object AppUpdateManager {
                 connection.connect()
 
                 val code = connection.responseCode
-                if (code == HttpURLConnection.HTTP_REQUESTED_RANGE_NOT_SATISFIABLE && existing > 0L) {
+                if (code == 416 && existing > 0L) {
                     part.delete()
                     allowResume = false
                     continue
