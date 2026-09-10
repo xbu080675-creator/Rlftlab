@@ -53,6 +53,7 @@ data class TournamentEditionArchiveRecord(
     val endDate: String,
     val participantTeamCodes: List<String> = emptyList(),
     val scheduleSeriesCount: Int = 0,
+    val archivedSlots: List<TournamentEditionSlot> = emptyList(),
     val firstSeenEpochMs: Long = System.currentTimeMillis(),
     val lastSeenEpochMs: Long = System.currentTimeMillis()
 )
@@ -71,6 +72,7 @@ data class TournamentEditionArchiveState(
     val editions: List<TournamentEditionArchiveRecord> = emptyList(),
     val selectedTournamentId: String = "",
     val selected: TournamentEditionDetail? = null,
+    val followingCurrent: Boolean = true,
     val lastRefreshEpochMs: Long = 0L,
     val statusMessage: String = "年度赛事档案尚未同步"
 )
@@ -80,11 +82,14 @@ object TournamentEditionArchiveStore {
     private const val FILE_NAME = "tournament_editions_v1.json"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val historicalStandingsClient = LolEsportsStandingsClient()
+    private val hydratedStandings = linkedMapOf<String, TournamentStandings>()
     private val _state = MutableStateFlow(TournamentEditionArchiveState())
     val state: StateFlow<TournamentEditionArchiveState> = _state.asStateFlow()
 
     private var archiveFile: File? = null
     private var syncJob: Job? = null
+    private var hydrateJob: Job? = null
     @Volatile private var initialized = false
     @Volatile private var manualSelectedTournamentId = ""
 
@@ -113,19 +118,65 @@ object TournamentEditionArchiveStore {
         }
     }
 
-    /** Selecting an archived edition asks the existing standings store to hydrate that edition. */
+    /**
+     * Historical browsing is deliberately isolated from the app-wide StandingsCenterStore.
+     * Selecting an old edition must not make the current PRE/LIVE coverage suddenly point at an
+     * unrelated historical standings table, so an archive-only Riot client hydrates that edition.
+     */
     fun selectTournament(tournamentId: String) {
         val record = _state.value.editions.firstOrNull { it.tournamentId == tournamentId } ?: return
         manualSelectedTournamentId = record.tournamentId
+        val initial = buildDetail(
+            record = record,
+            schedule = MatchSessionStore.schedule.value,
+            standingsState = StandingsCenterStore.state.value
+        )
+        replaceEdition(initial.edition)
         _state.value = _state.value.copy(
             selectedTournamentId = record.tournamentId,
-            selected = buildDetail(record, MatchSessionStore.schedule.value, StandingsCenterStore.state.value),
+            selected = initial,
+            followingCurrent = false,
             statusMessage = "正在打开 ${record.displayName} 年度赛事档案…"
         )
-        StandingsCenterStore.selectTournament(record.tournamentId)
+        persist(_state.value.editions)
+
+        hydrateJob?.cancel()
+        hydrateJob = scope.launch {
+            val fetched = runCatching {
+                historicalStandingsClient.fetchTournamentStandings(record.tournamentId)
+            }.getOrNull()?.takeIf(::hasStandingsRows)
+
+            if (manualSelectedTournamentId != record.tournamentId) return@launch
+            if (fetched == null) {
+                _state.value = _state.value.copy(
+                    statusMessage = "${record.displayName} · 当前 Riot 历史 Standings 无可用结构，保留已归档槽位"
+                )
+                return@launch
+            }
+
+            synchronized(hydratedStandings) {
+                hydratedStandings[record.tournamentId] = fetched
+            }
+            val latestRecord = _state.value.editions.firstOrNull { it.tournamentId == record.tournamentId }
+                ?: return@launch
+            val hydrated = buildDetail(
+                record = latestRecord,
+                schedule = MatchSessionStore.schedule.value,
+                standingsState = StandingsCenterStore.state.value,
+                standingsOverride = fetched
+            )
+            replaceEdition(hydrated.edition)
+            _state.value = _state.value.copy(
+                selected = hydrated,
+                lastRefreshEpochMs = System.currentTimeMillis(),
+                statusMessage = "${record.displayName} · 历史 Standings 已独立同步，不影响当前赛事上下文"
+            )
+            persist(_state.value.editions)
+        }
     }
 
     fun followCurrentTournament() {
+        hydrateJob?.cancel()
         manualSelectedTournamentId = ""
         rebuild(
             MatchSessionStore.schedule.value,
@@ -167,12 +218,13 @@ object TournamentEditionArchiveStore {
                 endDate = ref.endDate,
                 participantTeamCodes = (old?.participantTeamCodes.orEmpty() + knownTeams).distinct().sorted(),
                 scheduleSeriesCount = maxOf(old?.scheduleSeriesCount ?: 0, matches.size),
+                archivedSlots = old?.archivedSlots.orEmpty(),
                 firstSeenEpochMs = old?.firstSeenEpochMs ?: now,
                 lastSeenEpochMs = now
             )
         }
 
-        val ordered = previous.values
+        var ordered = previous.values
             .distinctBy { it.editionKey.ifBlank { it.tournamentId } }
             .sortedWith(
                 compareBy<TournamentEditionArchiveRecord> { it.startDate.ifBlank { "9999-99-99" } }
@@ -191,12 +243,25 @@ object TournamentEditionArchiveStore {
             else -> ordered.lastOrNull()?.tournamentId.orEmpty()
         }
         val selectedRecord = ordered.firstOrNull { it.tournamentId == selectedId }
-        val detail = selectedRecord?.let { buildDetail(it, schedule, standingsState) }
+        val detail = selectedRecord?.let {
+            buildDetail(
+                record = it,
+                schedule = schedule,
+                standingsState = standingsState,
+                standingsOverride = cachedHydratedStandings(it.tournamentId)
+            )
+        }
+        if (detail != null) {
+            ordered = ordered.map { record ->
+                if (record.tournamentId == detail.edition.tournamentId) detail.edition else record
+            }
+        }
 
         _state.value = TournamentEditionArchiveState(
             editions = ordered,
             selectedTournamentId = selectedId,
             selected = detail,
+            followingCurrent = manualSelectedTournamentId.isBlank(),
             lastRefreshEpochMs = now,
             statusMessage = when {
                 ordered.isEmpty() -> "Riot Tournament Directory · 当前没有可归档届次"
@@ -206,16 +271,13 @@ object TournamentEditionArchiveStore {
             }
         )
         persist(ordered)
-
-        if (selectedId.isNotBlank() && standingsState.selectedTournament?.id != selectedId) {
-            StandingsCenterStore.selectTournament(selectedId)
-        }
     }
 
     private fun buildDetail(
         record: TournamentEditionArchiveRecord,
         schedule: List<ScheduledEsportsMatch>,
-        standingsState: StandingsCenterState
+        standingsState: StandingsCenterState,
+        standingsOverride: TournamentStandings? = null
     ): TournamentEditionDetail {
         val ref = EsportsTournamentRef(
             id = record.tournamentId,
@@ -227,7 +289,8 @@ object TournamentEditionArchiveStore {
             leagueName = record.leagueName
         )
         val matches = matchesForEdition(ref, schedule)
-        val standings = standingsState.standings?.takeIf { it.tournamentId == record.tournamentId }
+        val standings = standingsOverride
+            ?: standingsState.standings?.takeIf { it.tournamentId == record.tournamentId }
         val governance = TournamentGovernanceProvider.resolve(
             tournament = ref,
             competitionTitle = record.displayName,
@@ -243,10 +306,13 @@ object TournamentEditionArchiveStore {
         )
         val standingsTeams = standings.orEmptyTeamCodes()
         val participantTeams = (record.participantTeamCodes + standingsTeams).distinct().sorted()
-        val enriched = record.copy(
+        val provisional = record.copy(
             participantTeamCodes = participantTeams,
             scheduleSeriesCount = maxOf(record.scheduleSeriesCount, matches.size)
         )
+        val liveSlots = buildSlots(provisional, matches, standings, governance, research)
+        val mergedSlots = mergeSlots(record.archivedSlots, liveSlots)
+        val enriched = provisional.copy(archivedSlots = mergedSlots)
 
         return TournamentEditionDetail(
             edition = enriched,
@@ -254,7 +320,7 @@ object TournamentEditionArchiveStore {
             standings = standings,
             governance = governance,
             research = research,
-            slots = buildSlots(enriched, matches, standings, governance, research),
+            slots = mergedSlots,
             provenance = buildList {
                 add(
                     DataProvenance(
@@ -437,6 +503,25 @@ object TournamentEditionArchiveStore {
         )
     }
 
+    /** Never downgrade a known historical slot because a later network window is thinner. */
+    private fun mergeSlots(
+        archived: List<TournamentEditionSlot>,
+        current: List<TournamentEditionSlot>
+    ): List<TournamentEditionSlot> {
+        val oldByKey = archived.associateBy { it.key }
+        return current.map { fresh ->
+            val old = oldByKey[fresh.key] ?: return@map fresh
+            if (slotRank(fresh.state) >= slotRank(old.state)) fresh else old
+        } + archived.filter { old -> current.none { it.key == old.key } }
+    }
+
+    private fun slotRank(state: TournamentEditionSlotState): Int = when (state) {
+        TournamentEditionSlotState.COMPLETE -> 3
+        TournamentEditionSlotState.PARTIAL -> 2
+        TournamentEditionSlotState.PENDING -> 1
+        TournamentEditionSlotState.SOURCE_ERROR -> 0
+    }
+
     private fun resolveTerminalOutcome(standings: TournamentStandings?): String? {
         val bracket = standings?.stages.orEmpty().flatMap { stage -> stage.sections.flatMap { it.matches } }
         if (bracket.isEmpty()) return null
@@ -461,6 +546,21 @@ object TournamentEditionArchiveStore {
     private fun isCompleted(value: String): Boolean {
         val normalized = value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
         return normalized.contains("complete") || normalized.contains("finished")
+    }
+
+    private fun hasStandingsRows(standings: TournamentStandings): Boolean = standings.stages.any { stage ->
+        stage.sections.any { it.rankings.isNotEmpty() || it.matches.isNotEmpty() }
+    }
+
+    private fun cachedHydratedStandings(tournamentId: String): TournamentStandings? =
+        synchronized(hydratedStandings) { hydratedStandings[tournamentId] }
+
+    private fun replaceEdition(record: TournamentEditionArchiveRecord) {
+        val current = _state.value
+        val replaced = current.editions.map { existing ->
+            if (existing.tournamentId == record.tournamentId) record else existing
+        }
+        _state.value = current.copy(editions = replaced)
     }
 
     private fun chooseTargetEdition(
@@ -550,6 +650,7 @@ object TournamentEditionArchiveStore {
                             endDate = row.optString("endDate"),
                             participantTeamCodes = jsonStrings(row.optJSONArray("participantTeamCodes")),
                             scheduleSeriesCount = row.optInt("scheduleSeriesCount", 0),
+                            archivedSlots = parseSlots(row.optJSONArray("slots")),
                             firstSeenEpochMs = row.optLong("firstSeenEpochMs", 0L)
                                 .takeIf { it > 0 } ?: System.currentTimeMillis(),
                             lastSeenEpochMs = row.optLong("lastSeenEpochMs", 0L)
@@ -560,6 +661,7 @@ object TournamentEditionArchiveStore {
             TournamentEditionArchiveState(
                 editions = editions,
                 selectedTournamentId = "",
+                followingCurrent = true,
                 lastRefreshEpochMs = root.optLong("savedAtEpochMs", 0L),
                 statusMessage = "已从本地恢复 ${editions.size} 个 Tournament Edition · 等待在线增量同步"
             )
@@ -596,6 +698,17 @@ object TournamentEditionArchiveStore {
                                     put("endDate", edition.endDate)
                                     put("participantTeamCodes", JSONArray(edition.participantTeamCodes))
                                     put("scheduleSeriesCount", edition.scheduleSeriesCount)
+                                    put("slots", JSONArray().apply {
+                                        edition.archivedSlots.forEach { slot ->
+                                            put(JSONObject().apply {
+                                                put("key", slot.key)
+                                                put("label", slot.label)
+                                                put("state", slot.state.name)
+                                                put("detail", slot.detail)
+                                                put("source", slot.source)
+                                            })
+                                        }
+                                    })
                                     put("firstSeenEpochMs", edition.firstSeenEpochMs)
                                     put("lastSeenEpochMs", edition.lastSeenEpochMs)
                                 }
@@ -610,6 +723,29 @@ object TournamentEditionArchiveStore {
             if (!temp.renameTo(file)) {
                 file.writeText(root.toString())
                 temp.delete()
+            }
+        }
+    }
+
+    private fun parseSlots(array: JSONArray?): List<TournamentEditionSlot> {
+        if (array == null) return emptyList()
+        return buildList {
+            for (i in 0 until array.length()) {
+                val row = array.optJSONObject(i) ?: continue
+                val key = row.optString("key")
+                if (key.isBlank()) continue
+                val state = runCatching {
+                    TournamentEditionSlotState.valueOf(row.optString("state"))
+                }.getOrDefault(TournamentEditionSlotState.PENDING)
+                add(
+                    TournamentEditionSlot(
+                        key = key,
+                        label = row.optString("label").ifBlank { key },
+                        state = state,
+                        detail = row.optString("detail"),
+                        source = row.optString("source")
+                    )
+                )
             }
         }
     }
