@@ -123,3 +123,9 @@ dev.71 不要求全世界所有年份一次性达到 100%，但必须做到：
 - 2026 Worlds can recover already-confirmed qualifying participant codes from Riot's official Handbook even before the event appears in the normal schedule window.
 - Qualification coverage is now `PARTIAL` when the Handbook explicitly establishes the mechanism; team seed/origin remains unknown unless Riot explicitly states it.
 - LEC's Handbook currently contains wording that does not fully explain the third Worlds place. RiftLab preserves that ambiguity instead of inventing the missing mechanism.
+
+## 2026-09-10 · terminal result tranche
+
+- Final placement now prefers an explicitly labelled completed Final / Grand Final Series from Riot Completed Events / Unified Schedule.
+- A verified final Series upgrades champion and runner-up from a bracket-shape guess to provider-backed result facts.
+- If only a terminal bracket node exists, the UI continues to say `候选` and the source is explicitly marked `DERIVED`; lower placements stay unknown until a trustworthy placement table exists.
