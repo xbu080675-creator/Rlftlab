@@ -222,6 +222,7 @@ private fun PointCell(title: String, value: String, detail: String, modifier: Mo
     }
 }
 
+@Composable
 private fun statusColor(status: QualificationTeamState): Color = when (status) {
     QualificationTeamState.LOCKED -> RiftCyan
     QualificationTeamState.CONTENDING -> RiftText
@@ -229,6 +230,7 @@ private fun statusColor(status: QualificationTeamState): Color = when (status) {
     QualificationTeamState.PENDING -> RiftMuted
 }
 
+@Composable
 private fun evidenceColor(evidence: QualificationEvidence): Color = when (evidence) {
     QualificationEvidence.OFFICIAL -> RiftCyan
     QualificationEvidence.PROVIDER -> RiftText
@@ -236,6 +238,7 @@ private fun evidenceColor(evidence: QualificationEvidence): Color = when (eviden
     QualificationEvidence.PENDING -> RiftMuted
 }
 
+@Composable
 private fun nodeColor(state: QualificationNodeState): Color = when (state) {
     QualificationNodeState.CONFIRMED -> RiftCyan
     QualificationNodeState.AVAILABLE -> RiftText
