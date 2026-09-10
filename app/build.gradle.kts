@@ -7,23 +7,33 @@ plugins {
 
 val devSigningB64 = rootProject.file("signing/riftlab-dev.keystore.b64")
 val devSigningStore = layout.buildDirectory.file("signing/riftlab-dev.keystore").get().asFile
-if (!devSigningStore.exists() && devSigningB64.exists()) {
-    devSigningStore.parentFile.mkdirs()
-    devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
-}
 
-// dev.67 icon-only release: keep the generated launcher artwork as text in Git and decode
-// it into build/generated so the exact generated WebP is packaged without adding binary blobs.
+// dev.67 launcher art and the public DEV keystore are text-backed generated build inputs. Keep one
+// materializer and run it both at configuration time and after :app:clean. Without the post-clean
+// re-materialization, `gradle clean :app:assembleDebug` deletes build/generated + build/signing after
+// configuration and AAPT/signing later see missing files.
 val launcherIconB64 = file("src/main/icon/riftlab_launcher.webp.b64")
 val generatedLauncherResDir = layout.buildDirectory.dir("generated/riftlabLauncher/res").get().asFile
 val generatedLauncherIcon = generatedLauncherResDir.resolve("drawable-nodpi/ic_launcher_riftlab.webp")
-if (launcherIconB64.exists()) {
-    generatedLauncherIcon.parentFile.mkdirs()
-    val bytes = Base64.getDecoder().decode(launcherIconB64.readText().filterNot(Char::isWhitespace))
-    if (!generatedLauncherIcon.exists() || !generatedLauncherIcon.readBytes().contentEquals(bytes)) {
-        generatedLauncherIcon.writeBytes(bytes)
+
+fun materializeTextBackedBuildInputs() {
+    if (devSigningB64.exists()) {
+        val bytes = Base64.getDecoder().decode(devSigningB64.readText().filterNot(Char::isWhitespace))
+        if (!devSigningStore.exists() || !devSigningStore.readBytes().contentEquals(bytes)) {
+            devSigningStore.parentFile.mkdirs()
+            devSigningStore.writeBytes(bytes)
+        }
+    }
+    if (launcherIconB64.exists()) {
+        val bytes = Base64.getDecoder().decode(launcherIconB64.readText().filterNot(Char::isWhitespace))
+        if (!generatedLauncherIcon.exists() || !generatedLauncherIcon.readBytes().contentEquals(bytes)) {
+            generatedLauncherIcon.parentFile.mkdirs()
+            generatedLauncherIcon.writeBytes(bytes)
+        }
     }
 }
+
+materializeTextBackedBuildInputs()
 
 // Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
 // dev.65 stops trusting one fixed public node: the app probes the actual Release APK and picks the
@@ -50,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 70
-        versionName = "1.0.0-dev.70"
+        versionCode = 71
+        versionName = "1.0.0-dev.71"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -85,6 +95,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+// `clean` runs after project configuration when requested in the same Gradle invocation, so restore
+// generated inputs once its deletion phase finishes before resource linking/signing tasks execute.
+tasks.named("clean").configure {
+    doLast { materializeTextBackedBuildInputs() }
 }
 
 dependencies {

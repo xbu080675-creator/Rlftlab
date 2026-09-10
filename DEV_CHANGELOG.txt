@@ -1,3 +1,9 @@
+dev.71：完成全面数据第一轮全局查漏补缺。PRE 将首发与 roster pool 分离，同位置多人时不再按名单顺序猜首发，新增教练组/管理层、近期正式 Series 与近期 H2H；Rank、伤病、转会与首发变化没有可信源时继续保持未知。Tournament Edition 新增历史 Completed Events 回填、真实 LiveStats Patch 归档、显式 Final 优先的冠军/亚军结果，并严格保留 DERIVED 兜底标记；Riot 2026 League Handbook 正式接入 LPL/LCK/LCP/LEC/LCS/CBLOL 及 First Stand/MSI/Worlds，规则、参赛队与资格机制优先使用官方快照。Qualification Center 扩展非 LPL 赛区语义，区分直接名次、Championship Points、资格赛与国际赛 Qualification Origin；LCP 2026 接入 Riot 官方 Championship Points 计分公式，但在没有完整赛段结果/官方总分表时不伪造队伍当前总分。全球 Staff 与已核实 MVP/POG 镜像新增 APK 内置种子兜底，GitHub Raw/jsDelivr 不可达时仍可恢复已归档数据；OTA 继续使用 GitHub canonical dev-latest + GitHub-only 加速/Range 断点续传，固定 DEV 签名校验不变。版本升级至 1.0.0-dev.71 / versionCode 71。
+
+dev.70：新增独立 Qualification Center，将本届 Standings、全年 Championship Points 与晋级路径拆成不同概念；新增已锁定/仍可争夺/已淘汰/待确认状态、OFFICIAL/PROVIDER/DERIVED/PENDING 证据等级和逐节点 Route，从队伍可反向查询剩余路径。2026 LPL 世界赛资格上下文接入年度积分与官方签位，国际赛先建立 Qualification Origin 档案位，未知来源不从参赛名单反推。版本升级至 1.0.0-dev.70 / versionCode 70。
+
+dev.69：把 Tournament Edition / 年度届次从临时 Schedule 提升为长期档案实体，按 family/year/stage 稳定识别赛事；每届保存身份、Patch、参赛队、资格、规则、签位、赛程、Standings、最终名次、Awards 与 Provenance 槽位，并保证旧届次不会被当前网络窗口覆盖或降级。版本升级至 1.0.0-dev.69 / versionCode 69。
+
 dev.68：启动 RiftLab 全面数据主线。新增统一 Tournament Edition / Series / Game / Team / Player / Roster / PlayerStats / Standings / Qualification / Timeline 数据契约，加入 OFFICIAL / PROVIDER / DERIVED / LOCAL_CACHE / APK_SEED / USER_INPUT 来源等级与 STATIC / DAILY / HOURLY / MINUTES / REALTIME 刷新等级；新增 ComprehensiveDataCenter，将现有 Schedule、PRE、LIVE、CompletedGame、Standings 持续归一到同一数据图；新增 12 域 Coverage Report 与赛前可视化面板，缺失数据明确显示为部分/待同步/来源异常，不用 Mock 或占位值伪装完整。现有 Riot/Cito/OP.GG/Bilibili/本地归档仍为事实源，OTA 逻辑不变。版本升级至 1.0.0-dev.68 / versionCode 68。
 
 dev.67：仅更新 RiftLab APK 启动器图标并重新封装、签名、分发；不改赛事数据、UI 功能、OTA 逻辑或其他运行时功能。本版本用于在未开启 VPN / 系统代理的普通网络环境下，实测现有 GitHub canonical dev-latest + APP 内请求级 GitHub 加速的更新下载链路。版本升级至 1.0.0-dev.67 / versionCode 67。
