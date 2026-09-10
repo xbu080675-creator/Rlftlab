@@ -50,8 +50,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 69
-        versionName = "1.0.0-dev.69"
+        versionCode = 70
+        versionName = "1.0.0-dev.70"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -171,3 +171,5 @@ dependencies {
 // dev.68: begin the comprehensive-data line: normalized Tournament/Series/Game/Team/Player graph, provenance and explicit coverage gaps; existing providers remain the source of truth.
 
 // dev.69: persist Tournament Edition identities and explicit archival slots so old seasons remain queryable and can be enriched without being overwritten by the current tournament window.
+
+// dev.70: separate annual Championship Points from tournament standings and model reverse-queryable qualification routes with explicit official/provider/derived evidence.
