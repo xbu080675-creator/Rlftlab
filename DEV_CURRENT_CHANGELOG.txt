@@ -1,0 +1,1 @@
+dev.59：国内 OTA 正式切换到 Gitee Release 镜像。GitHub 继续作为唯一主仓库和构建真源；GitHub Actions 构建并校验 APK 后，先发布 GitHub dev-latest 备用源，再通过 Gitee API 更新固定 dev-latest Release：先上传带版本号 APK，再最后替换 latest.json，并清理旧 APK 附件。客户端默认优先读取 Gitee 稳定下载地址，Gitee 不可用或下载校验失败时自动回退 GitHub；保留 SHA-256、包名、versionCode 和固定 DEV 签名证书校验。通用 S3-compatible 对象存储降为可选扩展，不参与版本真源。
