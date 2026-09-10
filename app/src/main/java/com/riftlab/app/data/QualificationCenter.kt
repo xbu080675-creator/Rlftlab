@@ -107,6 +107,9 @@ data class QualificationCenterState(
 }
 
 object QualificationCenterStore {
+    private val INTERNATIONAL_PARTICIPATION_FAMILIES = setOf(
+        "WORLDS", "MSI", "FIRST_STAND", "EWC", "WSCI", "WSCL", "EMEA_MASTERS", "AMERICAS_CUP"
+    )
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
     @Volatile private var manualTeamCode = ""
@@ -225,13 +228,13 @@ object QualificationCenterStore {
             competitionTitle = edition.displayName,
             identity = "${edition.family} ${edition.stage} ${edition.slug} ${edition.leagueSlug} ${edition.leagueName}"
         )
-        if (handbookQualification != null && edition.family.uppercase() !in setOf("WORLDS", "MSI", "FIRST_STAND")) {
+        if (handbookQualification != null && edition.family.uppercase() !in INTERNATIONAL_PARTICIPATION_FAMILIES) {
             return buildOfficialRegionalMechanismSnapshot(edition, archive, standingsState, handbookQualification)
         }
 
         // International target events use participant-origin semantics. Observing a team in the
         // tournament participant set proves participation, not the region/seed/path that qualified it.
-        if (edition.family.uppercase() in setOf("WORLDS", "MSI", "FIRST_STAND")) {
+        if (edition.family.uppercase() in INTERNATIONAL_PARTICIPATION_FAMILIES) {
             return buildInternationalParticipationSnapshot(edition)
         }
 
@@ -440,8 +443,10 @@ object QualificationCenterStore {
             },
             note = if (routes.isEmpty()) {
                 "该届国际赛已建立资格档案位；参赛集合本身尚未恢复，等待历史赛程 / Standings / Completed Events。"
-            } else {
+            } else if (officialWorldsTeams.isNotEmpty()) {
                 "官方已经确认的 Worlds 参赛事实会直接标记已锁定；Seed 及更细晋级来源仍按字段级证据单独确认。国际赛本身不显示虚构的 Championship Points 缺失表。"
+            } else {
+                "可信 Provider 已确认的参赛事实只证明参赛；Region / Seed / Qualification Origin 仍分别等待证据，不从队名或对阵反推，也不显示虚构的 Championship Points 缺失表。"
             },
             mechanism = QualificationMechanism.PARTICIPANT_ORIGIN,
             mechanismEvidence = when {

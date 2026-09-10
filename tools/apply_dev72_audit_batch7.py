@@ -33,8 +33,8 @@ replace_once(
 )
 replace_once(
     "app/src/main/java/com/riftlab/app/data/TournamentResearch.kt",
-    '''        identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"\n        identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"\n        Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) -> "WSCL"\n''',
-    '''        identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"\n        identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"\n        Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) -> "WSCI"\n        Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> "WSCL"\n'''
+    '''        Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) -> "WSCL"\n        identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"\n        identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"\n''',
+    '''        Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) -> "WSCI"\n        Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> "WSCL"\n        identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"\n        identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"\n'''
 )
 replace_all(
     "app/src/main/java/com/riftlab/app/data/TournamentResearch.kt",
@@ -180,13 +180,13 @@ replace_once(
 # 8) Riot LiveStats must not call Riot event-details with a provider-owned event id.
 replace_once(
     "app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt",
-    '''        while (currentCoroutineContext().isActive) {\n            if (currentEvent == null) {\n''',
-    '''        while (currentCoroutineContext().isActive) {\n            val registeredTarget = LiveMatchTargetRegistry.snapshot()\n            if (registeredTarget != null && isExternalProviderTarget(registeredTarget)) {\n                currentEvent = null\n                knownGameIds = emptyList()\n                emittedGameIds.clear()\n                _status.value = LiveSourceStatus(\n                    phase = LiveSourcePhase.WAITING_FOR_MATCH,\n                    message = "Riot LiveStats · 当前赛事使用非 Riot Event ID，等待其它实时源",\n                    eventId = registeredTarget.eventId,\n                    lastUpdateEpochMs = System.currentTimeMillis()\n                )\n                delay(5_000)\n                continue\n            }\n\n            if (currentEvent == null) {\n'''
+    '''        while (currentCoroutineContext().isActive) {\n            try {\n                if (currentEvent == null) {\n''',
+    '''        while (currentCoroutineContext().isActive) {\n            try {\n                val registeredTarget = LiveMatchTargetRegistry.snapshot()\n                if (registeredTarget != null && isExternalProviderTarget(registeredTarget)) {\n                    currentEvent = null\n                    knownGames = emptyList()\n                    currentGame = null\n                    currentGameId = ""\n                    previous = null\n                    lockedFromSchedule = false\n                    _status.value = LiveSourceStatus(\n                        phase = LiveSourcePhase.WAITING_FOR_MATCH,\n                        message = "Riot LiveStats · 当前赛事使用非 Riot Event ID，等待其它实时源",\n                        eventId = registeredTarget.eventId,\n                        lastUpdateEpochMs = System.currentTimeMillis()\n                    )\n                    delay(5_000)\n                    continue\n                }\n\n                if (currentEvent == null) {\n'''
 )
 replace_once(
     "app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt",
-    '''    private fun selectScheduleEvent(\n''',
-    '''    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =\n        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")\n\n    private fun selectScheduleEvent(\n'''
+    '''    private fun teamLabel(match: ScheduledEsportsMatch): String =\n''',
+    '''    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =\n        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")\n\n    private fun teamLabel(match: ScheduledEsportsMatch): String =\n'''
 )
 
 # 9) Tournament Edition must not run Riot history hydration or Riot provenance for provider editions.

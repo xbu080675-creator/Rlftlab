@@ -25,11 +25,11 @@ object MatchSessionStore {
         blue = "—",
         red = "—",
         startTime = "--:--",
-        blueForm = "RIOT SCHEDULE",
-        redForm = "RIOT SCHEDULE",
+        blueForm = "UNIFIED SCHEDULE",
+        redForm = "UNIFIED SCHEDULE",
         blueRoster = emptyList(),
         redRoster = emptyList(),
-        rosterNote = "正在同步 Riot 全球 LoL Esports 赛程；不会用 Mock 首发或 Rank 填空。"
+        rosterNote = "正在同步 Unified Schedule；不会用 Mock 首发或 Rank 填空。"
     )
 
     private val _preMatch = MutableStateFlow(emptyPreMatch)
@@ -83,7 +83,7 @@ object MatchSessionStore {
     private val _targetMatch = MutableStateFlow<ScheduledEsportsMatch?>(null)
     val targetMatch: StateFlow<ScheduledEsportsMatch?> = _targetMatch.asStateFlow()
 
-    private val _scheduleStatus = MutableStateFlow("正在连接 Riot LoL Esports 赛程中心…")
+    private val _scheduleStatus = MutableStateFlow("正在连接 Unified Schedule 赛事中心…")
     val scheduleStatus: StateFlow<String> = _scheduleStatus.asStateFlow()
 
     private val _rosterStatus = MutableStateFlow("ROSTER · 等待选中赛事")
@@ -183,7 +183,7 @@ object MatchSessionStore {
             currentMatch = current,
             nextMatch = next,
             statusMessage = if (target == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else {
                 buildScheduleStatus(all, current, next)
             }
@@ -196,7 +196,7 @@ object MatchSessionStore {
     }
 
     private suspend fun refreshScheduleAndRoster() {
-        _scheduleStatus.value = "正在同步 Riot 全球赛事分页赛程…"
+        _scheduleStatus.value = "正在同步 Unified Schedule 全球赛事…"
         try {
             val matches = scheduleSource.fetchLeagueSchedule()
             _schedule.value = matches
@@ -227,7 +227,7 @@ object MatchSessionStore {
             _targetMatch.value = homepageTarget
             LiveMatchTargetRegistry.update(homepageTarget)
             _scheduleStatus.value = if (homepageTarget == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else center.statusMessage
 
             // Post-match recovery is independent from the live target. Always resolve the most
@@ -313,7 +313,7 @@ object MatchSessionStore {
     private suspend fun refreshPreMatchFromTarget(target: ScheduledEsportsMatch): String {
         val left = target.teams.getOrNull(0) ?: return "0/2"
         val right = target.teams.getOrNull(1) ?: return "0/2"
-        _rosterStatus.value = "ROSTER · 正在同步 Riot getTeams…"
+        _rosterStatus.value = "ROSTER · 正在同步队伍资料源…"
 
         val leftDetails = runCatching {
             teamLookupSlug(left)?.let { teamSource.fetchTeam(it) }
@@ -364,7 +364,7 @@ object MatchSessionStore {
             redRecentSeries = rightRecent,
             recentHeadToHead = recentH2h
         )
-        _rosterStatus.value = "ROSTER · RIOT GETTEAMS $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        _rosterStatus.value = "ROSTER · TEAM SOURCES $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
         return "$connectedCount/2"
     }
 
@@ -427,7 +427,7 @@ object MatchSessionStore {
             scoreAgainst = scoreAgainst,
             outcome = outcome,
             startTimeIso = match.startTimeIso,
-            source = "Unified Schedule · Riot/Cito"
+            source = "Unified Schedule · Riot/Cito/International Mirror"
         )
     }
 
@@ -488,7 +488,7 @@ object MatchSessionStore {
         if (team.recordWins > 0 || team.recordLosses > 0) {
             "${team.recordWins}W-${team.recordLosses}L"
         } else {
-            "RIOT SCHEDULE"
+            "UNIFIED SCHEDULE"
         }
 
     private fun matchesHomepageSubscription(match: ScheduledEsportsMatch): Boolean {
@@ -547,7 +547,7 @@ object MatchSessionStore {
         val completed = matches.count(::isCompletedState)
         val currentText = current?.let { "${scheduleActivityLabel(it)} ${teamsLabel(it)}" } ?: "NO ACTIVE EVENT"
         val nextText = next?.let { "NEXT ${teamsLabel(it)} ${formatLocalDateTime(it.startTimeIso)}" } ?: "NO NEXT"
-        return "${RiotResilientHttp.sourceLabel()} · Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
+        return "Unified Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
     }
 
     private fun teamsLabel(match: ScheduledEsportsMatch): String =

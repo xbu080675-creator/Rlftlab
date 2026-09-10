@@ -176,6 +176,24 @@ internal class LolEsportsLiveDataSource(
 
         while (currentCoroutineContext().isActive) {
             try {
+                val registeredTarget = LiveMatchTargetRegistry.snapshot()
+                if (registeredTarget != null && isExternalProviderTarget(registeredTarget)) {
+                    currentEvent = null
+                    knownGames = emptyList()
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+                    lockedFromSchedule = false
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "Riot LiveStats · 当前赛事使用非 Riot Event ID，等待其它实时源",
+                        eventId = registeredTarget.eventId,
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(5_000)
+                    continue
+                }
+
                 if (currentEvent == null) {
                     val scheduled = LiveMatchTargetRegistry.snapshot()
                     if (scheduled != null && scheduled.eventId.isNotBlank()) {
@@ -391,6 +409,9 @@ internal class LolEsportsLiveDataSource(
 
     private suspend fun getJson(url: String): JSONObject =
         RiotResilientHttp.getJson(url, connectTimeoutMs = 5_000, readTimeoutMs = 5_000)
+
+    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =
+        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")
 
     private fun teamLabel(match: ScheduledEsportsMatch): String =
         match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }

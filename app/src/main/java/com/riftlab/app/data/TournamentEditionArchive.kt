@@ -147,6 +147,13 @@ object TournamentEditionArchiveStore {
         )
         persist(_state.value.editions)
 
+        if (isExternalProviderEdition(record)) {
+            _state.value = _state.value.copy(
+                statusMessage = "${record.displayName} · Provider mirror 档案已载入；未提供的 Standings / Patch / Awards 保持未知"
+            )
+            return
+        }
+
         hydrateJob?.cancel()
         hydrateJob = scope.launch {
             val fetchedStandings = runCatching {
@@ -291,7 +298,7 @@ object TournamentEditionArchiveStore {
             followingCurrent = manualSelectedTournamentId.isBlank(),
             lastRefreshEpochMs = now,
             statusMessage = when {
-                ordered.isEmpty() -> "Riot Tournament Directory · 当前没有可归档届次"
+                ordered.isEmpty() -> "Tournament Directory · 当前没有可归档届次"
                 detail == null -> "已归档 ${ordered.size} 个 Tournament Edition"
                 manualSelectedTournamentId.isNotBlank() -> "已归档 ${ordered.size} 个 Tournament Edition · 浏览 ${detail.edition.displayName}"
                 else -> "已归档 ${ordered.size} 个 Tournament Edition · 当前 ${detail.edition.displayName}"
@@ -302,6 +309,7 @@ object TournamentEditionArchiveStore {
     }
 
     private fun maybeAutoHydrateCurrentEdition(record: TournamentEditionArchiveRecord) {
+        if (isExternalProviderEdition(record)) return
         if (cachedHydratedHistory(record.tournamentId) != null) return
         val now = System.currentTimeMillis()
         if (autoHydrateTournamentId == record.tournamentId && now - autoHydrateAttemptEpochMs < 15L * 60L * 1000L) return
@@ -398,20 +406,32 @@ object TournamentEditionArchiveStore {
             research = research,
             slots = mergedSlots,
             provenance = buildList {
-                add(
-                    DataProvenance(
-                        sourceId = "riot-tournament-directory",
-                        displayName = "Riot Tournament Directory",
-                        authority = DataAuthority.PROVIDER,
-                        freshness = DataFreshnessClass.DAILY,
-                        verified = false
+                if (isExternalProviderEdition(record)) {
+                    add(
+                        DataProvenance(
+                            sourceId = "international-tournament-mirror",
+                            displayName = "RFT.gg public event mirror",
+                            authority = DataAuthority.PROVIDER,
+                            freshness = DataFreshnessClass.HOURLY,
+                            verified = false
+                        )
                     )
-                )
+                } else {
+                    add(
+                        DataProvenance(
+                            sourceId = "riot-tournament-directory",
+                            displayName = "Riot Tournament Directory",
+                            authority = DataAuthority.PROVIDER,
+                            freshness = DataFreshnessClass.DAILY,
+                            verified = false
+                        )
+                    )
+                }
                 if (matches.isNotEmpty()) {
                     add(
                         DataProvenance(
                             sourceId = "unified-schedule",
-                            displayName = "RiftLab Unified Schedule (Riot/Cito)",
+                            displayName = "RiftLab Unified Schedule (Riot/Cito/International Mirror)",
                             authority = DataAuthority.PROVIDER,
                             freshness = DataFreshnessClass.MINUTES,
                             verified = false
@@ -503,7 +523,7 @@ object TournamentEditionArchiveStore {
                     edition.family,
                     edition.stage.takeIf { it.isNotBlank() }
                 ).joinToString(" · ").ifBlank { edition.displayName },
-                source = "Riot Tournament Directory"
+                source = if (isExternalProviderEdition(edition)) "RFT.gg public event mirror" else "Riot Tournament Directory"
             ),
             TournamentEditionSlot(
                 key = "patch",
@@ -585,7 +605,7 @@ object TournamentEditionArchiveStore {
                     else -> TournamentEditionSlotState.PARTIAL
                 },
                 detail = if (matches.isEmpty()) "当前分页没有该届比赛；保留届次实体等待历史回填" else "当前已归档 ${matches.size} 场 Series",
-                source = if (history?.completedSeries?.isNotEmpty() == true) history.completedEventsSource else "RiftLab Unified Schedule (Riot/Cito)"
+                source = if (history?.completedSeries?.isNotEmpty() == true) history.completedEventsSource else "RiftLab Unified Schedule (Riot/Cito/International Mirror)"
             ),
             TournamentEditionSlot(
                 key = "standings",
@@ -720,6 +740,9 @@ object TournamentEditionArchiveStore {
         val normalized = value.lowercase().replace("_", "").replace("-", "").replace(" ", "")
         return normalized.contains("complete") || normalized.contains("finished")
     }
+
+    private fun isExternalProviderEdition(record: TournamentEditionArchiveRecord): Boolean =
+        record.tournamentId.startsWith("rft-event:") || record.leagueId.startsWith("rft-event:")
 
     private fun hasStandingsRows(standings: TournamentStandings): Boolean = standings.stages.any { stage ->
         stage.sections.any { it.rankings.isNotEmpty() || it.matches.isNotEmpty() }
