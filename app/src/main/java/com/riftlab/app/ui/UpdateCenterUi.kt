@@ -53,6 +53,14 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
 
             if (state.sourceLabel.isNotBlank()) {
                 Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 9.sp)
+                if (state.sourceLabel == "GitHub 更新加速") {
+                    Text(
+                        "仅作用于本次 RiftLab GitHub 更新请求 · 非 VPN / 非系统代理",
+                        color = RiftMuted,
+                        fontSize = 8.sp,
+                        lineHeight = 12.sp
+                    )
+                }
             }
             Text(state.status, color = if (state.available) RiftCyan else RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
 

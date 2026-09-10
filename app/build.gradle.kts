@@ -12,14 +12,15 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
     devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
-val defaultOtaCnManifestUrl =
-    "https://gitee.com/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/latest.json"
-val otaCnManifestUrl = providers.gradleProperty("RIFTLAB_OTA_PRIMARY_MANIFEST_URL")
+// Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
+// The built-in dev endpoint can be replaced at build time without changing updater code.
+val defaultGithubAcceleratorBaseUrl = "https://gh-proxy.com/"
+val githubAcceleratorBaseUrl = providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URL")
     .orElse("")
     .get()
     .trim()
-    .ifBlank { defaultOtaCnManifestUrl }
-val otaCnManifestLiteral = otaCnManifestUrl
+    .ifBlank { defaultGithubAcceleratorBaseUrl }
+val githubAcceleratorBaseLiteral = githubAcceleratorBaseUrl
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
@@ -33,7 +34,11 @@ android {
         targetSdk = 36
         versionCode = 59
         versionName = "1.0.0-dev.59"
-        buildConfigField("String", "OTA_CN_MANIFEST_URL", "\"$otaCnManifestLiteral\"")
+        buildConfigField(
+            "String",
+            "GITHUB_ACCELERATOR_BASE_URL",
+            "\"$githubAcceleratorBaseLiteral\""
+        )
     }
 
     // Public DEV identity: used only so test builds can overwrite each other.
@@ -127,4 +132,4 @@ dependencies {
 
 // dev.58: fix annual research compilation and add mainland-first dual-channel OTA with verified GitHub fallback.
 
-// dev.59: GitHub remains the only build/version source; Gitee dev-latest Release becomes the default mainland OTA mirror, with GitHub fallback and optional S3 extension.
+// dev.59: GitHub remains the only build/version/release source. The app tries GitHub directly first, then temporarily enables a GitHub-only accelerator for manifest/APK requests, supports Range resume, and releases the accelerated connection immediately after the update request.

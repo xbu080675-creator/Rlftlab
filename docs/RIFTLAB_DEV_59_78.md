@@ -2,7 +2,7 @@
 
 > 基线：`main` / `1.0.0-dev.58`
 >
-> 原则：GitHub 是唯一主仓库与版本真源；Gitee 只作为中国大陆镜像与 OTA 分发节点，不反向决定版本历史。
+> 原则：GitHub 是唯一主仓库、版本真源、构建源和正式 Release 源；Gitee 只作为中国大陆源码镜像，不反向决定版本历史，也不承担 APK 主分发。
 >
 > 当前主线：先把赛事内容与数据完整度补齐，再把已有的赛程、战队、实时状态、赛后、Timeline、赛事规则/抽签/研究档案能力汇入“沙盘”。
 
@@ -27,7 +27,7 @@
 当前仍有几条明显缺口：
 
 1. `DEV_CHANGELOG.txt` 的可见记录落后于实际 `dev.58`，需要把版本史重新对齐；
-2. 当前大陆 OTA 文档仍以通用 S3-compatible 对象存储为主，下一步需要正式接入 Gitee Release 镜像；
+2. dev.58 的大陆 OTA 方案依赖额外镜像分发，dev.59 改为 GitHub 唯一 Release + APP 内请求级 GitHub 更新加速，避免跨境大文件二次上传和镜像附件体积限制；
 3. 赛事研究层已经有“版本 / 规则 / 抽签 / 赛程 / 排名”槽位，但大量赛事仍停留在 provider/待同步状态，内容覆盖率还不够；
 4. 赛前阵容、Rank、状态、转会，赛中事件，赛后完整选手/英雄/装备/资源数据仍需要继续补齐；
 5. 目前没有独立 Sandbox / 沙盘模块，沙盘应建立在真实赛事模型上，而不是另做一套 Mock 游戏。
@@ -36,18 +36,21 @@
 
 # 第一阶段：赛事数据补全与国内分发稳定化
 
-## dev.59 — Gitee 国内 OTA 镜像正式接管优先通道
+## dev.59 — GitHub 唯一 Release + APP 内更新加速
 
-目标：完成 GitHub → Gitee Release 双发，但保持 GitHub 为唯一版本真源。
+目标：长期保留 GitHub 作为唯一 APK 正式发布源，同时解决中国大陆检查更新与下载链路不稳定的问题。
 
-- GitHub Actions 构建 APK 与 `latest.json`；
-- Gitee 只接收 Release 附件，不在 Gitee 重新构建；
-- 客户端优先读取 Gitee `latest.json` / APK，失败自动回 GitHub `dev-latest`；
-- manifest 保留 SHA-256、package、versionCode、签名证书校验；
-- 发布顺序保持“APK 先上传，latest.json 最后切换”；
-- 修正文档，把“通用 S3 OTA”调整为“Gitee 国内镜像 + 可选对象存储扩展”。
+- GitHub Actions 构建 APK 与 `latest.json`，只发布到 GitHub 固定 `dev-latest` Release；
+- 发布顺序保持“APK 先上传，latest.json 最后切换”，再清理旧 APK；
+- 客户端检查更新先直连 GitHub，失败或超时才临时启用 GitHub 更新加速；
+- 更新加速只允许访问 RiftLab 官方 GitHub `dev-latest` manifest / APK 白名单，不支持任意 URL；
+- 不创建 `VpnService`，不修改系统代理，不接管其他 APP、赛事数据、直播、回放或普通 API 流量；
+- 加速请求结束后立即断开，不保持系统级网络状态；
+- APK 下载支持 HTTP Range 断点续传，直连中断后可从加速通道继续；
+- manifest / APK 保留 HTTPS、SHA-256、package、versionCode、固定 DEV 签名证书校验；
+- Gitee 继续作为源码镜像，不承担 APK 主分发；S3 对象存储不再是 dev.59 必需依赖。
 
-验收：大陆网络下更新无需 GitHub 直连也可完成；Gitee 故障时 GitHub 兜底不影响更新。
+验收：GitHub 可直连时完全不经过加速节点；GitHub 直连不稳定时，仅更新请求临时走加速通道；下载中断后可续传；加速层无法把非 RiftLab GitHub Release URL 注入更新流程；构建发布链不再等待 Gitee 大文件上传。
 
 ## dev.60 — 版本史与数据源治理清账
 

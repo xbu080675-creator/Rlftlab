@@ -50,8 +50,8 @@ jobs:
           gradle-version: '9.6.0'
       - name: Build fixed-signed debug APK
         env:
-          RIFTLAB_OTA_CN_MANIFEST_URL: ${{ vars.RIFTLAB_OTA_CN_MANIFEST_URL }}
-        run: gradle :app:assembleDebug -PRIFTLAB_OTA_CN_MANIFEST_URL="${RIFTLAB_OTA_CN_MANIFEST_URL:-}"
+          RIFTLAB_GITHUB_ACCELERATOR_BASE_URL: ${{ vars.RIFTLAB_GITHUB_ACCELERATOR_BASE_URL }}
+        run: gradle :app:assembleDebug -PRIFTLAB_GITHUB_ACCELERATOR_BASE_URL="${RIFTLAB_GITHUB_ACCELERATOR_BASE_URL:-}"
       - name: Verify fixed dev signature
         shell: bash
         run: |
@@ -115,7 +115,7 @@ jobs:
           echo "RIFTLAB_VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "RIFTLAB_APK_NAME=$APK_NAME" >> "$GITHUB_ENV"
           echo "RIFTLAB_APK_PATH=$OUT" >> "$GITHUB_ENV"
-      - name: Publish dev-latest GitHub fallback
+      - name: Publish canonical GitHub dev-latest OTA
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -123,13 +123,28 @@ jobs:
           set -euo pipefail
           git tag -f dev-latest "$GITHUB_SHA"
           git push -f origin refs/tags/dev-latest
+
           if gh release view dev-latest >/dev/null 2>&1; then
             RID=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/dev-latest" --jq .id)
-            gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate --jq '.[] | select(.name | endswith(".apk")) | .id' |
+
+            # Remove only an existing copy of this exact APK before publishing the new bytes.
+            gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate \
+              --jq ".[] | select(.name == \"$RIFTLAB_APK_NAME\") | .id" |
               while read -r AID; do
                 [ -n "$AID" ] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$AID"
               done
+
+            # Publish APK first. latest.json is switched only after the new APK is available.
             gh release upload dev-latest "$RIFTLAB_APK_PATH"
+            gh release upload dev-latest /tmp/latest.json --clobber
+
+            # Once the stable manifest points at the new APK, stale APKs are safe to remove.
+            gh api "repos/${GITHUB_REPOSITORY}/releases/$RID/assets" --paginate \
+              --jq ".[] | select((.name | endswith(\".apk\")) and .name != \"$RIFTLAB_APK_NAME\") | .id" |
+              while read -r AID; do
+                [ -n "$AID" ] && gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$AID"
+              done
+
             gh api --method PATCH "repos/${GITHUB_REPOSITORY}/releases/$RID" \
               -f name="RiftLab $RIFTLAB_VERSION_NAME · DEV" \
               -f body="$(cat /tmp/riftlab-release.txt)" \
@@ -141,190 +156,7 @@ jobs:
               --title "RiftLab $RIFTLAB_VERSION_NAME · DEV" \
               --notes-file /tmp/riftlab-release.txt \
               --prerelease
-          fi
-      - name: Publish mainland Gitee Release mirror
-        timeout-minutes: 8
-        env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          GITEE_OWNER: xiaobaiaaa1
-          GITEE_REPO: Rlftlab
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -z "${GITEE_TOKEN:-}" ]; then
-            echo "::notice::GITEE_TOKEN is not configured; Gitee OTA mirror publish skipped. GitHub fallback is already available."
-            exit 0
+            gh release upload dev-latest /tmp/latest.json
           fi
 
-          API="https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}"
-          TAG="dev-latest"
-          AUTH="Authorization: Bearer ${GITEE_TOKEN}"
-          RELEASE_JSON=$(mktemp)
-
-          echo "Gitee: lookup release $TAG"
-          STATUS=$(curl -sS --connect-timeout 10 --max-time 30 -o "$RELEASE_JSON" -w '%{http_code}' \
-            -H "$AUTH" -H 'Accept: application/json' \
-            "$API/releases/tags/$TAG")
-
-          RID=""
-          if [ "$STATUS" = "200" ]; then
-            RID=$(jq -r 'if type == "object" then (.id // empty) else empty end' "$RELEASE_JSON")
-            if ! [[ "$RID" =~ ^[0-9]+$ ]]; then
-              echo "::notice::Gitee returned HTTP 200 without a dev-latest Release; creating it."
-              RID=""
-            fi
-          elif [ "$STATUS" != "404" ]; then
-            cat "$RELEASE_JSON"
-            echo "Gitee release lookup failed with HTTP $STATUS" >&2
-            exit 1
-          fi
-
-          if [ -z "$RID" ]; then
-            echo "Gitee: create release $TAG"
-            CREATE_JSON=$(mktemp)
-            CREATE_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 -o "$CREATE_JSON" -w '%{http_code}' --retry 1 --request POST \
-              -H "$AUTH" -H 'Accept: application/json' \
-              --data-urlencode "tag_name=$TAG" \
-              --data-urlencode "name=RiftLab $RIFTLAB_VERSION_NAME · DEV Mirror" \
-              --data-urlencode "body@/tmp/riftlab-release.txt" \
-              --data-urlencode "target_commitish=main" \
-              --data-urlencode "prerelease=true" \
-              "$API/releases")
-            if [ "$CREATE_STATUS" -lt 200 ] || [ "$CREATE_STATUS" -ge 300 ]; then
-              cat "$CREATE_JSON"
-              echo "Gitee release create failed with HTTP $CREATE_STATUS" >&2
-              exit 1
-            fi
-            RID=$(jq -r 'if type == "object" then (.id // empty) else empty end' "$CREATE_JSON")
-            cp "$CREATE_JSON" "$RELEASE_JSON"
-          fi
-
-          if ! [[ "$RID" =~ ^[0-9]+$ ]]; then
-            cat "$RELEASE_JSON"
-            echo "Gitee release id is invalid after lookup/create: ${RID:-<empty>}" >&2
-            exit 1
-          fi
-          echo "Gitee release id: $RID"
-
-          # Do not PATCH release metadata here. Gitee currently returns HTTP 400 for that
-          # request on this dev-latest release, while attachment operations are independent.
-          list_assets() {
-            curl -fsS --connect-timeout 10 --max-time 30 --retry 1 \
-              -H "$AUTH" -H 'Accept: application/json' \
-              "$API/releases/$RID/attach_files?per_page=100&direction=desc"
-          }
-
-          delete_asset_id() {
-            local aid="$1"
-            curl -fsS --connect-timeout 10 --max-time 30 --retry 1 --request DELETE \
-              -H "$AUTH" \
-              "$API/releases/$RID/attach_files/$aid" >/dev/null
-          }
-
-          delete_assets_named() {
-            local wanted="$1"
-            local assets
-            echo "Gitee: inspect existing attachment $wanted" >&2
-            assets=$(list_assets)
-            while read -r aid; do
-              [ -n "$aid" ] && delete_asset_id "$aid"
-            done < <(jq -r --arg wanted "$wanted" '.[] | select((.name // "") == $wanted) | .id' <<<"$assets")
-          }
-
-          # Idempotent retry: remove an existing copy of this exact versioned APK only.
-          delete_assets_named "$RIFTLAB_APK_NAME"
-
-          # Gitee's attachment endpoint expects OAuth access_token as a multipart field.
-          # Keep lookup/list/delete on Bearer auth, but match Gitee upload clients here.
-          echo "Gitee: upload $RIFTLAB_APK_NAME"
-          curl --http1.1 -fsS --connect-timeout 10 --max-time 180 --request POST \
-            -H 'Accept: application/json' -H 'Expect:' \
-            -F "access_token=${GITEE_TOKEN}" \
-            -F "file=@${RIFTLAB_APK_PATH};type=application/octet-stream" \
-            "$API/releases/$RID/attach_files" > /tmp/gitee-apk.json
-          jq -e --arg wanted "$RIFTLAB_APK_NAME" '(.name // "") == $wanted or (.browser_download_url // "" | length > 0)' \
-            /tmp/gitee-apk.json >/dev/null
-
-          # Switch the stable manifest last. A very short replacement gap falls back to GitHub in-app.
-          delete_assets_named "latest.json"
-          echo "Gitee: upload latest.json"
-          curl --http1.1 -fsS --connect-timeout 10 --max-time 60 --request POST \
-            -H 'Accept: application/json' -H 'Expect:' \
-            -F "access_token=${GITEE_TOKEN}" \
-            -F "file=@/tmp/latest.json;type=application/octet-stream" \
-            "$API/releases/$RID/attach_files" > /tmp/gitee-manifest.json
-
-          MANIFEST_URL="https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases/download/${TAG}/latest.json"
-          for attempt in 1 2 3 4; do
-            echo "Gitee: verify latest.json attempt $attempt"
-            if curl -fsSL --retry 1 --connect-timeout 8 --max-time 30 -H 'Cache-Control: no-cache' \
-              "${MANIFEST_URL}?ci=${GITHUB_RUN_ID}-${attempt}" > /tmp/gitee-latest-check.json; then
-              if python3 - "$RIFTLAB_VERSION_CODE" "$RIFTLAB_APK_NAME" <<'PY'
-          import json, sys
-          expected_code = int(sys.argv[1])
-          expected_apk = sys.argv[2]
-          with open('/tmp/gitee-latest-check.json', encoding='utf-8') as f:
-              data = json.load(f)
-          assert int(data['versionCode']) == expected_code, data
-          assert data['apk'] == expected_apk, data
-          print('Gitee manifest verified:', data['versionName'], data['sha256'])
-          PY
-              then
-                break
-              fi
-            fi
-            if [ "$attempt" = "4" ]; then
-              echo "Gitee stable latest.json verification failed" >&2
-              exit 1
-            fi
-            sleep $((attempt * 3))
-          done
-
-          # After latest.json points at the new APK, stale versioned APKs can be removed safely.
-          echo "Gitee: clean stale APK attachments"
-          assets=$(list_assets)
-          while read -r aid; do
-            [ -n "$aid" ] && delete_asset_id "$aid"
-          done < <(jq -r --arg keep "$RIFTLAB_APK_NAME" '.[] | select(((.name // "") | endswith(".apk")) and ((.name // "") != $keep)) | .id' <<<"$assets")
-
-          echo "Gitee mainland OTA mirror published: $MANIFEST_URL"
-      - name: Publish optional S3-compatible OTA extension
-        continue-on-error: true
-        env:
-          OTA_CN_MANIFEST_URL: ${{ vars.RIFTLAB_OTA_CN_MANIFEST_URL }}
-          OTA_CN_S3_ENDPOINT: ${{ vars.RIFTLAB_OTA_CN_S3_ENDPOINT }}
-          OTA_CN_BUCKET: ${{ vars.RIFTLAB_OTA_CN_BUCKET }}
-          OTA_CN_PREFIX: ${{ vars.RIFTLAB_OTA_CN_PREFIX }}
-          OTA_CN_REGION: ${{ vars.RIFTLAB_OTA_CN_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.RIFTLAB_OTA_CN_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.RIFTLAB_OTA_CN_SECRET_ACCESS_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          required=(OTA_CN_MANIFEST_URL OTA_CN_S3_ENDPOINT OTA_CN_BUCKET OTA_CN_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY)
-          for name in "${required[@]}"; do
-            if [ -z "${!name:-}" ]; then
-              echo "::notice::Optional S3 OTA extension is not fully configured; skipping upload."
-              exit 0
-            fi
-          done
-          python3 -m pip install --user --quiet awscli
-          export PATH="$HOME/.local/bin:$PATH"
-          aws configure set default.s3.addressing_style virtual
-          PREFIX="${OTA_CN_PREFIX:-riftlab/dev}"
-          PREFIX="${PREFIX#/}"
-          PREFIX="${PREFIX%/}"
-          APK_KEY="${PREFIX:+$PREFIX/}$RIFTLAB_APK_NAME"
-          MANIFEST_KEY="${PREFIX:+$PREFIX/}latest.json"
-          aws s3 cp "$RIFTLAB_APK_PATH" "s3://$OTA_CN_BUCKET/$APK_KEY" \
-            --endpoint-url "$OTA_CN_S3_ENDPOINT" --region "$OTA_CN_REGION" \
-            --content-type "application/vnd.android.package-archive" \
-            --cache-control "public,max-age=31536000,immutable" --no-progress
-          aws s3 cp /tmp/latest.json "s3://$OTA_CN_BUCKET/$MANIFEST_KEY" \
-            --endpoint-url "$OTA_CN_S3_ENDPOINT" --region "$OTA_CN_REGION" \
-            --content-type "application/json; charset=utf-8" \
-            --cache-control "no-cache,no-store,must-revalidate" --no-progress
-          curl -fsSL --retry 2 --connect-timeout 8 -H 'Cache-Control: no-cache' \
-            "${OTA_CN_MANIFEST_URL}?ci=${GITHUB_RUN_ID}" |
-            python3 -c 'import json,sys; d=json.load(sys.stdin); assert int(d["versionCode"]) == int(sys.argv[1]); print("S3 manifest verified", d["versionName"], d["sha256"])' \
-            "$RIFTLAB_VERSION_CODE"
+          echo "GitHub OTA manifest: https://github.com/${GITHUB_REPOSITORY}/releases/download/dev-latest/latest.json"
