@@ -1,0 +1,33 @@
+name: dev66 updater patch
+
+on:
+  push:
+    branches: [ dev66-mainland-ota-docs ]
+    paths:
+      - 'tools/dev66_patch_updater.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev66-mainland-ota-docs
+      - name: Apply updater robustness patch
+        run: python3 tools/dev66_patch_updater.py
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/update/AppUpdateManager.kt
+          git commit -m "fix(dev66): handle stale mainland OTA mirror"
+          git push origin HEAD:dev66-mainland-ota-docs
