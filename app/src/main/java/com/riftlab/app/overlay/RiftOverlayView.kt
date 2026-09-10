@@ -20,6 +20,7 @@ import com.riftlab.app.data.LiveSnapshot
 import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.LiveSourceStatus
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.ui.RiftTeamSkins
 import kotlin.math.abs
@@ -78,7 +79,7 @@ class RiftOverlayView(
 
     private val metrics = text("K —   T —   D —", 12f, 0xFFD1D7E2.toInt())
     private val goldLine = text("GOLD — : —   LEAD —", 11f, 0xFFD1D7E2.toInt())
-    private val event = text("STATUS · 等待 Riot 数据源", 10f, 0xFF8C98AA.toInt())
+    private val event = text("STATUS · 等待实时 Provider", 10f, 0xFF8C98AA.toInt())
     private val hint = text("轻点切换尺寸 · 拖动可移动", 9f, 0xFF667386.toInt())
     private val accent = View(context)
     private val teams = LinearLayout(context).apply {
@@ -145,6 +146,10 @@ class RiftOverlayView(
         target: ScheduledEsportsMatch?
     ) {
         val isLive = status.phase == LiveSourcePhase.LIVE
+        val unifiedEvent = if (isLive && snapshot.game > 0) {
+            MatchTimelineStore.find(snapshot)?.events
+                ?.lastOrNull { it.seconds <= snapshot.elapsedSeconds }
+        } else null
         val scheduledLeft = target?.teams?.getOrNull(0)?.displayCode().orEmpty()
         val scheduledRight = target?.teams?.getOrNull(1)?.displayCode().orEmpty()
         val left = if (isLive) snapshot.blue else scheduledLeft.ifBlank { "—" }
@@ -186,7 +191,9 @@ class RiftOverlayView(
             miniCenter.setTextColor(leadColor)
             metrics.text = "K ${snapshot.blueKills}:${snapshot.redKills}   T ${snapshot.blueTowers}:${snapshot.redTowers}   D ${snapshot.blueDragons}:${snapshot.redDragons}"
             goldLine.text = "GOLD %.1fK : %.1fK   LEAD $diff".format(snapshot.blueGold / 1000f, snapshot.redGold / 1000f)
-            event.text = "EVENT · ${snapshot.latestEvent}"
+            event.text = unifiedEvent?.let { current ->
+                "EVENT · ${current.type.name} · ${current.title}"
+            } ?: "EVENT · 统一事件等待可核实节点"
         } else {
             goldDiff.text = "VS"
             goldDiff.setTextColor(palette.muted.toArgb())
