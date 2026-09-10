@@ -1,0 +1,28 @@
+name: dev72 RFT probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-wsci-batch5 ]
+    paths:
+      - '.github/workflows/dev72-rft-probe.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe WSCI page
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --connect-timeout 12 --max-time 30 -A 'RiftLab-DataSync/1.0' 'https://rft.gg/event/wsci-2026' -o /tmp/wsci.html
+          wc -c /tmp/wsci.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('/tmp/wsci.html').read_text(errors='replace')
+          for pat in ['__NEXT_DATA__','WSCI 2026','TES.C','Dplus Challengers','Bilibili Gaming Junior','Recent Matches']:
+              print(pat, bool(re.search(re.escape(pat), s, re.I)))
+          print('nextdata-bytes', len(re.findall(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', s, re.I|re.S)[0]) if re.findall(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', s, re.I|re.S) else 0)
+          print('html-prefix', re.sub(r'\s+',' ',s[:500]))
+          PY
