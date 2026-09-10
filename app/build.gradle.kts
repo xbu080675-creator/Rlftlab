@@ -12,6 +12,19 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
     devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
+// dev.67 icon-only release: keep the generated launcher artwork as text in Git and decode
+// it into build/generated so the exact generated WebP is packaged without adding binary blobs.
+val launcherIconB64 = file("src/main/icon/riftlab_launcher.webp.b64")
+val generatedLauncherResDir = layout.buildDirectory.dir("generated/riftlabLauncher/res").get().asFile
+val generatedLauncherIcon = generatedLauncherResDir.resolve("drawable-nodpi/ic_launcher_riftlab.webp")
+if (launcherIconB64.exists()) {
+    generatedLauncherIcon.parentFile.mkdirs()
+    val bytes = Base64.getDecoder().decode(launcherIconB64.readText().filterNot(Char::isWhitespace))
+    if (!generatedLauncherIcon.exists() || !generatedLauncherIcon.readBytes().contentEquals(bytes)) {
+        generatedLauncherIcon.writeBytes(bytes)
+    }
+}
+
 // Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
 // dev.65 stops trusting one fixed public node: the app probes the actual Release APK and picks the
 // fastest path for the user's current network, then keeps Range-resume fallback across the pool.
@@ -31,13 +44,14 @@ val githubAcceleratorBaseUrlsLiteral = githubAcceleratorBaseUrls
 android {
     namespace = "com.riftlab.app"
     compileSdk = 36
+    sourceSets["main"].res.srcDir(generatedLauncherResDir)
 
     defaultConfig {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 66
-        versionName = "1.0.0-dev.66"
+        versionCode = 67
+        versionName = "1.0.0-dev.67"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -151,3 +165,5 @@ dependencies {
 // dev.65: make GitHub OTA acceleration network-adaptive. Probe the real APK through direct GitHub and multiple GitHub-only accelerators, rank by measured throughput, download from the fastest path, keep Range resume/fallback, and stop sending no-cache on immutable versioned APK assets so CDN caches can actually help.
 
 // dev.66: keep Gitee OTA retired. Continue GitHub canonical dev-latest + request-scoped adaptive GitHub acceleration; refresh project/development documentation.
+
+// dev.67: icon-only repack. No product/runtime changes; package the new RiftLab launcher icon and republish OTA for normal-network download testing without VPN/system proxy.

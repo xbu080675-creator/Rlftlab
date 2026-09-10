@@ -24,6 +24,8 @@
 
     <application
         android:name=".RiftLabApplication"
+        android:icon="@drawable/ic_launcher_riftlab"
+        android:roundIcon="@drawable/ic_launcher_riftlab"
         android:hardwareAccelerated="true"
         android:allowBackup="true"
         android:label="RiftLab"
