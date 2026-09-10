@@ -194,7 +194,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                 val biliPart = biliVod?.parts?.firstOrNull { it.game == game }
                 val selected = game == selectedGame
                 Column(
-                    Modifier.width(156.dp)
+                    Modifier.width(132.dp)
                         .clickable { selectedGame = game }
                         .background(if (selected) RiftPanel else RiftPanelAlt, shape)
                         .border(1.dp, if (selected) RiftCyan.copy(alpha = 0.55f) else RiftLine, shape)
@@ -248,7 +248,7 @@ private fun ReplaySourceChip(label: String, selected: Boolean, modifier: Modifie
             .padding(horizontal = 9.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (selected) RiftCyan else RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(label, color = if (selected) RiftCyan else RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
 
@@ -288,7 +288,18 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
         }
         Spacer(Modifier.height(5.dp))
         if (youtubeEmbed) {
-            OfficialWebVideoPlayer(videoId)
+            val startSeconds = link?.offsetSeconds?.coerceAtLeast(0) ?: 0
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Riot VOD 对齐", color = RiftMuted, fontSize = 9.sp)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (startSeconds > 0) "同步起点 ${formatReplayTimestamp(startSeconds)}" else "官方源未提供额外偏移",
+                    color = if (startSeconds > 0) RiftCyan else RiftMuted,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            OfficialWebVideoPlayer(videoId, startSeconds)
         } else {
             val shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
             Column(
@@ -314,10 +325,10 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
 }
 
 @Composable
-private fun OfficialWebVideoPlayer(videoId: String) {
+private fun OfficialWebVideoPlayer(videoId: String, startSeconds: Int) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
-    var sessionNonce by remember(videoId) { mutableIntStateOf(0) }
+    var sessionNonce by remember(videoId, startSeconds) { mutableIntStateOf(0) }
     val chromeClient = remember(context, activity) { EmbeddedVideoChromeClient(context, activity) }
     val webView = remember(context) {
         WebView(context).apply {
@@ -339,11 +350,11 @@ private fun OfficialWebVideoPlayer(videoId: String) {
         }
     }
 
-    LaunchedEffect(videoId, sessionNonce, webView) {
+    LaunchedEffect(videoId, startSeconds, sessionNonce, webView) {
         webView.stopLoading()
         webView.loadDataWithBaseURL(
             "https://www.youtube.com/",
-            youtubeEmbedDocument(videoId),
+            youtubeEmbedDocument(videoId, startSeconds),
             "text/html",
             "UTF-8",
             null
@@ -380,8 +391,9 @@ private fun OfficialWebVideoPlayer(videoId: String) {
     }
 }
 
-private fun youtubeEmbedDocument(videoId: String): String {
+private fun youtubeEmbedDocument(videoId: String, startSeconds: Int): String {
     val safeId = videoId.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
+    val safeStart = startSeconds.coerceAtLeast(0)
     return """<!doctype html>
 <html>
 <head>
@@ -393,11 +405,19 @@ html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#
 </head>
 <body>
 <iframe id="frame"
-  src="https://www.youtube.com/embed/$safeId?playsinline=1&rel=0&fs=1"
+  src="https://www.youtube.com/embed/$safeId?playsinline=1&rel=0&fs=1&start=$safeStart"
   allow="autoplay; encrypted-media; picture-in-picture; web-share; fullscreen"
   allowfullscreen></iframe>
 </body>
 </html>"""
+}
+
+private fun formatReplayTimestamp(seconds: Int): String {
+    val safe = seconds.coerceAtLeast(0)
+    val hours = safe / 3600
+    val minutes = (safe % 3600) / 60
+    val secs = safe % 60
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, secs) else "%02d:%02d".format(minutes, secs)
 }
 
 private fun configureOfficialWebView(webView: WebView, chromeClient: WebChromeClient) {
