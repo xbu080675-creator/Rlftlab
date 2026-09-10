@@ -24,7 +24,8 @@ import com.riftlab.app.data.DataCoverageState
 
 /**
  * dev.68 makes missing esports data visible instead of masking it with placeholders.
- * dev.69 keeps the coverage meter and adds the durable Tournament Edition archive directly below it.
+ * dev.69 adds the durable Tournament Edition archive.
+ * dev.70 adds annual points/qualification routes as an independent data plane below it.
  */
 @Composable
 fun ComprehensiveDataCoveragePanel() {
@@ -69,7 +70,7 @@ fun ComprehensiveDataCoveragePanel() {
         }
 
         Text(
-            "GRAPH  SERIES ${if (graph.series != null) 1 else 0} · GAME ${graph.games.size} · TEAM ${graph.teams.size} · PLAYER ${graph.players.size} · STATS ${graph.playerGameStats.size}",
+            "GRAPH  SERIES ${if (graph.series != null) 1 else 0} · GAME ${graph.games.size} · TEAM ${graph.teams.size} · PLAYER ${graph.players.size} · STATS ${graph.playerGameStats.size} · QUAL ${graph.qualificationPaths.size}",
             color = RiftMuted,
             fontSize = 9.sp
         )
@@ -84,6 +85,8 @@ fun ComprehensiveDataCoveragePanel() {
 
         Spacer(Modifier.height(10.dp))
         TournamentEditionArchiveInlinePanel()
+        Spacer(Modifier.height(10.dp))
+        QualificationPathCenterPanel()
     }
 }
 
