@@ -13,20 +13,31 @@ import com.riftlab.app.overlay.RiftOverlayService
  * Opens the user's preferred viewing app without coupling RiftScreen to the video source.
  * Only known streaming packages are queried; QUERY_ALL_PACKAGES is intentionally avoided.
  */
+enum class StreamRegion {
+    MAINLAND,
+    GLOBAL
+}
+
 enum class StreamPlatform(
     val id: String,
+    val displayName: String,
+    val region: StreamRegion,
     val webUrl: String,
     val packages: List<String>,
     val deepLinks: List<String> = emptyList()
 ) {
     BILIBILI(
         id = "bilibili",
+        displayName = "Bilibili 官方直播",
+        region = StreamRegion.MAINLAND,
         webUrl = "https://live.bilibili.com/6",
         packages = listOf("tv.danmaku.bili"),
         deepLinks = listOf("bilibili://live/6")
     ),
     HUYA(
         id = "huya",
+        displayName = "虎牙 LPL",
+        region = StreamRegion.MAINLAND,
         webUrl = "https://www.huya.com/lpl",
         // Mainland package first; Google Play / overseas package second.
         packages = listOf("com.duowan.kiwi", "com.huya.kiwi"),
@@ -35,6 +46,34 @@ enum class StreamPlatform(
         deepLinks = listOf(
             "https://www.huya.com/660000?source=android&pid=1346609715&hyaction=live&uid=1346609715&platform=7"
         )
+    ),
+    LOL_ESPORTS(
+        id = "lol_esports",
+        displayName = "LoL Esports 官方",
+        region = StreamRegion.GLOBAL,
+        webUrl = "https://lolesports.com/en-US/",
+        packages = emptyList()
+    ),
+    YOUTUBE(
+        id = "youtube",
+        displayName = "YouTube · LoL Esports",
+        region = StreamRegion.GLOBAL,
+        webUrl = "https://www.youtube.com/@lolesports/live",
+        packages = listOf("com.google.android.youtube")
+    ),
+    TWITCH(
+        id = "twitch",
+        displayName = "Twitch · Riot Games",
+        region = StreamRegion.GLOBAL,
+        webUrl = "https://www.twitch.tv/riotgames",
+        packages = listOf("tv.twitch.android.app")
+    ),
+    X_LOLESPORTS(
+        id = "x_lolesports",
+        displayName = "X · @lolesports",
+        region = StreamRegion.GLOBAL,
+        webUrl = "https://x.com/lolesports",
+        packages = listOf("com.twitter.android")
     )
 }
 
@@ -97,7 +136,8 @@ object StreamLauncher {
             if (tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)).setPackage(pkg))) return
         }
 
-        // Final fallback: browser/web association.
+        // Final fallback: browser/web association. Global entries are deliberately just URLs;
+        // RiftLab does not proxy, capture or re-route the user's general network traffic.
         tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)))
     }
 
