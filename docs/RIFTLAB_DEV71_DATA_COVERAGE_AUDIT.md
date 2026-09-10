@@ -129,3 +129,10 @@ dev.71 不要求全世界所有年份一次性达到 100%，但必须做到：
 - Final placement now prefers an explicitly labelled completed Final / Grand Final Series from Riot Completed Events / Unified Schedule.
 - A verified final Series upgrades champion and runner-up from a bracket-shape guess to provider-backed result facts.
 - If only a terminal bracket node exists, the UI continues to say `候选` and the source is explicitly marked `DERIVED`; lower placements stay unknown until a trustworthy placement table exists.
+
+## 2026-09-10 · qualification center handbook tranche
+
+- QualificationCenter now consumes the same Riot Handbook source used by Tournament Governance instead of leaving verified regional rule systems as `UNKNOWN` merely because there are no team routes yet.
+- LCK/LCS/CBLOL are classified as direct-placement systems for the matched 2026 Split 3 editions; LCP remains mixed because the official page explicitly combines top-two direct qualification with a Championship Points slot.
+- LEC intentionally remains mechanism `UNKNOWN` with official evidence because Riot's current page does not fully explain the third Worlds place; the official rule text is still shown.
+- Team-level locked/contending/eliminated states are not inferred from participant lists.
