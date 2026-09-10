@@ -63,6 +63,7 @@ import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineEvent
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.ScheduleMatchPhase
+import com.riftlab.app.data.TimelineEventEvidence
 import com.riftlab.app.data.TimelineEventType
 import kotlinx.coroutines.delay
 
@@ -328,6 +329,15 @@ private fun ReplayAnchorRow(anchor: ReplayAnchor, onSeek: () -> Unit) {
             }
             if (anchor.detail.isNotBlank()) {
                 Text(anchor.detail, color = RiftMuted, fontSize = 8.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 2)
+            }
+            if (anchor.source.isNotBlank()) {
+                Text(
+                    "SOURCE · ${anchor.source}",
+                    color = RiftMuted,
+                    fontSize = 7.sp,
+                    modifier = Modifier.padding(top = 3.dp),
+                    maxLines = 2
+                )
             }
         }
         Text("跳转 ›", color = RiftMuted, fontSize = 8.sp)
@@ -627,10 +637,20 @@ private fun buildReplayAnchors(part: BilibiliVodPart?, localTimeline: GameTimeli
                 title = replayTimelineTitle(event),
                 team = event.team,
                 detail = event.detail,
-                source = "RiftLab 本机实时记录"
+                source = listOf(
+                    replayEvidenceLabel(event.evidence),
+                    event.source.ifBlank { "RiftLab 本机实时记录" }
+                ).filter { it.isNotBlank() }.distinct().joinToString(" · ")
             )
         }
         .sortedBy { it.gameSecond }
+}
+
+private fun replayEvidenceLabel(evidence: TimelineEventEvidence): String = when (evidence) {
+    TimelineEventEvidence.LOCAL_CAPTURE -> "本机采集"
+    TimelineEventEvidence.VERIFIED_DELTA -> "连续帧差分确认"
+    TimelineEventEvidence.DERIVED_WINDOW -> "派生窗口 · 非官方事件分类"
+    TimelineEventEvidence.PROVIDER_EXPLICIT -> "Provider 明确事件"
 }
 
 private fun replayTimelineTitle(event: MatchTimelineEvent): String = when (event.type) {
