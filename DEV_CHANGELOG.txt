@@ -1,3 +1,5 @@
+dev.68：启动 RiftLab 全面数据主线。新增统一 Tournament Edition / Series / Game / Team / Player / Roster / PlayerStats / Standings / Qualification / Timeline 数据契约，加入 OFFICIAL / PROVIDER / DERIVED / LOCAL_CACHE / APK_SEED / USER_INPUT 来源等级与 STATIC / DAILY / HOURLY / MINUTES / REALTIME 刷新等级；新增 ComprehensiveDataCenter，将现有 Schedule、PRE、LIVE、CompletedGame、Standings 持续归一到同一数据图；新增 12 域 Coverage Report 与赛前可视化面板，缺失数据明确显示为部分/待同步/来源异常，不用 Mock 或占位值伪装完整。现有 Riot/Cito/OP.GG/Bilibili/本地归档仍为事实源，OTA 逻辑不变。版本升级至 1.0.0-dev.68 / versionCode 68。
+
 dev.67：仅更新 RiftLab APK 启动器图标并重新封装、签名、分发；不改赛事数据、UI 功能、OTA 逻辑或其他运行时功能。本版本用于在未开启 VPN / 系统代理的普通网络环境下，实测现有 GitHub canonical dev-latest + APP 内请求级 GitHub 加速的更新下载链路。版本升级至 1.0.0-dev.67 / versionCode 67。
 
 dev.66：锁定 RiftLab OTA 架构并补齐开发文档。撤销误重新引入的 Gitee OTA / Gitee Release 二进制镜像依赖；APP 恢复并继续使用 GitHub canonical dev-latest + GitHub 直连/多个 GitHub-only 加速节点真实 APK Range 自适应测速、断点续传和自动换线；GitHub Actions 不上传 APK/latest.json 到 Gitee，不需要 GITEE_TOKEN。SHA-256、包名、versionCode 与固定 DEV 签名校验保持不变。补齐 dev.31～dev.66 开发履历、更新 README/OTA 文档，并从 dev.67 重新排定后续路线。版本升级至 1.0.0-dev.66 / versionCode 66。

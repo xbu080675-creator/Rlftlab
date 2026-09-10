@@ -1,6 +1,6 @@
 # RiftLab dev.67 ～ dev.86 开发路线
 
-> 新基线：`1.0.0-dev.66`
+> 新基线：`1.0.0-dev.67`
 >
 > 说明：旧 `RIFTLAB_DEV_59_78.md` 是 dev.58 时制定的计划。实际开发中 dev.59～dev.66 被 OTA、全球观赛入口与 RiftScreen Draft HUD 等工作占用，因此从这里重新排号，不再让“计划版本号”和“真实已发布版本号”冲突。
 >
@@ -10,29 +10,35 @@
 
 # 第一阶段：清账与赛事内容完整度
 
-## dev.67 — 版本史、工作流与数据来源治理清账
+## dev.67 — Launcher 图标二次更新 / OTA 实机验证
 
-目标：把高速迭代留下的技术债先收口，避免继续叠功能时历史越来越乱。
+实际交付：这一版刻意保持最小变量，只更新 APK Launcher / Round Launcher 图标并重新打包分发，用于验证 dev.66 → dev.67 的 APP 内 OTA。
 
-- 将 `DEV_CHANGELOG.txt`、续篇履历、Gradle 版本说明与 Release 文案对齐；
-- 归档/删除只用于一次迁移的 dev28/dev29/dev49/dev56/dev57 apply/fix workflow；
-- 保留真正长期运行的 OTA、Riot mirror、team/person/staff/esports graph sync；
-- 为 Riot Official / Riot Mirror / OP.GG / Cito / Bilibili / Local Cache / APK Seed 建统一 provenance；
-- UI 明确区分：`官方确认 / Provider 返回 / 结构推导 / 本地缓存 / 待核实`；
-- 对“看起来像事实但其实只是推演”的字段统一加来源约束。
+- 不改赛事数据、PRE / LIVE / POST、RiftScreen 或 OTA 传输逻辑；
+- 中国移动 5G、手机重启并还原网络设置、VPN/系统代理关闭条件下完成实机 OTA；
+- 实测下载约 20 MB/s，检查、下载、校验、覆盖安装闭环通过；
+- Gitee OTA 继续保持废弃。
 
-验收：任意核心数据都能回答“它从哪里来、多久以前更新、失败时退到哪里”。
+该版不再承担原路线中的“治理清账”任务，相关工作并入后续数据治理主线。
 
-## dev.68 — 全球赛事目录完整化
+## dev.68 — 全面数据基线：统一图 + Provenance + Coverage
 
-目标：把“能发现赛事”升级成稳定、长期可浏览的赛事目录。
+目标：从这一版开始，把 RiftLab 从“多个页面各自拿数据”升级成长期可扩展的电竞数据图。全面不等于强行填满字段，而是任意实体都能继续沿关系查询，缺口也必须可见。
 
-- LPL、LCK、LCP、LEC、LTA 及主要次级赛事建立稳定 identity；
-- 国际赛统一 family：First Stand / MSI / Worlds / EWC / Americas Cup / EMEA Masters / Demacia Global / WSCL 等；
-- 赛事目录固定按 `年份 → 赛段/届次 → 阶段` 组织；
-- 同名、改名、次级联赛与主联赛不会互相串档；
-- 目录层级不依赖当前是否存在 LIVE 比赛；
-- 历史赛事可以离线浏览基础档案。
+第一阶段落地：
+
+- 统一 `Tournament Edition → Series → Game → Team → Player` 核心关系；
+- 纳入 Roster、Player Game Stats、Standings、Qualification、Timeline 槽位；
+- 每条数据保留 authority / freshness / source provenance；
+- 统一 12 个覆盖域：赛事、赛程、队伍、选手、阵容、PRE、LIVE、POST、排名、晋级、历史、来源；
+- 覆盖状态固定为 `完整 / 部分 / 待同步 / 来源异常 / 不适用`；
+- `ComprehensiveDataCenter` 直接监听现有真实 Store，不重复抓同一数据；
+- PRE 页面增加真实 Coverage 面板，明确暴露缺失字段；
+- LPL、LCK、LCP、LEC、LTA 与 Worlds / MSI / First Stand / EWC 等 family 使用稳定 edition identity 规则；
+- 不因当前没有 LIVE 比赛就丢掉 Tournament / Series / Standings 档案关系；
+- 不用 Mock、推测、静态占位文本把 Coverage 顶成“完整”。
+
+验收：当前运行中的比赛数据已经可以进入统一 Graph，并能回答“当前拿到了哪些域、还缺哪些域、来源是什么”；后续全球历史目录、资格路径与完整赛后数据在这个统一模型上继续补齐。
 
 ## dev.69 — Tournament Edition / 年度赛事实体
 

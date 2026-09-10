@@ -50,8 +50,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 67
-        versionName = "1.0.0-dev.67"
+        versionCode = 68
+        versionName = "1.0.0-dev.68"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -167,3 +167,5 @@ dependencies {
 // dev.66: keep Gitee OTA retired. Continue GitHub canonical dev-latest + request-scoped adaptive GitHub acceleration; refresh project/development documentation.
 
 // dev.67: icon-only repack. No product/runtime changes; package the new RiftLab launcher icon and republish OTA for normal-network download testing without VPN/system proxy.
+
+// dev.68: begin the comprehensive-data line: normalized Tournament/Series/Game/Team/Player graph, provenance and explicit coverage gaps; existing providers remain the source of truth.
