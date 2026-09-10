@@ -13,9 +13,11 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
 }
 
 // Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
-// dev.61 uses multiple release-file accelerators because public nodes can change availability.
+// dev.65 stops trusting one fixed public node: the app probes the actual Release APK and picks the
+// fastest path for the user's current network, then keeps Range-resume fallback across the pool.
 // Override with RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS="https://node-a/|https://node-b/" when needed.
-val defaultGithubAcceleratorBaseUrls = "https://ghfast.top/|https://ghproxy.net/"
+val defaultGithubAcceleratorBaseUrls =
+    "https://gh.llkk.cc/|https://cors.isteed.cc/|https://gh.xmly.dev/|https://gh.ddlc.top/|https://ghfast.top/|https://ghproxy.net/"
 val githubAcceleratorBaseUrls = providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS")
     .orElse(providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URL"))
     .orElse("")
@@ -34,8 +36,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 64
-        versionName = "1.0.0-dev.64"
+        versionCode = 65
+        versionName = "1.0.0-dev.65"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -145,3 +147,5 @@ dependencies {
 // dev.63: turn Draft HUD into a user-owned layout. Keep a safe default, add an EDIT/LOCK workflow, draggable modules, per-module scale/alpha/visibility, reset, normalized coordinates, independent landscape/portrait profiles, and full touch pass-through whenever locked.
 
 // dev.64: polish the watch HUD after real-screen testing. Auto-hide the finished DRAFT LOCKED status after a brief confirmation, keep it visible while editing, and compress matchup intelligence into a two-line horizontal strip to reduce broadcast obstruction.
+
+// dev.65: make GitHub OTA acceleration network-adaptive. Probe the real APK through direct GitHub and multiple GitHub-only accelerators, rank by measured throughput, download from the fastest path, keep Range resume/fallback, and stop sending no-cache on immutable versioned APK assets so CDN caches can actually help.
