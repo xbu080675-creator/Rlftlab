@@ -232,6 +232,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             EventCenterTab.RESEARCH -> ResearchView(
                                 bucket = selectedBucket,
                                 standings = selectedStandings,
+                                archivedEdition = selectedArchive,
                                 onOpenSchedule = { tabIndex = EventCenterTab.SCHEDULE.ordinal }
                             )
                             EventCenterTab.SCHEDULE -> CompetitionMatches(
@@ -249,8 +250,8 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 scheduleMatches = selectedBucket.matches,
                                 bucket = selectedBucket
                             )
-                            EventCenterTab.RULES -> RulesView(selectedBucket, selectedStandings)
-                            EventCenterTab.DRAW -> DrawView(selectedBucket, selectedStandings)
+                            EventCenterTab.RULES -> RulesView(selectedBucket, selectedStandings, selectedArchive)
+                            EventCenterTab.DRAW -> DrawView(selectedBucket, selectedStandings, selectedArchive)
                             EventCenterTab.TEAMS -> TeamsView(
                                 standings = selectedStandings,
                                 scheduleMatches = leagueWideTeamMatches(selectedBucket, center.matches),
@@ -1101,18 +1102,23 @@ private fun BracketTeamLine(code: String, score: String) {
 private fun ResearchView(
     bucket: ScheduleCompetitionBucket,
     standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?,
     onOpenSchedule: () -> Unit
 ) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
     }
-    val research = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches, governance) {
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
+    }
+    val research = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches, governance, archivedEdition?.patchVersions) {
         TournamentResearchProvider.resolve(
             tournament = bucket.tournament,
             competitionTitle = bucket.title,
             matches = bucket.matches,
             standings = standings,
-            governance = governance
+            governance = governance,
+            verifiedPatchVersions = archivedEdition?.patchVersions.orEmpty()
         )
     }
 
@@ -1241,9 +1247,16 @@ private fun researchEvidenceColor(value: ResearchEvidence) = when (value) {
 }
 
 @Composable
-private fun RulesView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+private fun RulesView(
+    bucket: ScheduleCompetitionBucket,
+    standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?
+) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
     }
     val snapshot = governance.rules
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1282,9 +1295,16 @@ private fun RulesView(bucket: ScheduleCompetitionBucket, standings: TournamentSt
 }
 
 @Composable
-private fun DrawView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+private fun DrawView(
+    bucket: ScheduleCompetitionBucket,
+    standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?
+) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
     }
     val snapshot = governance.draw
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {

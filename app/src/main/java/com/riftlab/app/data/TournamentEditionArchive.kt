@@ -38,6 +38,12 @@ data class TournamentEditionSlot(
     val source: String = ""
 )
 
+data class TournamentQualificationArchive(
+    val detail: String,
+    val source: String,
+    val savedAtEpochMs: Long = System.currentTimeMillis()
+)
+
 data class TournamentEditionArchiveRecord(
     val tournamentId: String,
     val slug: String,
@@ -54,6 +60,9 @@ data class TournamentEditionArchiveRecord(
     val participantTeamCodes: List<String> = emptyList(),
     val scheduleSeriesCount: Int = 0,
     val patchVersions: List<String> = emptyList(),
+    val archivedRules: TournamentRulesSnapshot? = null,
+    val archivedDraw: TournamentDrawSnapshot? = null,
+    val archivedQualification: TournamentQualificationArchive? = null,
     val archivedSlots: List<TournamentEditionSlot> = emptyList(),
     val firstSeenEpochMs: Long = System.currentTimeMillis(),
     val lastSeenEpochMs: Long = System.currentTimeMillis()
@@ -235,6 +244,21 @@ object TournamentEditionArchiveStore {
                 .distinct()
                 .sorted()
             val old = previous[ref.id]
+            val displayName = StandingsCenterStore.displayTournamentName(ref)
+            val standingsForEdition = standingsState.standings?.takeIf { it.tournamentId == ref.id }
+            val liveGovernance = TournamentGovernanceProvider.resolve(
+                tournament = ref,
+                competitionTitle = displayName,
+                matches = matches,
+                standings = standingsForEdition
+            )
+            val retainedGovernance = mergeGovernanceForDisplay(old, liveGovernance)
+            val liveQualification = OfficialHandbookGovernance2026.qualificationSummaryFor(
+                tournament = ref,
+                competitionTitle = displayName,
+                identity = "${identity.family} ${identity.stage} ${ref.slug} ${ref.leagueSlug} ${ref.leagueName}"
+            )
+            val retainedQualification = preferQualification(old?.archivedQualification, liveQualification)
             previous[ref.id] = TournamentEditionArchiveRecord(
                 tournamentId = ref.id,
                 slug = ref.slug,
@@ -244,13 +268,16 @@ object TournamentEditionArchiveStore {
                 family = identity.family,
                 seasonYear = identity.seasonYear,
                 editionKey = identity.editionKey,
-                displayName = StandingsCenterStore.displayTournamentName(ref),
+                displayName = displayName,
                 stage = identity.stage,
                 startDate = ref.startDate,
                 endDate = ref.endDate,
                 participantTeamCodes = (old?.participantTeamCodes.orEmpty() + knownTeams).distinct().sorted(),
                 scheduleSeriesCount = maxOf(old?.scheduleSeriesCount ?: 0, matches.size),
                 patchVersions = old?.patchVersions.orEmpty(),
+                archivedRules = retainedGovernance.rules,
+                archivedDraw = retainedGovernance.draw,
+                archivedQualification = retainedQualification,
                 archivedSlots = old?.archivedSlots.orEmpty(),
                 firstSeenEpochMs = old?.firstSeenEpochMs ?: now,
                 lastSeenEpochMs = now
@@ -348,12 +375,13 @@ object TournamentEditionArchiveStore {
             .sortedBy { it.startTimeIso }
         val standings = standingsOverride
             ?: standingsState.standings?.takeIf { it.tournamentId == record.tournamentId }
-        val governance = TournamentGovernanceProvider.resolve(
+        val liveGovernance = TournamentGovernanceProvider.resolve(
             tournament = ref,
             competitionTitle = record.displayName,
             matches = matches,
             standings = standings
         )
+        val governance = mergeGovernanceForDisplay(record, liveGovernance)
         val research = TournamentResearchProvider.resolve(
             tournament = ref,
             competitionTitle = record.displayName,
@@ -372,18 +400,23 @@ object TournamentEditionArchiveStore {
             Worlds2026QualifiedTeams.teams.map { it.code }
         } else emptyList()
         val handbookParticipantSource = OfficialHandbookGovernance2026.participantSourceFor(ref, record.displayName)
-        val qualificationSummary = OfficialHandbookGovernance2026.qualificationSummaryFor(
+        val liveQualificationSummary = OfficialHandbookGovernance2026.qualificationSummaryFor(
             tournament = ref,
             competitionTitle = record.displayName,
             identity = "${record.family} ${record.stage} ${record.slug} ${record.leagueSlug} ${record.leagueName}"
         )
+        val archivedQualification = preferQualification(record.archivedQualification, liveQualificationSummary)
+        val qualificationSummary = archivedQualification?.let { it.detail to it.source }
         val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams + officialWorldsTeams)
             .distinct()
             .sorted()
         val provisional = record.copy(
             participantTeamCodes = participantTeams,
             scheduleSeriesCount = maxOf(record.scheduleSeriesCount, matches.size),
-            patchVersions = (record.patchVersions + historyOverride?.patchVersions.orEmpty()).distinct()
+            patchVersions = (record.patchVersions + historyOverride?.patchVersions.orEmpty()).distinct(),
+            archivedRules = governance.rules,
+            archivedDraw = governance.draw,
+            archivedQualification = archivedQualification
         )
         val liveSlots = buildSlots(
             provisional,
@@ -652,6 +685,60 @@ object TournamentEditionArchiveStore {
         )
     }
 
+    fun mergeGovernanceForDisplay(
+        record: TournamentEditionArchiveRecord?,
+        live: TournamentGovernanceSnapshot
+    ): TournamentGovernanceSnapshot = TournamentGovernanceSnapshot(
+        rules = preferRules(record?.archivedRules, live.rules),
+        draw = preferDraw(record?.archivedDraw, live.draw)
+    )
+
+    private fun preferRules(
+        archived: TournamentRulesSnapshot?,
+        live: TournamentRulesSnapshot
+    ): TournamentRulesSnapshot {
+        if (archived == null) return live
+        val sameContent = archived.title == live.title &&
+            archived.sourceSummary == live.sourceSummary &&
+            archived.items == live.items
+        if (sameContent) return archived
+        fun quality(snapshot: TournamentRulesSnapshot): Int =
+            snapshot.items.count { it.verified } * 1000 +
+                snapshot.items.count { !it.title.contains("待同步") } * 10 +
+                snapshot.items.size
+        return if (quality(live) >= quality(archived)) live else archived
+    }
+
+    private fun preferDraw(
+        archived: TournamentDrawSnapshot?,
+        live: TournamentDrawSnapshot
+    ): TournamentDrawSnapshot {
+        if (archived == null) return live
+        val sameContent = archived.title == live.title &&
+            archived.note == live.note &&
+            archived.sourceSummary == live.sourceSummary &&
+            archived.slots == live.slots
+        if (sameContent) return archived
+        fun quality(snapshot: TournamentDrawSnapshot): Int =
+            snapshot.slots.count { it.verified } * 1000 +
+                snapshot.slots.sumOf { slot ->
+                    listOf(slot.left, slot.right).count { it.isNotBlank() && !it.equals("TBD", true) } * 10
+                } + snapshot.slots.size
+        return if (quality(live) >= quality(archived)) live else archived
+    }
+
+    private fun preferQualification(
+        archived: TournamentQualificationArchive?,
+        live: Pair<String, String>?
+    ): TournamentQualificationArchive? {
+        if (live == null) return archived
+        val detail = live.first.trim()
+        val source = live.second.trim()
+        if (detail.isBlank() || source.isBlank()) return archived
+        if (archived?.detail == detail && archived.source == source) return archived
+        return TournamentQualificationArchive(detail = detail, source = source)
+    }
+
     /** Never downgrade a known historical slot because a later network window is thinner. */
     private fun mergeSlots(
         archived: List<TournamentEditionSlot>,
@@ -862,6 +949,9 @@ object TournamentEditionArchiveStore {
                             participantTeamCodes = jsonStrings(row.optJSONArray("participantTeamCodes")),
                             scheduleSeriesCount = row.optInt("scheduleSeriesCount", 0),
                             patchVersions = jsonStrings(row.optJSONArray("patchVersions")),
+                            archivedRules = parseRulesSnapshot(row.optJSONObject("rulesSnapshot")),
+                            archivedDraw = parseDrawSnapshot(row.optJSONObject("drawSnapshot")),
+                            archivedQualification = parseQualificationSnapshot(row.optJSONObject("qualificationSnapshot")),
                             archivedSlots = parseSlots(row.optJSONArray("slots")),
                             firstSeenEpochMs = row.optLong("firstSeenEpochMs", 0L)
                                 .takeIf { it > 0 } ?: System.currentTimeMillis(),
@@ -911,6 +1001,15 @@ object TournamentEditionArchiveStore {
                                     put("participantTeamCodes", JSONArray(edition.participantTeamCodes))
                                     put("scheduleSeriesCount", edition.scheduleSeriesCount)
                                     put("patchVersions", JSONArray(edition.patchVersions))
+                                    edition.archivedRules?.let { put("rulesSnapshot", rulesSnapshotJson(it)) }
+                                    edition.archivedDraw?.let { put("drawSnapshot", drawSnapshotJson(it)) }
+                                    edition.archivedQualification?.let { qualification ->
+                                        put("qualificationSnapshot", JSONObject().apply {
+                                            put("detail", qualification.detail)
+                                            put("source", qualification.source)
+                                            put("savedAtEpochMs", qualification.savedAtEpochMs)
+                                        })
+                                    }
                                     put("slots", JSONArray().apply {
                                         edition.archivedSlots.forEach { slot ->
                                             put(JSONObject().apply {
@@ -938,6 +1037,110 @@ object TournamentEditionArchiveStore {
                 temp.delete()
             }
         }
+    }
+
+    private fun rulesSnapshotJson(snapshot: TournamentRulesSnapshot): JSONObject = JSONObject().apply {
+        put("title", snapshot.title)
+        put("sourceSummary", snapshot.sourceSummary)
+        put("updatedAtEpochMs", snapshot.updatedAtEpochMs)
+        put("items", JSONArray().apply {
+            snapshot.items.forEach { item ->
+                put(JSONObject().apply {
+                    put("title", item.title)
+                    put("detail", item.detail)
+                    put("source", item.source)
+                    put("verified", item.verified)
+                })
+            }
+        })
+    }
+
+    private fun drawSnapshotJson(snapshot: TournamentDrawSnapshot): JSONObject = JSONObject().apply {
+        put("title", snapshot.title)
+        put("note", snapshot.note)
+        put("sourceSummary", snapshot.sourceSummary)
+        put("updatedAtEpochMs", snapshot.updatedAtEpochMs)
+        put("slots", JSONArray().apply {
+            snapshot.slots.forEach { slot ->
+                put(JSONObject().apply {
+                    put("label", slot.label)
+                    put("left", slot.left)
+                    put("right", slot.right)
+                    put("scheduledAt", slot.scheduledAt)
+                    put("status", slot.status)
+                    put("source", slot.source)
+                    put("verified", slot.verified)
+                    put("bracketMatchId", slot.bracketMatchId)
+                })
+            }
+        })
+    }
+
+    private fun parseRulesSnapshot(obj: JSONObject?): TournamentRulesSnapshot? {
+        if (obj == null) return null
+        val items = buildList {
+            val rows = obj.optJSONArray("items") ?: JSONArray()
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                val title = row.optString("title")
+                if (title.isBlank()) continue
+                add(TournamentRuleItem(
+                    title = title,
+                    detail = row.optString("detail"),
+                    source = row.optString("source"),
+                    verified = row.optBoolean("verified", false)
+                ))
+            }
+        }
+        if (items.isEmpty()) return null
+        return TournamentRulesSnapshot(
+            title = obj.optString("title").ifBlank { "赛事规则" },
+            items = items,
+            sourceSummary = obj.optString("sourceSummary"),
+            updatedAtEpochMs = obj.optLong("updatedAtEpochMs", 0L).takeIf { it > 0 } ?: System.currentTimeMillis()
+        )
+    }
+
+    private fun parseDrawSnapshot(obj: JSONObject?): TournamentDrawSnapshot? {
+        if (obj == null) return null
+        val slots = buildList {
+            val rows = obj.optJSONArray("slots") ?: JSONArray()
+            for (i in 0 until rows.length()) {
+                val row = rows.optJSONObject(i) ?: continue
+                val label = row.optString("label")
+                if (label.isBlank()) continue
+                add(TournamentDrawSlot(
+                    label = label,
+                    left = row.optString("left"),
+                    right = row.optString("right"),
+                    scheduledAt = row.optString("scheduledAt"),
+                    status = row.optString("status"),
+                    source = row.optString("source"),
+                    verified = row.optBoolean("verified", false),
+                    bracketMatchId = row.optString("bracketMatchId")
+                ))
+            }
+        }
+        if (slots.isEmpty()) return null
+        return TournamentDrawSnapshot(
+            title = obj.optString("title").ifBlank { "抽签 / 签位" },
+            slots = slots,
+            note = obj.optString("note"),
+            sourceSummary = obj.optString("sourceSummary"),
+            updatedAtEpochMs = obj.optLong("updatedAtEpochMs", 0L).takeIf { it > 0 } ?: System.currentTimeMillis()
+        )
+    }
+
+    private fun parseQualificationSnapshot(obj: JSONObject?): TournamentQualificationArchive? {
+        if (obj == null) return null
+        val detail = obj.optString("detail")
+        val source = obj.optString("source")
+        if (detail.isBlank() || source.isBlank()) return null
+        return TournamentQualificationArchive(
+            detail = detail,
+            source = source,
+            savedAtEpochMs = obj.optLong("savedAtEpochMs", 0L).takeIf { it > 0 } ?: System.currentTimeMillis()
+        )
     }
 
     private fun parseSlots(array: JSONArray?): List<TournamentEditionSlot> {
