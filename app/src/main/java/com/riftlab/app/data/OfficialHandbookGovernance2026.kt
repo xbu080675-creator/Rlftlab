@@ -42,7 +42,7 @@ internal object OfficialHandbookGovernance2026 {
             isWorlds(token) -> worldsRules()
             isMsi(token) -> msiRules()
             isFirstStand(token) -> firstStandRules()
-            isSplit3(token) -> regionalSplit3Rules(tournament, token)
+            isRegionalFinalStage(tournament, token) -> regionalSplit3Rules(tournament, token)
             else -> null
         }
     }
@@ -74,7 +74,7 @@ internal object OfficialHandbookGovernance2026 {
                 "Riot Handbook 已列出 ${participants.size} 支已确认 Worlds 参赛队；这里只确认参赛资格和赛区，不从列表顺序猜 Seed / 晋级原因。" to worldsSource()
             )
         }
-        if (!isSplit3(token)) return null
+        if (!isRegionalFinalStage(tournament, token)) return null
         return when (canonicalLeague(tournament, token)) {
             "LCK" -> "Riot Handbook：Split 3 季后赛前三名晋级 Worlds。" to split3Source(LCK_ID)
             "LCP" -> "Riot Handbook：季后赛前两名晋级 Worlds，第三个名额通过 Championship Points。" to split3Source(LCP_ID)
@@ -217,6 +217,18 @@ internal object OfficialHandbookGovernance2026 {
     private fun isSplit3(token: String): Boolean = token.contains("split_3") ||
         token.contains("split-3") || token.contains("split 3") || token.contains("third") ||
         token.contains("第三赛段")
+
+    private fun isRegionalFinalStage(tournament: EsportsTournamentRef?, token: String): Boolean {
+        if (isSplit3(token)) return true
+        val league = canonicalLeague(tournament, token)
+        if (league.isBlank()) return false
+        val start = tournament?.startDate?.take(10).orEmpty()
+        // Riot's current Tournament Directory does not always carry "Split 3" in the slug/name.
+        // For known 2026 regional leagues, a tournament beginning in the second half of the season
+        // is the handbook's final split context. This only selects an already verified handbook
+        // snapshot; it does not infer any match result, seed or qualification state.
+        return start.startsWith("2026-") && start >= "2026-07-01"
+    }
 
     private fun isWorlds(token: String): Boolean = token.contains("worlds") || token.contains("world championship") || token.contains("全球总决赛")
     private fun isMsi(token: String): Boolean = token.contains(" msi") || token.contains("mid-season")

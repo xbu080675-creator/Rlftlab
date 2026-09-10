@@ -114,7 +114,7 @@ object TournamentResearchProvider {
         identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") || identity.contains("全球先锋赛") -> "全球先锋赛"
         identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> "Esports World Cup"
         identity.contains("demacia") || identity.contains("德玛西亚") -> "德杯国际邀请赛"
-        Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> "WSCL"
+        Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) -> "WSCL"
         identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"
         identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"
         else -> fallback
@@ -126,7 +126,7 @@ object TournamentResearchProvider {
             identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") ||
             identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) ||
             identity.contains("demacia") || identity.contains("德玛西亚") ||
-            Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) ||
+            Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) ||
             identity.contains("americas cup") || identity.contains("emea masters")
 
     private fun resolveVersion(
