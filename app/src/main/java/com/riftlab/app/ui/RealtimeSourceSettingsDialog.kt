@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -27,11 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.CitoApiConfig
 import com.riftlab.app.data.ProviderCredentialStore
+import com.riftlab.app.overlay.DraftHudSimulation
+import com.riftlab.app.stream.StreamLauncher
 
 @Composable
 internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
+    val context = LocalContext.current
     val citoConfigured by ProviderCredentialStore.citoConfigured.collectAsState()
     val tachioConfigured by ProviderCredentialStore.tachioConfigured.collectAsState()
+    val draftSim by DraftHudSimulation.state.collectAsState()
 
     var citoDraft by remember { mutableStateOf("") }
     var tachioDraft by remember { mutableStateOf("") }
@@ -171,6 +176,59 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                                 statusText = "Tachio API Key 已清除"
                             }
                         ) { Text("清除") }
+                    }
+                }
+
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    "RIFTSCREEN · DRAFT HUD SIMULATOR",
+                    color = RiftCyan,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "在正式 BP WebSocket 接入前，用本地脚本模拟 10 次 Pick、选手英雄胜率、对位形成与 Counter/Lane Edge 弹层。全屏 HUD 本身完全触摸穿透，只有屏幕右侧 RIFT 控制条可操作；下方约 40% 默认留给直播官方 BP 包装。所有百分比均标记 SIMULATION，不会写入真实赛事档案。",
+                    color = RiftMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 15.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (draftSim.active) "SIM ${draftSim.step}/${draftSim.totalSteps} · ${draftSim.message}" else "SIM 待机",
+                    color = if (draftSim.active) RiftCyan else RiftMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(
+                        onClick = {
+                            if (StreamLauncher.startOverlay(context)) {
+                                DraftHudSimulation.startAuto()
+                                statusText = "BP 自动模拟已启动 · 现在切到直播/视频 APP 查看全屏 HUD"
+                            } else {
+                                statusText = "请先授予悬浮窗权限，返回后再点一次 BP 自动模拟"
+                            }
+                        }
+                    ) { Text("自动模拟") }
+                    TextButton(
+                        onClick = {
+                            if (StreamLauncher.startOverlay(context)) {
+                                DraftHudSimulation.startManual()
+                                statusText = "BP 手动模拟已准备 · 切到直播后用右侧 RIFT 控制条逐手推进"
+                            } else {
+                                statusText = "请先授予悬浮窗权限"
+                            }
+                        }
+                    ) { Text("手动") }
+                    if (draftSim.active) {
+                        TextButton(
+                            onClick = {
+                                DraftHudSimulation.stop()
+                                statusText = "BP 模拟已停止"
+                            }
+                        ) { Text("停止") }
                     }
                 }
 
