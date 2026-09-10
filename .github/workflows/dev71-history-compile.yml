@@ -1,17 +1,17 @@
-name: dev71 archive integrity compile
+name: dev71 PRE context compile
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_archive_integrity.py'
+      - 'tools/apply_dev71_pre_context.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-archive-integrity-compile
+  group: dev71-pre-context-compile
   cancel-in-progress: true
 
 jobs:
@@ -22,15 +22,17 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Apply archive integrity fixes
-        run: python3 tools/apply_dev71_archive_integrity.py
-      - name: Static archive guards
+      - name: Apply PRE context expansion
+        run: python3 tools/apply_dev71_pre_context.py
+      - name: Static PRE guards
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'patchVersions = old?.patchVersions.orEmpty()' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
-          grep -q 'standingsOverride = cachedHydratedStandings(record.tournamentId)' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
-          grep -q 'record.participantTeamCodes + standingsTeams + matchTeams' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'data class PreRecentSeries' app/src/main/java/com/riftlab/app/data/Models.kt
+          grep -q 'blueRosterPool' app/src/main/java/com/riftlab/app/data/Models.kt
+          grep -q 'recentHeadToHead' app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt
+          grep -q 'ROSTER POOL / 名单池（不等于首发）' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          grep -q 'RECENT H2H / 近期交手' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -42,18 +44,22 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile dev71 archive tranche
+      - name: Compile dev71 PRE tranche
         run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated archive source
+      - name: Commit validated PRE source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          git add \
+            app/src/main/java/com/riftlab/app/data/Models.kt \
+            app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt \
+            app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt \
+            docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           if git diff --cached --quiet; then
-            echo "No generated archive changes to commit"
+            echo "No generated PRE changes to commit"
             exit 0
           fi
-          git commit -m "dev71: preserve historical archive hydration"
+          git commit -m "dev71: enrich PRE roster staff and recent context"
           git push origin HEAD:dev71-data-coverage-repair
