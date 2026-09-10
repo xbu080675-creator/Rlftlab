@@ -6,6 +6,7 @@ on:
     branches: [ dev72-replay-timeline-batch3 ]
     paths:
       - 'tools/apply_dev72_replay_timeline.py'
+      - 'tools/fix_dev72_replay_metric.py'
       - '.github/workflows/dev72-replay-timeline-batch3.yml'
 
 permissions:
@@ -20,7 +21,9 @@ jobs:
           ref: dev72-replay-timeline-batch3
           fetch-depth: 0
       - name: Apply replay and timeline repairs
-        run: python3 tools/apply_dev72_replay_timeline.py
+        run: |
+          python3 tools/apply_dev72_replay_timeline.py
+          python3 tools/fix_dev72_replay_metric.py
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
