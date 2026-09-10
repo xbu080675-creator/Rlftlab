@@ -125,6 +125,10 @@ internal object RiotPersistedMirror {
                 val tournamentId = query["tournamentId"].orEmpty()
                 root.optJSONObject("standingsByTournament")?.optJSONObject(tournamentId)
             }
+            "getCompletedEvents" -> {
+                val tournamentId = query["tournamentId"].orEmpty()
+                root.optJSONObject("completedEventsByTournament")?.optJSONObject(tournamentId)
+            }
             "getTeams" -> {
                 val requested = normalizeLookup(query["id"].orEmpty())
                 val canonical = root.optJSONObject("teamLookup")?.optString(requested).orEmpty()

@@ -59,7 +59,8 @@ object TournamentResearchProvider {
         competitionTitle: String,
         matches: List<ScheduledEsportsMatch>,
         standings: TournamentStandings?,
-        governance: TournamentGovernanceSnapshot
+        governance: TournamentGovernanceSnapshot,
+        verifiedPatchVersions: List<String> = emptyList()
     ): TournamentResearchSnapshot {
         val identity = listOf(
             tournament?.leagueSlug.orEmpty(),
@@ -73,7 +74,7 @@ object TournamentResearchProvider {
         val year = resolveYear(tournament, competitionTitle, matches)
         val family = resolveFamily(identity, competitionTitle)
         val scope = if (isInternational(identity)) "国际赛事" else "赛区联赛"
-        val version = resolveVersion(matches)
+        val version = resolveVersion(matches, verifiedPatchVersions)
         val updates = buildUpdates(competitionTitle, matches, standings, governance)
         val coverage = buildCoverage(matches, standings, governance, version)
         val sources = buildList {
@@ -128,7 +129,24 @@ object TournamentResearchProvider {
             Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) ||
             identity.contains("americas cup") || identity.contains("emea masters")
 
-    private fun resolveVersion(matches: List<ScheduledEsportsMatch>): TournamentVersionSnapshot {
+    private fun resolveVersion(
+        matches: List<ScheduledEsportsMatch>,
+        verifiedPatchVersions: List<String>
+    ): TournamentVersionSnapshot {
+        val verified = verifiedPatchVersions
+            .mapNotNull(::normalizePatch)
+            .distinct()
+            .sortedWith(compareBy({ it.substringBefore('.').toIntOrNull() ?: 0 }, { it.substringAfter('.').toIntOrNull() ?: 0 }))
+        if (verified.isNotEmpty()) {
+            val label = verified.joinToString(" / ") { "Patch $it" }
+            return TournamentVersionSnapshot(
+                versionLabel = label,
+                detail = "由该 Tournament Edition 的真实 Riot EventDetails gameId 读取 LiveStats gameMetadata.patchVersion；若赛事跨版本会保留多个已观测版本。",
+                source = "Riot LoL Esports LiveStats · gameMetadata.patchVersion",
+                evidence = ResearchEvidence.VERIFIED
+            )
+        }
+
         // Current normalized schedule/standings models do not expose a trustworthy patch field.
         // Keep the slot explicit instead of guessing from event date.
         val explicit = matches.asSequence()
@@ -150,6 +168,11 @@ object TournamentResearchProvider {
                 evidence = ResearchEvidence.PENDING
             )
         }
+    }
+
+    private fun normalizePatch(raw: String): String? {
+        val match = Regex("(?<!\\d)(\\d{1,2})\\.(\\d{1,2})(?!\\d)").find(raw.trim()) ?: return null
+        return "${match.groupValues[1]}.${match.groupValues[2]}"
     }
 
     private fun buildUpdates(
