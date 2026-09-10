@@ -1,17 +1,17 @@
-name: dev71 historical source compile
+name: dev71 qualification semantics compile
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_tournament_history.py'
+      - 'tools/apply_dev71_qualification_semantics.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-history-compile
+  group: dev71-qualification-compile
   cancel-in-progress: true
 
 jobs:
@@ -22,28 +22,17 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Apply dev71 history wiring
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('tools/apply_dev71_tournament_history.py').resolve()
-          code = path.read_text(encoding='utf-8')
-          marker = '# Do not let a feature branch run the data-bot workflow'
-          if marker not in code:
-              raise SystemExit('dev71 patch marker missing')
-          ns = {'__file__': str(path), '__name__': '__main__'}
-          exec(compile(code.split(marker, 1)[0] + '\nprint("dev71 source patch prepared")\n', str(path), 'exec'), ns, ns)
-          PY
-      - name: Static data-source guards
+      - name: Apply qualification semantics repair
+        run: python3 tools/apply_dev71_qualification_semantics.py
+      - name: Static qualification guards
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'getCompletedEvents' app/src/main/java/com/riftlab/app/data/TournamentEventHistoryProvider.kt
-          grep -q 'gameMetadata.patchVersion' app/src/main/java/com/riftlab/app/data/TournamentResearch.kt
-          grep -q 'completedEventsByTournament' app/src/main/java/com/riftlab/app/data/RiotResilientHttp.kt
-          grep -q 'collect_completed_events' tools/sync_riot_persisted_mirror.py
-          grep -q 'branches: \[ main \]' .github/workflows/riot-mirror-sync.yml
+          grep -q 'enum class QualificationMechanism' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q 'PARTICIPANT_ORIGIN' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q '这里不是 Championship Points 缺失' app/src/main/java/com/riftlab/app/ui/QualificationPathUi.kt
+          grep -q '资格路径 / 参赛来源' app/src/main/java/com/riftlab/app/ui/TournamentEditionArchiveUi.kt
+          grep -q 'Championship Points、名次直通、资格赛与国际赛参赛来源' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -55,22 +44,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile dev71 source tranche
+      - name: Compile dev71 qualification tranche
         run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated source files
+      - name: Commit validated qualification source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
+            app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
             app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt \
-            app/src/main/java/com/riftlab/app/data/TournamentResearch.kt \
-            app/src/main/java/com/riftlab/app/data/RiotResilientHttp.kt \
-            tools/sync_riot_persisted_mirror.py
+            app/src/main/java/com/riftlab/app/ui/QualificationPathUi.kt \
+            app/src/main/java/com/riftlab/app/ui/TournamentEditionArchiveUi.kt \
+            docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           if git diff --cached --quiet; then
-            echo "No generated source changes to commit"
+            echo "No generated qualification changes to commit"
             exit 0
           fi
-          git commit -m "dev71: wire Riot historical events and patch metadata"
+          git commit -m "dev71: classify qualification mechanisms and participant origins"
           git push origin HEAD:dev71-data-coverage-repair
