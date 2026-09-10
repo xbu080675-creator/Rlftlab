@@ -1,0 +1,62 @@
+name: dev72 durable edition governance batch14
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-edition-governance-batch14 ]
+    paths:
+      - 'tools/apply_dev72_edition_governance_batch14.py'
+      - 'tools/stabilize_dev72_edition_governance_batch14.py'
+      - '.github/workflows/dev72-edition-governance-batch14.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-edition-governance-batch14
+          fetch-depth: 0
+      - name: Apply durable governance archive
+        run: |
+          python3 tools/apply_dev72_edition_governance_batch14.py
+          python3 tools/stabilize_dev72_edition_governance_batch14.py
+      - name: Audit archive contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCH=app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          UI=app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt
+          grep -q 'archivedRules: TournamentRulesSnapshot' "$ARCH"
+          grep -q 'archivedDraw: TournamentDrawSnapshot' "$ARCH"
+          grep -q 'archivedQualification: TournamentQualificationArchive' "$ARCH"
+          grep -q 'rulesSnapshotJson' "$ARCH"
+          grep -q 'parseRulesSnapshot' "$ARCH"
+          grep -q 'sameContent = archived.title == live.title' "$ARCH"
+          grep -q 'mergeGovernanceForDisplay' "$UI"
+          grep -q 'verifiedPatchVersions = archivedEdition?.patchVersions.orEmpty()' "$UI"
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Compile Android
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Commit verified governance archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt \
+                  app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt
+          if git diff --cached --quiet; then
+            echo "No source changes"
+            exit 0
+          fi
+          git commit -m "dev72: persist edition rules draw and qualification"
+          git push origin HEAD:dev72-edition-governance-batch14
