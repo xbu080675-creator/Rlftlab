@@ -69,7 +69,11 @@ object TournamentGovernanceProvider {
         val rules = if (is2026LplThirdStage(identity, tournament, matches)) {
             verified2026LplWorldsQualificationRules()
         } else {
-            deriveRules(competitionTitle, matches, standings)
+            OfficialHandbookGovernance2026.rulesFor(
+                tournament = tournament,
+                competitionTitle = competitionTitle,
+                identity = identity
+            ) ?: deriveRules(competitionTitle, matches, standings)
         }
 
         val draw = if (is2026LplThirdStage(identity, tournament, matches)) {

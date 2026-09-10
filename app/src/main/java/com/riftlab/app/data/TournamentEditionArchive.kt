@@ -338,7 +338,14 @@ object TournamentEditionArchiveStore {
             .flatMap { it.teams }
             .map { it.code.ifBlank { it.name }.trim().uppercase() }
             .filter { it.isNotBlank() && it != "TBD" && it != "—" }
-        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams)
+        val handbookTeams = OfficialHandbookGovernance2026.participantCodesFor(ref, record.displayName)
+        val handbookParticipantSource = OfficialHandbookGovernance2026.participantSourceFor(ref, record.displayName)
+        val qualificationSummary = OfficialHandbookGovernance2026.qualificationSummaryFor(
+            tournament = ref,
+            competitionTitle = record.displayName,
+            identity = "${record.family} ${record.stage} ${record.slug} ${record.leagueSlug} ${record.leagueName}"
+        )
+        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams)
             .distinct()
             .sorted()
         val provisional = record.copy(
@@ -346,7 +353,16 @@ object TournamentEditionArchiveStore {
             scheduleSeriesCount = maxOf(record.scheduleSeriesCount, matches.size),
             patchVersions = (record.patchVersions + historyOverride?.patchVersions.orEmpty()).distinct()
         )
-        val liveSlots = buildSlots(provisional, matches, standings, governance, research, historyOverride)
+        val liveSlots = buildSlots(
+            provisional,
+            matches,
+            standings,
+            governance,
+            research,
+            historyOverride,
+            handbookParticipantSource,
+            qualificationSummary
+        )
         val mergedSlots = mergeSlots(record.archivedSlots, liveSlots)
         val enriched = provisional.copy(archivedSlots = mergedSlots)
 
@@ -441,7 +457,9 @@ object TournamentEditionArchiveStore {
         standings: TournamentStandings?,
         governance: TournamentGovernanceSnapshot,
         research: TournamentResearchSnapshot,
-        history: TournamentEventHistorySnapshot?
+        history: TournamentEventHistorySnapshot?,
+        handbookParticipantSource: String,
+        handbookQualification: Pair<String, String>?
     ): List<TournamentEditionSlot> {
         val standingsRows = standings?.stages.orEmpty().sumOf { stage ->
             stage.sections.sumOf { it.rankings.size + it.matches.size }
@@ -488,6 +506,8 @@ object TournamentEditionArchiveStore {
                     "已识别 ${edition.participantTeamCodes.size} 支：${edition.participantTeamCodes.take(8).joinToString(" / ")}${if (edition.participantTeamCodes.size > 8) " …" else ""}"
                 },
                 source = when {
+                    handbookParticipantSource.isNotBlank() && history?.completedSeries?.isNotEmpty() == true && standings != null -> "Riot Handbook + Riot getCompletedEvents + Riot Standings"
+                    handbookParticipantSource.isNotBlank() -> handbookParticipantSource
                     history?.completedSeries?.isNotEmpty() == true && standings != null -> "Riot getCompletedEvents + Riot Standings"
                     history?.completedSeries?.isNotEmpty() == true -> history.completedEventsSource
                     standings != null -> "Unified Schedule + Riot Standings"
@@ -497,8 +517,10 @@ object TournamentEditionArchiveStore {
             TournamentEditionSlot(
                 key = "qualification",
                 label = "资格来源",
-                state = TournamentEditionSlotState.PENDING,
-                detail = "资格体系使用独立模型：Championship Points、名次直通、资格赛与国际赛参赛来源分开记录；不从参赛名单反推具体 Seed / 晋级原因。"
+                state = if (handbookQualification != null) TournamentEditionSlotState.PARTIAL else TournamentEditionSlotState.PENDING,
+                detail = handbookQualification?.first
+                    ?: "资格体系使用独立模型：Championship Points、名次直通、资格赛与国际赛参赛来源分开记录；不从参赛名单反推具体 Seed / 晋级原因。",
+                source = handbookQualification?.second.orEmpty()
             ),
             TournamentEditionSlot(
                 key = "rules",
