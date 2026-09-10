@@ -70,9 +70,17 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
         var ref: MatchRef? = null
         var previous: LiveSnapshot? = null
         var lastBo = 0
+        var observedTargetKey = ""
 
         while (currentCoroutineContext().isActive) {
             try {
+                val nextTargetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    ref = null
+                    previous = null
+                    lastBo = 0
+                }
                 if (ref == null) {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
@@ -201,6 +209,7 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.LIVE,
                     message = "LPL Official · matchDetail LIVE · bmid=${active.bmid} · G$bo · gameStatus=${current.status} · teamInfos=${current.teams.size} · players=${blueState.players.size + redState.players.size}",
+                    eventId = targetEventId(),
                     gameId = snapshot.gameId,
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
@@ -318,9 +327,40 @@ internal class LplMatchDetailLiveDataSource : LiveMatchDataSource {
             val end = (hit.range.first + 3600).coerceAtMost(text.length)
             parseRef(text.substring(start, end))
         }.distinctBy { it.bmid }.toList()
-        return candidates.firstOrNull { it.teamAName.isNotBlank() && it.teamBName.isNotBlank() }
-            ?: candidates.firstOrNull()
+        val target = LiveMatchTargetRegistry.snapshot()
+        if (target != null && target.teams.size >= 2) {
+            val ranked = candidates.map { it to matchScore(it, target) }.sortedByDescending { it.second }
+            ranked.firstOrNull()?.takeIf { it.second >= 95 }?.let { return it.first }
+            return null
+        }
+        return candidates.singleOrNull()
     }
+
+    private fun matchScore(ref: MatchRef, target: ScheduledEsportsMatch): Int {
+        val left = target.teams.getOrNull(0) ?: return 0
+        val right = target.teams.getOrNull(1) ?: return 0
+        val direct = teamMatches(ref.teamAName, left) && teamMatches(ref.teamBName, right)
+        val swapped = teamMatches(ref.teamAName, right) && teamMatches(ref.teamBName, left)
+        return when {
+            direct -> 100
+            swapped -> 95
+            else -> 0
+        }
+    }
+
+    private fun teamMatches(upstreamName: String, team: EsportsTeamRef): Boolean {
+        val upstream = teamKey(upstreamName)
+        if (upstream.isBlank()) return false
+        return listOf(team.code, team.name, team.slug).map(::teamKey).filter { it.isNotBlank() }.any { candidate ->
+            upstream == candidate ||
+                (upstream.length >= 4 && candidate.length >= 4 && (upstream.contains(candidate) || candidate.contains(upstream)))
+        }
+    }
+
+    private fun teamKey(value: String): String =
+        value.uppercase().filter { it.isLetterOrDigit() }
+
+    private fun targetEventId(): String = LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty()
 
     private fun parseRef(chunk: String): MatchRef? {
         val bmid = field(chunk, "bMatchId")

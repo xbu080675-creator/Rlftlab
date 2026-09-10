@@ -209,6 +209,7 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
         var gameNumber = 1
         var lastEmission = ""
         var lastWsPayload: JSONObject? = null
+        var observedTargetKey = ""
         val wsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         var wsJob = wsScope.launch { }
 
@@ -236,6 +237,15 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
                     continue
                 }
 
+                val nextTargetKey = LiveMatchTargetRegistry.key(target)
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    citoMatchId = ""
+                    gameId = ""
+                    gameNumber = 1
+                    lastEmission = ""
+                    lastWsPayload = null
+                }
                 val matchKey = MatchLifecycleArchive.keyFor(target)
                 if (citoMatchId.isBlank()) {
                     citoMatchId = resolveCitoMatchId(target)
@@ -264,11 +274,9 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
                 var snapshot: LiveSnapshot? = null
                 var transport = "REST fallback"
                 val ws = lastWsPayload
-                if (ws != null) {
+                if (ws != null && gameId.isNotBlank()) {
                     val candidate = CitoJson.parseLiveBoard(ws, target, gameNumber)
-                    if (candidate != null && CitoJson.meaningful(candidate) &&
-                        (gameId.isBlank() || candidate.gameId.isBlank() || candidate.gameId == gameId)
-                    ) {
+                    if (candidate != null && CitoJson.meaningful(candidate) && candidate.gameId == gameId) {
                         snapshot = candidate
                         transport = "WebSocket"
                         CitoRawArchive.append(matchKey, candidate.gameId.ifBlank { gameId }, "websocket", ws)
