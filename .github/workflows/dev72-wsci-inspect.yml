@@ -1,0 +1,95 @@
+name: dev72 WSCI structure inspector
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-integration-batch6 ]
+    paths:
+      - '.github/workflows/dev72-wsci-inspect.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-integration-batch6
+          fetch-depth: 0
+      - name: Inspect server-rendered WSCI data structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --connect-timeout 12 --max-time 30 -A 'RiftLab-DataSync/1.0' 'https://rft.gg/event/wsci-2026' -o /tmp/wsci.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, html, json
+
+          raw = Path('/tmp/wsci.html').read_text(errors='replace')
+          out = []
+          out.append(f'bytes={len(raw.encode())}')
+          out.append(f'chars={len(raw)}')
+
+          scripts = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', raw, re.I)
+          out.append('SCRIPT_SRCS')
+          out.extend(scripts[:80])
+
+          out.append('\nJSON_SCRIPT_SUMMARY')
+          for idx, m in enumerate(re.finditer(r'<script([^>]*)>(.*?)</script>', raw, re.I | re.S)):
+              attrs, body = m.group(1), html.unescape(m.group(2)).strip()
+              if not body:
+                  continue
+              if 'application/json' in attrs.lower() or body.startswith('{') or body.startswith('['):
+                  try:
+                      parsed = json.loads(body)
+                  except Exception:
+                      continue
+                  def walk(v, path='$', depth=0):
+                      if depth > 8:
+                          return
+                      if isinstance(v, dict):
+                          keys = list(v.keys())
+                          if any(k.lower() in {'event','events','matches','participants','teams','schedule','games','tournament'} for k in keys):
+                              out.append(f'{path} keys={keys[:30]}')
+                          for k, x in list(v.items())[:120]:
+                              walk(x, f'{path}.{k}', depth + 1)
+                      elif isinstance(v, list):
+                          if v:
+                              out.append(f'{path} list[{len(v)}]')
+                          for i, x in enumerate(v[:30]):
+                              walk(x, f'{path}[{i}]', depth + 1)
+                      elif isinstance(v, str):
+                          low = v.lower()
+                          if any(t in low for t in ['wsci', 'tes.c', 'dplus', 'bilibili gaming junior']):
+                              out.append(f'{path}={v[:400]}')
+                  out.append(f'json-script-{idx} attrs={attrs[:200]}')
+                  walk(parsed)
+
+          out.append('\nLINKS')
+          for href, label in re.findall(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', raw, re.I | re.S):
+              plain = re.sub(r'<[^>]+>', ' ', html.unescape(label))
+              plain = re.sub(r'\s+', ' ', plain).strip()
+              token = (href + ' ' + plain).lower()
+              if any(k in token for k in ['/match', '/team', 'wsci', 'tes.c', 'dplus', 'bilibili gaming junior']):
+                  out.append(f'{href} => {plain[:300]}')
+
+          out.append('\nTARGET_CONTEXT')
+          text = html.unescape(raw)
+          for target in ['Recent Matches', 'Participants', 'TES.C', 'Dplus Challengers', 'Bilibili Gaming Junior']:
+              pos = text.lower().find(target.lower())
+              out.append(f'--- {target} @ {pos} ---')
+              if pos >= 0:
+                  snippet = re.sub(r'\s+', ' ', text[max(0,pos-1200):pos+3000])
+                  out.append(snippet[:4200])
+
+          Path('.ci/dev72-wsci-structure.txt').write_text('\n'.join(out)[:120000], encoding='utf-8')
+          PY
+      - name: Commit inspector result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .ci/dev72-wsci-structure.txt
+          git commit -m "dev72: capture WSCI provider structure" || exit 0
+          git push origin HEAD:dev72-integration-batch6
