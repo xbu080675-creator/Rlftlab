@@ -1,106 +1,188 @@
-# RiftLab 中国大陆更新加速
+# RiftLab 中国大陆 OTA 架构
 
-RiftLab `dev.59` 起采用 **GitHub 唯一正式 Release + APP 内 GitHub 更新加速** 的更新架构。
+> 当前基线：`1.0.0-dev.66`
+>
+> 目标：APP 内检查更新和下载 APK 在中国大陆网络下尽可能直接、稳定，同时不让镜像站成为版本真源。
 
-## 架构边界
+## 1. 角色划分
 
-- **GitHub `xbu080675-creator/Rlftlab`**：唯一代码真源、版本真源、GitHub Actions 构建源和 APK 正式发布源。
-- **Gitee `xiaobaiaaa1/Rlftlab`**：仅保留为中国大陆源码镜像，不承担 APK 主分发，不在 Gitee 重新构建，也不反向决定版本历史。
-- **GitHub 更新加速**：只在 RiftLab 自己执行“检查更新 / 下载更新包”时按需启用，不是 VPN，不创建 `VpnService`，不修改 Android 系统代理，不接管其他 APP 流量，也不代理赛事数据、直播、回放或普通 API。
+RiftLab dev.66 把更新链固定为两层来源、三类传输通道：
 
-## 更新流程
+```text
+GitHub main / GitHub Actions
+        │
+        ├─ 构建同一份固定签名 APK + latest.json
+        │
+        ├─ ① GitHub dev-latest（canonical / 必须成功）
+        │
+        └─ ② Gitee dev-latest（大陆 Release 镜像 / 尽力同步）
 
-客户端固定从官方 GitHub `dev-latest` Release 获取更新：
+APP 检查与下载：
+Gitee 国内 OTA
+        ↓ 失败
+GitHub 官方 Release
+        ↓
+GitHub 直连 + GitHub-only 加速节点真实 APK 测速/自动换线
+```
 
-`https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json`
+- **GitHub `xbu080675-creator/Rlftlab`**：唯一代码真源、版本真源、构建源和 canonical `dev-latest` Release。
+- **Gitee `xiaobaiaaa1/Rlftlab`**：中国大陆 Release 镜像。它不编译 APK、不决定版本号、不反向覆盖 GitHub 历史。
+- **GitHub 更新加速节点**：只在 APP 访问 RiftLab 官方 GitHub `dev-latest` 资源时按请求使用；不是 VPN，不创建 `VpnService`，不修改系统代理，也不接管赛事数据、直播、回放或其他 APP 流量。
 
-流程为：
+因此“国内优先”只改变 APK 的传输路径，不改变谁拥有版本真相。
 
-1. 先直连 GitHub 获取 `latest.json`；
-2. 直连失败或超时时，临时把同一个官方 GitHub URL 交给内置 GitHub 更新加速通道；
-3. manifest 解析出的 APK 必须仍然指向 `xbu080675-creator/Rlftlab` 的 `dev-latest` Release，否则拒绝；
-4. 下载 APK 时优先沿用本次可用通道；直连中断时可使用 HTTP Range 从已下载字节继续通过加速通道续传；
-5. 下载完成后校验 SHA-256、包名、versionCode 和固定 DEV 签名证书；
-6. 使用加速通道时每个请求都显式 `Connection: close`，请求结束后立即断开，不保留系统级代理状态。
+## 2. APP 检查更新顺序
 
-因此更新加速层即使不可信，也不能绕过 APK 身份校验。它只能帮助转发 RiftLab 已写死白名单的 GitHub Release 资源，不能被当作任意 URL 的通用代理使用。
+默认国内 manifest：
 
-## GitHub Actions 发布顺序
+```text
+https://gitee.com/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/latest.json
+```
 
-`.github/workflows/ota-direct.yml` 在 `main` 上执行：
+canonical GitHub manifest：
 
-1. 从 GitHub 主仓库 checkout；
-2. 构建固定 DEV 签名 APK；
-3. 校验签名证书；
-4. 生成带版本号 APK 与 `latest.json`；
-5. 更新固定 tag `dev-latest`；
-6. 先上传新 APK；
-7. 再最后上传 / 覆盖 `latest.json`；
-8. manifest 已指向新 APK 后，再清理旧 APK 附件；
-9. 更新 Release 文案供旧版客户端和人工查看。
+```text
+https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json
+```
 
-这样不会出现 manifest 已宣布新版本，但 APK 还没有上传完成的顺序错误。
+检查逻辑：
 
-## GitHub Release 结构
+1. 优先读取 Gitee `latest.json`；
+2. Gitee 不可达、超时、manifest 非法或来源不在固定白名单时，回退 GitHub；
+3. GitHub manifest 先尝试官方直连；直连失败再通过 GitHub-only 加速节点获取；
+4. manifest 必须是 `channel=dev`，包含合法 `versionName`、正整数 `versionCode`、APK 引用和 64 位 SHA-256；
+5. Gitee manifest 只能引用 `xiaobaiaaa1/Rlftlab/releases/download/dev-latest/` 下的 APK；GitHub manifest 只能引用 `xbu080675-creator/Rlftlab/releases/download/dev-latest/` 下的 APK。
 
-固定 tag / Release：
+APP 不接受任意远程 manifest 把下载地址改到第三方 APK。
 
-- `dev-latest`
+## 3. 下载与跨源断点续传
 
-附件：
+### 3.1 Gitee 正常时
 
-- `RiftLab-1.0.0-dev.xx.apk`
-- `latest.json`
+APP 直接下载 Gitee Release 中的同版本 APK，并保留 `.part` 文件支持 HTTP Range 断点续传。
 
-`latest.json` 示例：
+### 3.2 Gitee 下载失败时
+
+APP 会重新读取 canonical GitHub manifest。只有确认 Gitee 与 GitHub 指向的是同一构建时，才允许拿现有 `.part` 从 GitHub 继续：
+
+- `versionName` 一致；
+- `versionCode` 一致；
+- SHA-256 一致；
+- 两边都提供文件长度时，长度一致。
+
+任何一项不一致都不能把两个不同 APK 的字节拼在一起。
+
+### 3.3 GitHub 兜底仍沿用 dev.65 自适应传输
+
+GitHub APK 下载不会固定押一个公共节点。APP 会对真实 RiftLab Release APK 做小范围 Range 并发测速，把 GitHub 直连与当前节点池按实际吞吐排序，再从最快通道开始下载。
+
+默认节点池：
+
+- GH LLKK
+- iSteed
+- XMLY
+- DDLC
+- GHFast
+- GHProxy.net
+- GitHub 直连
+
+节点失败或下载速度长期显著低于测速结果时，保留 `.part` 并自动换下一条通道。版本化 APK 请求允许 CDN/反代缓存；`latest.json` 始终 `no-cache`，避免拿到旧 manifest。
+
+## 4. 安装前安全校验
+
+无论 APK 来自 Gitee、GitHub 直连还是 GitHub 更新加速，安装前全部执行同一组校验：
+
+1. 原始 manifest / APK 地址必须为 HTTPS 且位于 RiftLab 固定 Release 白名单；
+2. 下载完成文件 SHA-256 必须与 `latest.json` 完全一致；
+3. Android 包名必须为 `com.riftlab.app`；
+4. APK `versionCode` 必须与 manifest 一致；
+5. APK 签名证书 SHA-256 必须匹配 RiftLab 固定 DEV 证书；
+6. 全部通过后才通过 `FileProvider` 拉起 Android 系统安装器。
+
+所以 Gitee 和公共 GitHub 加速节点都只是“搬运字节”，没有权限决定什么 APK 可以安装。
+
+## 5. GitHub Actions 发布顺序
+
+`.github/workflows/ota-direct.yml` 只在 GitHub Actions 构建。Gitee 不启用 CI。
+
+canonical GitHub 发布顺序：
+
+```text
+构建 APK
+→ 校验固定 DEV 签名
+→ 计算 SHA-256 / size
+→ 生成 latest.json
+→ 上传新 APK 到 GitHub dev-latest
+→ 最后切换 GitHub latest.json
+→ 清理 GitHub 旧 APK
+```
+
+随后执行大陆镜像：
+
+```text
+查找/创建 Gitee dev-latest Release
+→ 上传同一份 APK
+→ APK 成功后再切换 Gitee latest.json
+→ 清理 Gitee 旧 APK
+```
+
+关键原则仍然是 **APK 先到，manifest 后切**。这样客户端不会先看到新版本号，却下载不到对应 APK。
+
+Gitee 镜像步骤采用尽力同步：Gitee API 临时不可用、Token 未配置或附件超限时，不回滚已经成功的 GitHub canonical Release。客户端仍可进入 GitHub 自适应兜底链。
+
+## 6. Secrets 与配置
+
+Gitee Personal Access Token 只放 GitHub Actions Secret：
+
+```text
+GITEE_TOKEN
+```
+
+Token 不写进 APK、不提交源码、不放 `latest.json`，也不需要发送给任何客户端。
+
+可选 Actions/Gradle 配置：
+
+```text
+RIFTLAB_OTA_PRIMARY_MANIFEST_URL
+RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS
+RIFTLAB_GITHUB_ACCELERATOR_BASE_URL
+```
+
+默认情况下无需配置第一项，DEV 构建已经内置 RiftLab 官方 Gitee `dev-latest` manifest。GitHub 加速节点也有默认池；变量主要用于以后替换节点而不大改更新器代码。
+
+## 7. Release 文件结构
+
+GitHub 与 Gitee 的 `dev-latest` 都使用同一 manifest schema：
 
 ```json
 {
   "schemaVersion": 1,
   "channel": "dev",
-  "versionName": "1.0.0-dev.59",
-  "versionCode": 59,
-  "apk": "RiftLab-1.0.0-dev.59.apk",
-  "sha256": "...",
-  "size": 12345678,
+  "versionName": "1.0.0-dev.66",
+  "versionCode": 66,
+  "apk": "RiftLab-1.0.0-dev.66.apk",
+  "sha256": "<64-hex-sha256>",
+  "size": 74238412,
   "publishedAt": "2026-09-10T00:00:00Z",
   "changelog": "..."
 }
 ```
 
-APK 使用相对文件名，客户端会基于官方 GitHub `dev-latest` manifest 地址解析，并再次检查最终得到的 APK URL 是否属于 RiftLab 官方 Release。
+`apk` 使用相对文件名，客户端基于当前经过白名单验证的 manifest URL 解析绝对 APK URL，然后再次验证来源。
 
-## 更新加速配置
+## 8. Gitee 附件体积边界
 
-DEV 构建默认内置 GitHub 文件加速基址：
+当前 Gitee Release 单附件存在约 100 MB 的平台上限。dev.65 APK 约 74 MB，现阶段仍能镜像；工作流也会在 APK 接近/超过该边界时跳过 Gitee 大文件上传，避免拖垮 canonical GitHub 发布。
 
-`https://gh-proxy.com/`
+这意味着 Gitee 是当前中国大陆分发优化层，不是未来必须永久绑定的基础设施。如果 APK 继续增长到平台限制附近，应迁移大陆二进制源到对象存储/CDN，而 APP 的“国内第一源 → GitHub 自适应兜底”模型可以继续保持。
 
-它只会收到 RiftLab 官方 GitHub Release 的 URL，不会收到 Gitee Token、GitHub Token、用户账号凭据或赛事请求。
+## 9. dev.58 ～ dev.66 的方案演化
 
-如以后需要更换加速节点，可通过 Gradle 属性覆盖：
+- **dev.58**：第一次建立大陆优先双通道 OTA；
+- **dev.59 早期**：尝试由 GitHub Actions 上传 Gitee Release；经历空 Release、API 超时和 multipart 鉴权修复；
+- **dev.59 最终**：为避免镜像大文件成为发布阻塞，改为 GitHub 唯一 Release + APP 请求级 GitHub 加速；
+- **dev.61**：固定代理节点在大 APK 上卡顿，改成多节点故障切换；
+- **dev.65**：升级为对真实 APK 并发 Range 测速，按实际吞吐自动选路；
+- **dev.66**：把 Gitee Release 重新放回“大陆第一传输源”，但这次不再让它承担版本真源或构建职责，并完整保留 dev.65 GitHub 自适应兜底。
 
-`RIFTLAB_GITHUB_ACCELERATOR_BASE_URL`
-
-也可以在 GitHub 仓库的 Actions Variables 中创建同名变量，`.github/workflows/ota-direct.yml` 会在构建时传入。没有设置时使用 DEV 默认值。
-
-生产规模扩大后应优先使用可控或有明确服务保障的 GitHub 文件加速节点；客户端传输层不依赖某一家实现，只要求支持 HTTPS GET，APK 最好同时支持 HTTP Range。
-
-## 客户端安全校验
-
-RiftLab 不因为使用加速通道降低校验标准。安装前必须全部通过：
-
-- manifest 与原始 APK 目标均为 HTTPS；
-- manifest 的 APK 地址只能解析到 RiftLab 官方 GitHub `dev-latest` Release；
-- APK SHA-256 与 manifest 完全一致；
-- Android 包名为 `com.riftlab.app`；
-- APK `versionCode` 与 manifest 一致；
-- APK 签名证书 SHA-256 与 RiftLab 固定 DEV 证书一致。
-
-网络中断不会自动删除未损坏的 `.part` 文件，下次下载可以继续断点续传；哈希失败时才会丢弃损坏的部分文件重新下载。
-
-## 与 Gitee 的关系
-
-Gitee 仍可继续同步 GitHub 源码，方便中国大陆浏览和拉取代码，但不再作为 `dev.59+` 的 APK OTA 主链路。
-
-这样可以避免 GitHub hosted runner 每次构建后跨境向 Gitee 上传大 APK，也避免未来安装包体积增长后被镜像平台附件限制反向约束 RiftLab 的产品架构。
+当前方案的重点不是押注某一家镜像，而是让 APP 在国内网络里拥有一条快路径，同时始终保留可验证、可恢复的官方退路。
