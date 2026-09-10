@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -42,6 +43,13 @@ class DraftHudOverlayView(
     private var selectedModule = DraftHudModule.BLUE_PICK
     private var editing = false
     private var lastLandscape: Boolean? = null
+    private var lockedStatusVisible = true
+    private val hideLockedStatus = Runnable {
+        if (currentState.active && currentState.finished && !editing) {
+            lockedStatusVisible = false
+            applyRuntimeVisibility()
+        }
+    }
 
     init {
         setBackgroundColor(Color.TRANSPARENT)
@@ -54,7 +62,7 @@ class DraftHudOverlayView(
         addModule(DraftHudModule.PROGRESS, progress, LayoutParams(LayoutParams.WRAP_CONTENT, dp(28)))
         addModule(DraftHudModule.BLUE_PICK, blueCard.root, LayoutParams(dp(252), LayoutParams.WRAP_CONTENT))
         addModule(DraftHudModule.RED_PICK, redCard.root, LayoutParams(dp(252), LayoutParams.WRAP_CONTENT))
-        addModule(DraftHudModule.MATCHUP, matchupCard.root, LayoutParams(dp(294), LayoutParams.WRAP_CONTENT))
+        addModule(DraftHudModule.MATCHUP, matchupCard.root, LayoutParams(dp(320), LayoutParams.WRAP_CONTENT))
         addModule(DraftHudModule.WATERMARK, watermark, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
 
         DraftHudModule.entries.forEach { module -> attachModuleDrag(module, viewFor(module)) }
@@ -62,9 +70,14 @@ class DraftHudOverlayView(
     }
 
     fun render(state: DraftHudState) {
+        val enteredFinished = state.finished && !currentState.finished
         currentState = state
         visibility = if (state.active) View.VISIBLE else View.GONE
-        if (!state.active) return
+        if (!state.active) {
+            removeCallbacks(hideLockedStatus)
+            lockedStatusVisible = true
+            return
+        }
 
         topStatus.text = when {
             state.finished -> "RIFTSCREEN · DRAFT LOCKED"
@@ -73,6 +86,13 @@ class DraftHudOverlayView(
         }
         progress.text = "${state.step} / ${state.totalSteps}"
 
+        if (state.finished && enteredFinished) {
+            showLockedStatusBriefly()
+        } else if (!state.finished) {
+            removeCallbacks(hideLockedStatus)
+            lockedStatusVisible = true
+        }
+
         blueCard.bind(state.bluePicks.lastOrNull())
         redCard.bind(state.redPicks.lastOrNull())
         matchupCard.bind(state.matchup)
@@ -80,7 +100,7 @@ class DraftHudOverlayView(
         val landscape = isLandscape()
         (blueCard.root.layoutParams as LayoutParams).width = dp(if (landscape) 252 else 178)
         (redCard.root.layoutParams as LayoutParams).width = dp(if (landscape) 252 else 178)
-        (matchupCard.root.layoutParams as LayoutParams).width = dp(if (landscape) 294 else 242)
+        (matchupCard.root.layoutParams as LayoutParams).width = dp(if (landscape) 320 else 250)
         ensureProfile()
         post {
             applyAllPlacements()
@@ -92,9 +112,13 @@ class DraftHudOverlayView(
         editing = enabled
         safeZoneGuide.visibility = if (enabled) View.VISIBLE else View.GONE
         if (enabled) {
+            removeCallbacks(hideLockedStatus)
+            lockedStatusVisible = true
             ensureProfile()
             selectedModule = selectedModule.takeIf { placements[it]?.visible == true } ?: DraftHudModule.BLUE_PICK
             onModuleSelected(selectedModule)
+        } else if (currentState.finished) {
+            showLockedStatusBriefly()
         }
         applyRuntimeVisibility()
     }
@@ -132,6 +156,13 @@ class DraftHudOverlayView(
         ensureProfile(force = true)
         applyRuntimeVisibility()
         onModuleSelected(selectedModule)
+    }
+
+    private fun showLockedStatusBriefly() {
+        removeCallbacks(hideLockedStatus)
+        lockedStatusVisible = true
+        applyRuntimeVisibility()
+        postDelayed(hideLockedStatus, 1_800L)
     }
 
     private fun mutateSelected(block: (DraftHudPlacement) -> DraftHudPlacement) {
@@ -257,6 +288,7 @@ class DraftHudOverlayView(
         DraftHudModule.entries.forEach { module ->
             val userVisible = placements[module]?.visible ?: true
             val runtimeVisible = when (module) {
+                DraftHudModule.STATUS -> editing || !currentState.finished || lockedStatusVisible
                 DraftHudModule.MATCHUP -> currentState.matchup != null
                 DraftHudModule.WATERMARK -> landscape || editing
                 else -> true
@@ -300,21 +332,25 @@ class DraftHudOverlayView(
     }
 
     private fun matchupCard(): MatchupCard {
-        val header = text("MATCHUP", 9f, 0xFF8CEBFF.toInt(), bold = true).apply { gravity = Gravity.CENTER }
-        val champions = text("等待形成对位", 15f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
-        val verdict = text("—", 11f, 0xFFFFD76C.toInt(), bold = true).apply { gravity = Gravity.CENTER }
-        val detail = text("CSD@15 — · SAMPLE —", 9f, 0xFFB9C3D3.toInt()).apply { gravity = Gravity.CENTER }
+        val summary = text("MATCHUP", 11f, Color.WHITE, bold = true).apply {
+            gravity = Gravity.CENTER
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        val detail = text("CSD@15 — · SAMPLE —", 9f, 0xFFB9C3D3.toInt()).apply {
+            gravity = Gravity.CENTER
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+        }
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(8), dp(12), dp(9))
+            setPadding(dp(10), dp(5), dp(10), dp(6))
             background = panelBackground(0xD911151C.toInt(), 0xAA8CEBFF.toInt())
-            addView(header)
-            addView(champions)
-            addView(verdict)
+            addView(summary)
             addView(detail)
             visibility = View.GONE
         }
-        return MatchupCard(root, header, champions, verdict, detail)
+        return MatchupCard(root, summary, detail)
     }
 
     private inner class PickCard(
@@ -336,18 +372,20 @@ class DraftHudOverlayView(
 
     private inner class MatchupCard(
         val root: LinearLayout,
-        private val header: TextView,
-        private val champions: TextView,
-        private val verdict: TextView,
+        private val summary: TextView,
         private val detail: TextView
     ) {
         fun bind(matchup: DraftHudMatchup?) {
             matchup ?: return
-            header.text = "${matchup.role.name} MATCHUP"
-            champions.text = "${matchup.blueChampion}  ↔  ${matchup.redChampion}"
-            verdict.text = matchup.verdict
+            summary.text = "${matchup.role.name} · ${matchup.blueChampion} ↔ ${matchup.redChampion}"
             val prefix = if (matchup.csd15 >= 0) "+" else "−"
-            detail.text = "CSD@15 $prefix%.1f · SAMPLE %d · 置信度 %s".format(abs(matchup.csd15), matchup.sampleGames, matchup.confidence)
+            detail.text = "%s · CSD@15 %s%.1f · %d局 · %s置信度".format(
+                matchup.verdict,
+                prefix,
+                abs(matchup.csd15),
+                matchup.sampleGames,
+                matchup.confidence
+            )
         }
     }
 
@@ -369,6 +407,11 @@ class DraftHudOverlayView(
         setTextColor(color)
         includeFontPadding = false
         if (bold) setTypeface(typeface, Typeface.BOLD)
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(hideLockedStatus)
+        super.onDetachedFromWindow()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
