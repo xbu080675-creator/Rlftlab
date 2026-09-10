@@ -47,6 +47,20 @@ enum class QualificationMechanism(val label: String) {
     UNKNOWN("资格规则待确认")
 }
 
+enum class QualificationSegmentType(val label: String) {
+    DIRECT_QUALIFICATION("名次 / 冠军直通"),
+    CHAMPIONSHIP_POINTS("Championship Points"),
+    REGIONAL_QUALIFIER("区域资格赛 / 附加赛"),
+    PARTICIPANT_ORIGIN("国际赛参赛来源")
+}
+
+data class QualificationMechanismSegment(
+    val type: QualificationSegmentType,
+    val detail: String,
+    val source: String,
+    val evidence: QualificationEvidence
+)
+
 data class QualificationRouteNode(
     val id: String,
     val label: String,
@@ -83,6 +97,7 @@ data class QualificationTournamentSnapshot(
     val title: String,
     val targetEvent: String,
     val routes: List<TeamQualificationRoute> = emptyList(),
+    val segments: List<QualificationMechanismSegment> = emptyList(),
     val rules: List<QualificationRuleRecord> = emptyList(),
     val sourceSummary: String = "",
     val note: String = "",
@@ -335,6 +350,7 @@ object QualificationCenterStore {
             title = "${edition.displayName} · 官方资格体系",
             targetEvent = "2026 全球总决赛",
             routes = participantRoutes,
+            segments = officialMechanismSegments(edition, handbookQualification),
             rules = rules,
             sourceSummary = listOf(
                 handbookQualification.second,
@@ -352,6 +368,102 @@ object QualificationCenterStore {
             mechanism = mechanism,
             mechanismEvidence = QualificationEvidence.OFFICIAL,
             mechanismDetail = handbookQualification.first
+        )
+    }
+
+    private fun officialMechanismSegments(
+        edition: TournamentEditionArchiveRecord,
+        handbookQualification: Pair<String, String>
+    ): List<QualificationMechanismSegment> {
+        val source = handbookQualification.second
+        val token = "${edition.leagueId} ${edition.leagueSlug} ${edition.leagueName}".uppercase()
+        return when {
+            token.contains("113476371197627891") || token.contains("LCP") -> listOf(
+                QualificationMechanismSegment(
+                    QualificationSegmentType.DIRECT_QUALIFICATION,
+                    "季后赛前两名直接获得 Worlds 席位。",
+                    source,
+                    QualificationEvidence.OFFICIAL
+                ),
+                QualificationMechanismSegment(
+                    QualificationSegmentType.CHAMPIONSHIP_POINTS,
+                    "第三个 Worlds 名额通过 Championship Points 决定；这里与普通 Standings Points 分开记录。",
+                    source,
+                    QualificationEvidence.OFFICIAL
+                )
+            )
+            token.contains("98767991314006698") || token.contains("LPL") -> listOf(
+                QualificationMechanismSegment(
+                    QualificationSegmentType.DIRECT_QUALIFICATION,
+                    "第三赛段冠军直通 Worlds。",
+                    source,
+                    QualificationEvidence.OFFICIAL
+                ),
+                QualificationMechanismSegment(
+                    QualificationSegmentType.CHAMPIONSHIP_POINTS,
+                    "年度 Championship Points 用于后续 Worlds 资格竞争；不与本届 Standings Points 合并。",
+                    source,
+                    QualificationEvidence.OFFICIAL
+                ),
+                QualificationMechanismSegment(
+                    QualificationSegmentType.REGIONAL_QUALIFIER,
+                    "Championship Points 前列进入区域资格赛，竞争其余 Worlds 席位；资格赛本身是独立晋级节点。",
+                    source,
+                    QualificationEvidence.OFFICIAL
+                )
+            )
+            officialRegionalMechanism(edition) == QualificationMechanism.DIRECT_PLACEMENT -> listOf(
+                QualificationMechanismSegment(
+                    QualificationSegmentType.DIRECT_QUALIFICATION,
+                    handbookQualification.first,
+                    source,
+                    QualificationEvidence.OFFICIAL
+                )
+            )
+            officialRegionalMechanism(edition) == QualificationMechanism.CHAMPIONSHIP_POINTS -> listOf(
+                QualificationMechanismSegment(
+                    QualificationSegmentType.CHAMPIONSHIP_POINTS,
+                    handbookQualification.first,
+                    source,
+                    QualificationEvidence.OFFICIAL
+                )
+            )
+            officialRegionalMechanism(edition) == QualificationMechanism.REGIONAL_QUALIFIER -> listOf(
+                QualificationMechanismSegment(
+                    QualificationSegmentType.REGIONAL_QUALIFIER,
+                    handbookQualification.first,
+                    source,
+                    QualificationEvidence.OFFICIAL
+                )
+            )
+            else -> emptyList()
+        }
+    }
+
+    private fun lpl2026MechanismSegments(
+        governance: TournamentGovernanceSnapshot
+    ): List<QualificationMechanismSegment> {
+        val officialRuleSource = governance.rules.items.firstOrNull { it.verified }?.source
+            ?: governance.rules.sourceSummary
+        return listOf(
+            QualificationMechanismSegment(
+                type = QualificationSegmentType.DIRECT_QUALIFICATION,
+                detail = "第三赛段冠军直通 Worlds；这里只描述官方机制，不据当前积分榜猜哪支队通过该路径。",
+                source = officialRuleSource,
+                evidence = QualificationEvidence.OFFICIAL
+            ),
+            QualificationMechanismSegment(
+                type = QualificationSegmentType.CHAMPIONSHIP_POINTS,
+                detail = "年度 Championship Points 独立于当前 Tournament Standings Points，用于决定后续资格竞争位置/路径。",
+                source = LplChampionshipPoints2026.sourceLabel,
+                evidence = QualificationEvidence.OFFICIAL
+            ),
+            QualificationMechanismSegment(
+                type = QualificationSegmentType.REGIONAL_QUALIFIER,
+                detail = "区域资格赛是独立赛程节点，竞争其余 Worlds 席位；M1/M2/M3 等具体签位只在已核实 Draw Slot 出现后绑定到队伍。",
+                source = officialRuleSource,
+                evidence = QualificationEvidence.OFFICIAL
+            )
         )
     }
 
@@ -445,6 +557,14 @@ object QualificationCenterStore {
             title = "${edition.displayName} · 参赛资格来源",
             targetEvent = edition.displayName,
             routes = routes,
+            segments = listOf(
+                QualificationMechanismSegment(
+                    type = QualificationSegmentType.PARTICIPANT_ORIGIN,
+                    detail = "本届按已确认参赛事实建档；Region / Seed / Qualification Origin 各自等待字段级证据，不从参赛名单顺序反推。",
+                    source = if (officialWorldsTeams.isNotEmpty()) Worlds2026QualifiedTeams.SOURCE else participantSource,
+                    evidence = if (officialWorldsTeams.isNotEmpty()) QualificationEvidence.OFFICIAL else if (routes.isNotEmpty()) QualificationEvidence.PROVIDER else QualificationEvidence.PENDING
+                )
+            ),
             sourceSummary = when {
                 officialWorldsTeams.isNotEmpty() -> Worlds2026QualifiedTeams.SOURCE
                 routes.isEmpty() -> pendingSource
@@ -598,6 +718,7 @@ object QualificationCenterStore {
             title = "2026 LPL · 全球总决赛资格路径",
             targetEvent = "2026 全球总决赛",
             routes = routes,
+            segments = lpl2026MechanismSegments(governance),
             rules = rules,
             sourceSummary = listOf(
                 LplChampionshipPoints2026.sourceLabel,
