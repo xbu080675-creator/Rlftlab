@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-10T11:26:45Z",
+  "updatedAt": "2026-09-10T16:28:45Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -800,7 +800,11 @@
           "source": "",
           "stintId": "st_95e73552658e"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:43Z",
+        "attempts": 1
+      }
     },
     "p_1e0b667c97eb": {
       "displayName": "Lazi",
@@ -1106,7 +1110,11 @@
           "source": "",
           "stintId": "st_5eb756e43453"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:42Z",
+        "attempts": 1
+      }
     },
     "p_67e0c3d88193": {
       "displayName": "Tabe",
@@ -1152,7 +1160,11 @@
           "source": "",
           "stintId": "st_b84786a150f9"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:44Z",
+        "attempts": 1
+      }
     },
     "p_2d35f95cfa60": {
       "displayName": "Zoom",
@@ -1194,7 +1206,11 @@
           "source": "",
           "stintId": "st_b84786a150f9"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:43Z",
+        "attempts": 1
+      }
     },
     "p_116390fb1a49": {
       "displayName": "Huge",
@@ -1611,7 +1627,11 @@
           "source": "",
           "stintId": "st_73c68ebb7f1a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:42Z",
+        "attempts": 1
+      }
     },
     "p_c48d27887dea": {
       "displayName": "NoName",
@@ -1736,7 +1756,11 @@
           "source": "",
           "stintId": "st_a86b6a3cf9dd"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:44Z",
+        "attempts": 1
+      }
     },
     "p_57c5772c75be": {
       "displayName": "Kezman",
@@ -1860,7 +1884,11 @@
           "source": "",
           "stintId": "st_090c8accb9c9"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:43Z",
+        "attempts": 1
+      }
     },
     "p_082ffa3b7fe9": {
       "displayName": "Li Qi-Lin",
@@ -2161,7 +2189,11 @@
           "source": "",
           "stintId": "st_d5019033edea"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T16:28:41Z",
+        "attempts": 1
+      }
     },
     "p_95106816f90a": {
       "displayName": "Medusa",
