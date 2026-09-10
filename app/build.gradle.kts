@@ -34,8 +34,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 61
-        versionName = "1.0.0-dev.61"
+        versionCode = 62
+        versionName = "1.0.0-dev.62"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -114,7 +114,7 @@ dependencies {
 // dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.
 // Final dev.51 CI/OTA trigger after dual-source replay and YouTube session handling.
 
-// dev.52: Riot GCD-backed global management/coaching identification plus stable hardware-accelerated portrait YouTube embed rendering.
+// dev.52: Riot GCD-backed global management/coaching identification plus stable YouTube embed rendering.
 // Final dev.52 trigger after GCD mirror population and role-label verification.
 
 // dev.53: Bilibili official VOD lookup accepts reversed team order and retries negative search cache.
@@ -139,3 +139,5 @@ dependencies {
 // dev.60: add a lifecycle-driven animated LIVE badge and a unified domestic/global broadcast jump hub. GAME_LIVE shows LIVE; EVENT_LIVE/BETWEEN_GAMES stay distinct as ON AIR. Add LoL Esports, YouTube, Twitch and X global entries alongside Bilibili/Huya.
 
 // dev.61: repair mainland OTA acceleration after gh-proxy.com stalled on large Release assets. Use GHFast as primary, GHProxy.net as secondary, keep direct GitHub fallback, preserve Range resume and all package/signature verification.
+
+// dev.62: add a local BP HUD simulator before live draft WebSocket integration. Split RiftScreen into a full-screen FLAG_NOT_TOUCHABLE visual HUD plus a tiny touchable control dock, preserve the lower broadcast-safe area, and simulate pick/matchup/counter transitions without polluting real archives.

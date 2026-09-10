@@ -37,8 +37,11 @@ class RiftOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlay: RiftOverlayView? = null
     private var params: WindowManager.LayoutParams? = null
+    private var draftHud: DraftHudOverlayView? = null
+    private var draftDock: DraftHudControlView? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var collectJob: Job? = null
+    private var draftHudJob: Job? = null
 
     private data class OverlayUiState(
         val snapshot: LiveSnapshot,
@@ -69,6 +72,7 @@ class RiftOverlayService : Service() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         overlay?.post { clampOverlayToDisplay() }
+        draftHud?.post { draftHud?.render(DraftHudSimulation.state.value) }
     }
 
     private fun syncOverlayVisibility() {
@@ -78,12 +82,13 @@ class RiftOverlayService : Service() {
     private fun showOverlay() {
         if (!Settings.canDrawOverlays(this)) return
         if (overlay == null) createOverlay()
-        overlay?.visibility = View.VISIBLE
-        overlay?.post { clampOverlayToDisplay() }
+        updateDraftMode(DraftHudSimulation.state.value)
     }
 
     private fun hideOverlay() {
         overlay?.visibility = View.GONE
+        draftHud?.visibility = View.GONE
+        draftDock?.visibility = View.GONE
     }
 
     private fun createOverlay() {
@@ -93,8 +98,7 @@ class RiftOverlayService : Service() {
         val layoutParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else WindowManager.LayoutParams.TYPE_PHONE,
+            overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -118,6 +122,76 @@ class RiftOverlayService : Service() {
             }.collect { state ->
                 view.render(state.snapshot, state.status, state.target)
             }
+        }
+
+        draftHudJob = scope.launch {
+            DraftHudSimulation.state.collect { state ->
+                updateDraftMode(state)
+            }
+        }
+    }
+
+    private fun createDraftWindows() {
+        if (draftHud != null && draftDock != null) return
+
+        val hud = DraftHudOverlayView(this)
+        val hudParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+        }
+        windowManager.addView(hud, hudParams)
+        draftHud = hud
+
+        val dock = DraftHudControlView(
+            this,
+            onToggleAuto = { DraftHudSimulation.toggleAuto() },
+            onNext = { DraftHudSimulation.next() },
+            onStop = { DraftHudSimulation.stop() }
+        )
+        val dockParams = WindowManager.LayoutParams(
+            dp(56),
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            x = dp(4)
+        }
+        windowManager.addView(dock, dockParams)
+        draftDock = dock
+    }
+
+    private fun updateDraftMode(state: DraftHudState) {
+        if (hostInForeground) {
+            hideOverlay()
+            return
+        }
+        if (state.active) {
+            createDraftWindows()
+            overlay?.visibility = View.GONE
+            draftHud?.apply {
+                visibility = View.VISIBLE
+                render(state)
+            }
+            draftDock?.apply {
+                visibility = View.VISIBLE
+                render(state)
+            }
+        } else {
+            draftHud?.visibility = View.GONE
+            draftDock?.visibility = View.GONE
+            overlay?.visibility = View.VISIBLE
+            overlay?.post { clampOverlayToDisplay() }
         }
     }
 
@@ -191,6 +265,10 @@ class RiftOverlayService : Service() {
         }
     }
 
+    private fun overlayType(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else WindowManager.LayoutParams.TYPE_PHONE
+
     private fun startAsForeground() {
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= 34) {
@@ -203,7 +281,7 @@ class RiftOverlayService : Service() {
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_rift)
         .setContentTitle("RiftScreen 正在运行")
-        .setContentText("赛事副屏 · 赛程状态与 Riot 实时数据同步")
+        .setContentText("赛事副屏 / 全屏 HUD · 仅控制区接收触摸")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .build()
@@ -218,10 +296,16 @@ class RiftOverlayService : Service() {
     override fun onDestroy() {
         isRunning = false
         collectJob?.cancel()
-        overlay?.let {
-            runCatching { windowManager.removeView(it) }
+        draftHudJob?.cancel()
+        DraftHudSimulation.stop()
+        if (this::windowManager.isInitialized) {
+            overlay?.let { runCatching { windowManager.removeView(it) } }
+            draftHud?.let { runCatching { windowManager.removeView(it) } }
+            draftDock?.let { runCatching { windowManager.removeView(it) } }
         }
         overlay = null
+        draftHud = null
+        draftDock = null
         scope.cancel()
         super.onDestroy()
     }
