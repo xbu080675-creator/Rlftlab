@@ -14,6 +14,10 @@ import java.net.URL
  * The mirror is generated from explicitly attributed public provider pages. Provider rows never
  * masquerade as Riot-official data. Network refresh is preferred, while a bundled snapshot keeps
  * dev/offline builds usable until the same mirror reaches the production branch/CDN.
+ *
+ * Upstream may expose the same event through more than one numeric event id. RiftLab therefore uses
+ * the provider event slug as its stable tournament identity and keeps the individual provider match
+ * ids only as Series identities. Unknown short codes remain blank rather than being synthesized.
  */
 internal object InternationalEventMirrorProvider {
     private val endpoints = listOf(
@@ -57,7 +61,6 @@ internal object InternationalEventMirrorProvider {
             return bundled
         }
 
-        // Keep the last known good in-memory snapshot if both refresh paths fail.
         return cachedRoot
     }
 
@@ -69,11 +72,14 @@ internal object InternationalEventMirrorProvider {
         return buildList {
             for (i in 0 until events.length()) {
                 val event = events.optJSONObject(i) ?: continue
-                val eventId = event.optString("id")
+                val upstreamEventId = event.optString("id")
                 val eventName = event.optString("name").ifBlank { "International Event" }
-                val eventSlug = event.optString("slug").ifBlank { eventId }
+                val eventSlug = event.optString("slug").ifBlank { upstreamEventId }
+                if (eventSlug.isBlank()) continue
+                val stableEventId = stableEventId(eventSlug)
                 val provider = event.optString("source").ifBlank { "Verified Provider" }
                 val matches = event.optJSONArray("matches") ?: JSONArray()
+
                 for (j in 0 until matches.length()) {
                     val row = matches.optJSONObject(j) ?: continue
                     val startTime = row.optString("scheduledAt")
@@ -83,7 +89,7 @@ internal object InternationalEventMirrorProvider {
                         for (k in 0 until teamsJson.length()) {
                             val team = teamsJson.optJSONObject(k) ?: continue
                             val name = team.optString("name")
-                            val code = team.optString("code").ifBlank { name.take(8) }
+                            val code = team.optString("code")
                             if (name.isBlank() && code.isBlank()) continue
                             add(
                                 EsportsTeamRef(
@@ -99,18 +105,21 @@ internal object InternationalEventMirrorProvider {
                         }
                     }
                     if (teams.size < 2) continue
-                    val id = row.optString("id").ifBlank { "$eventId-$j" }
+                    val upstreamMatchId = row.optString("providerMatchId")
+                        .ifBlank { row.optString("id") }
+                        .ifBlank { "$upstreamEventId-$j" }
+                    val stableMatchId = "provider:$upstreamMatchId"
                     add(
                         ScheduledEsportsMatch(
-                            eventId = "provider:$id",
-                            matchId = "provider:$id",
+                            eventId = stableMatchId,
+                            matchId = stableMatchId,
                             league = eventName,
                             blockName = row.optString("stage").ifBlank { "$provider · Provider" },
                             startTimeIso = startTime,
                             state = row.optString("state").ifBlank { "unstarted" },
                             bestOf = row.optInt("bestOf", 0),
                             teams = teams,
-                            leagueId = eventId,
+                            leagueId = stableEventId,
                             leagueSlug = eventSlug
                         )
                     )
@@ -121,15 +130,21 @@ internal object InternationalEventMirrorProvider {
 
     private fun parseTournaments(root: JSONObject): List<EsportsTournamentRef> {
         val events = root.optJSONArray("events") ?: JSONArray()
-        return buildList {
-            for (i in 0 until events.length()) {
-                val event = events.optJSONObject(i) ?: continue
-                val eventId = event.optString("id")
-                val slug = event.optString("slug").ifBlank { eventId }
-                val name = event.optString("name").ifBlank { "International Event" }
-                if (eventId.isBlank() || slug.isBlank()) continue
+        val grouped = linkedMapOf<String, MutableList<JSONObject>>()
+        for (i in 0 until events.length()) {
+            val event = events.optJSONObject(i) ?: continue
+            val slug = event.optString("slug").ifBlank { event.optString("id") }
+            if (slug.isBlank()) continue
+            grouped.getOrPut(slug) { mutableListOf() }.add(event)
+        }
 
-                val dates = buildList {
+        return grouped.mapNotNull { (slug, variants) ->
+            val name = variants.asSequence()
+                .map { it.optString("name") }
+                .firstOrNull { it.isNotBlank() }
+                ?: "International Event"
+            val dates = buildList {
+                variants.forEach { event ->
                     val matches = event.optJSONArray("matches") ?: JSONArray()
                     for (j in 0 until matches.length()) {
                         matches.optJSONObject(j)
@@ -138,23 +153,25 @@ internal object InternationalEventMirrorProvider {
                             ?.takeIf { it.length == 10 }
                             ?.let(::add)
                     }
-                }.sorted()
-                if (dates.isEmpty()) continue
+                }
+            }.distinct().sorted()
+            if (dates.isEmpty()) return@mapNotNull null
 
-                add(
-                    EsportsTournamentRef(
-                        id = eventId,
-                        slug = slug,
-                        startDate = dates.first(),
-                        endDate = dates.last(),
-                        leagueId = eventId,
-                        leagueSlug = slug,
-                        leagueName = name
-                    )
-                )
-            }
-        }.distinctBy { it.id }.sortedBy { it.startDate }
+            val eventId = stableEventId(slug)
+            EsportsTournamentRef(
+                id = eventId,
+                slug = slug,
+                startDate = dates.first(),
+                endDate = dates.last(),
+                leagueId = eventId,
+                leagueSlug = slug,
+                leagueName = name
+            )
+        }.sortedBy { it.startDate }
     }
+
+    private fun stableEventId(slug: String): String =
+        "rft-event:" + slug.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')
 
     private fun getJson(endpoint: String): JSONObject {
         val bucket = System.currentTimeMillis() / 300_000L
