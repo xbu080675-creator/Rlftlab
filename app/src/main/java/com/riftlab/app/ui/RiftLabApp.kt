@@ -55,7 +55,9 @@ import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MockAiInsightEngine
+import com.riftlab.app.data.EsportsStaffRef
 import com.riftlab.app.data.PlayerCard
+import com.riftlab.app.data.PreRecentSeries
 import com.riftlab.app.data.ScheduleActivityState
 import com.riftlab.app.data.ScheduledEsportsMatch
 import com.riftlab.app.stream.StreamLauncher
@@ -215,12 +217,73 @@ private fun PreScreen() {
         item { ComprehensiveDataCoveragePanel() }
 
         item { SectionTitle("STARTING ROSTER / 首发") }
-        items(data.blueRoster.zip(data.redRoster)) { pair -> RosterRow(pair.first, pair.second) }
+        val starterRows = maxOf(data.blueRoster.size, data.redRoster.size)
+        if (starterRows > 0) {
+            items((0 until starterRows).toList()) { index ->
+                RosterRow(data.blueRoster.getOrNull(index), data.redRoster.getOrNull(index))
+            }
+        } else {
+            item {
+                Panel {
+                    Text("STARTERS NOT CONFIRMED", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    Text("Roster pool 可以已连接，但存在同位置多人时不会把名单顺序当作官方首发。", color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                }
+            }
+        }
         item {
             Panel {
                 Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
                 Text(data.rosterNote, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+            }
+        }
+
+        if (data.blueRosterPool.isNotEmpty() || data.redRosterPool.isNotEmpty()) {
+            item { SectionTitle("ROSTER POOL / 名单池（不等于首发）") }
+            item {
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(rosterPoolLabel(data.blue, data.blueRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                        Text(rosterPoolLabel(data.red, data.redRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                    }
+                }
+            }
+        }
+
+        if (data.blueStaff.isNotEmpty() || data.redStaff.isNotEmpty()) {
+            item { SectionTitle("TEAM STAFF / 教练组与工作人员") }
+            item {
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(staffLabel(data.blue, data.blueStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                        Text(staffLabel(data.red, data.redStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                    }
+                }
+            }
+        }
+
+        item { SectionTitle("RECENT FORM / 近期正式系列赛") }
+        item {
+            Panel {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(recentSeriesLabel(data.blue, data.blueRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                    Text(recentSeriesLabel(data.red, data.redRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text("仅统计当前 Unified Schedule 历史窗口中已验证结束的 Series；不是全历史数据库。", color = RiftMuted, fontSize = 8.sp)
+            }
+        }
+
+        item { SectionTitle("RECENT H2H / 近期交手") }
+        item {
+            Panel {
+                Text(
+                    if (data.recentHeadToHead.isEmpty()) "当前历史窗口没有可核实的近期直接交手。" else recentSeriesLabel(data.blue, data.recentHeadToHead),
+                    color = RiftText,
+                    fontSize = 9.sp,
+                    lineHeight = 14.sp
+                )
+                Text("SOURCE  Unified Schedule · Riot/Cito", color = RiftMuted, fontSize = 8.sp)
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -535,25 +598,56 @@ private fun MatchHero(blue: String, red: String, time: String, label: String, ma
 }
 
 @Composable
-private fun RosterRow(left: PlayerCard, right: PlayerCard) {
+private fun RosterRow(left: PlayerCard?, right: PlayerCard?) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left.role, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                Text(left.id, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(left.rank, color = RiftMuted, fontSize = 10.sp)
-                Text(left.recent, color = RiftMuted, fontSize = 9.sp)
+                Text(left?.role ?: right?.role ?: "—", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                if (left != null) {
+                    Text(left.rank, color = RiftMuted, fontSize = 10.sp)
+                    Text(left.recent, color = RiftMuted, fontSize = 9.sp)
+                }
             }
             Text("↔", color = RiftLine, fontSize = 18.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right.role, color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                Text(right.id, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(right.rank, color = RiftMuted, fontSize = 10.sp)
-                Text(right.recent, color = RiftMuted, fontSize = 9.sp)
+                Text(right?.role ?: left?.role ?: "—", color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                if (right != null) {
+                    Text(right.rank, color = RiftMuted, fontSize = 10.sp)
+                    Text(right.recent, color = RiftMuted, fontSize = 9.sp)
+                }
             }
         }
     }
 }
+
+private fun rosterPoolLabel(team: String, pool: List<PlayerCard>): String = buildString {
+    append(team).append("\n")
+    if (pool.isEmpty()) append("名单池待同步")
+    else pool.forEach { player -> append(player.role).append("  ").append(player.id).append("\n") }
+}.trimEnd()
+
+private fun staffLabel(team: String, staff: List<EsportsStaffRef>): String = buildString {
+    append(team).append("\n")
+    if (staff.isEmpty()) append("Staff 待同步")
+    else staff.take(8).forEach { person ->
+        append(person.displayRole.ifBlank { person.role }.ifBlank { "STAFF" })
+            .append("  ").append(person.name).append("\n")
+    }
+}.trimEnd()
+
+private fun recentSeriesLabel(team: String, rows: List<PreRecentSeries>): String = buildString {
+    append(team).append("\n")
+    if (rows.isEmpty()) append("当前历史窗口暂无已结束 Series")
+    else rows.forEach { row ->
+        append(row.outcome).append("  ")
+            .append(row.scoreFor).append(':').append(row.scoreAgainst)
+            .append(" vs ").append(row.opponentCode)
+            .append(" · ").append(row.startTimeIso.take(10))
+            .append("\n")
+    }
+}.trimEnd()
 
 @Composable
 private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?) {

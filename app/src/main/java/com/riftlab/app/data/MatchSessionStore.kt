@@ -328,6 +328,11 @@ object MatchSessionStore {
         val rightUniqueFive = rightRiotRoster.uniqueStartingFiveOrNull()
         val leftRoster = leftUniqueFive ?: emptyList()
         val rightRoster = rightUniqueFive ?: emptyList()
+        val leftStaff = staffForPre(leftDetails)
+        val rightStaff = staffForPre(rightDetails)
+        val leftRecent = recentCompletedSeries(left, target, limit = 5)
+        val rightRecent = recentCompletedSeries(right, target, limit = 5)
+        val recentH2h = recentHeadToHead(left, right, target, limit = 5)
         val connectedCount = listOf(leftDetails != null, rightDetails != null).count { it }
         val autoStarterCount = listOf(leftUniqueFive != null, rightUniqueFive != null).count { it }
 
@@ -343,18 +348,103 @@ object MatchSessionStore {
             redRoster = rightRoster,
             rosterNote = when {
                 connectedCount == 2 && autoStarterCount == 2 ->
-                    "两队 Riot getTeams roster 已连接，五位置均唯一；当前显示 Riot roster 五人。Rank 将接独立 Ranked 数据源。"
+                    "两队 roster 已连接且五位置均唯一；可作为当前 roster 五人展示，但仍不把 roster pool 额外成员擅自标成替补。Rank 继续等待独立 Ranked 数据源。"
                 connectedCount == 2 ->
-                    "两队 Riot team roster 已连接；存在替补或位置歧义时保持空缺，不使用任何场次专属缓存。"
+                    "两队 roster pool 已连接；存在同位置多人或位置歧义时，首发保持未确认，不从名单顺序猜首发/替补。"
                 connectedCount == 1 ->
-                    "一侧 Riot roster 已连接；另一侧保持空缺，不使用战队或场次硬编码。Rank 暂未接入。"
+                    "一侧 roster pool 已连接；另一侧保持空缺。未取得公开确认前，不填首发变化、伤病/缺席或转会结论。"
                 else ->
-                    "Riot Schedule 已连接，但当前队伍 roster 暂不可用；没有独立核实的数据就保持空缺。Rank 暂未接入。"
-            }
+                    "Schedule 已连接，但当前 roster 暂不可用；没有独立核实的数据就保持空缺。Rank 暂未接入。"
+            },
+            blueRosterPool = leftRiotRoster,
+            redRosterPool = rightRiotRoster,
+            blueStaff = leftStaff,
+            redStaff = rightStaff,
+            blueRecentSeries = leftRecent,
+            redRecentSeries = rightRecent,
+            recentHeadToHead = recentH2h
         )
         _rosterStatus.value = "ROSTER · RIOT GETTEAMS $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
         return "$connectedCount/2"
     }
+
+    private fun staffForPre(details: EsportsTeamDetails?): List<EsportsStaffRef> =
+        (details?.staff.orEmpty() + details?.management.orEmpty())
+            .filter { it.name.isNotBlank() }
+            .distinctBy { "${teamIdentityToken(it.name)}|${teamIdentityToken(it.role)}" }
+
+    private fun recentCompletedSeries(
+        team: EsportsTeamRef,
+        exclude: ScheduledEsportsMatch,
+        limit: Int
+    ): List<PreRecentSeries> = _schedule.value
+        .asSequence()
+        .filter(::isCompletedState)
+        .filter { candidate -> candidate.matchId != exclude.matchId && candidate.eventId != exclude.eventId }
+        .filter { candidate -> candidate.teams.any { matchesTeamIdentity(it, team) } }
+        .sortedByDescending { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
+        .mapNotNull { toPreRecentSeries(it, team) }
+        .take(limit)
+        .toList()
+
+    private fun recentHeadToHead(
+        left: EsportsTeamRef,
+        right: EsportsTeamRef,
+        exclude: ScheduledEsportsMatch,
+        limit: Int
+    ): List<PreRecentSeries> = _schedule.value
+        .asSequence()
+        .filter(::isCompletedState)
+        .filter { candidate -> candidate.matchId != exclude.matchId && candidate.eventId != exclude.eventId }
+        .filter { candidate ->
+            candidate.teams.any { matchesTeamIdentity(it, left) } &&
+                candidate.teams.any { matchesTeamIdentity(it, right) }
+        }
+        .sortedByDescending { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
+        .mapNotNull { toPreRecentSeries(it, left) }
+        .take(limit)
+        .toList()
+
+    private fun toPreRecentSeries(
+        match: ScheduledEsportsMatch,
+        perspective: EsportsTeamRef
+    ): PreRecentSeries? {
+        val index = match.teams.indexOfFirst { matchesTeamIdentity(it, perspective) }
+        if (index < 0) return null
+        val self = match.teams[index]
+        val opponent = match.teams.firstOrNull { !matchesTeamIdentity(it, perspective) } ?: return null
+        val scoreFor = self.gameWins
+        val scoreAgainst = opponent.gameWins
+        val outcome = when {
+            scoreFor > scoreAgainst -> "W"
+            scoreFor < scoreAgainst -> "L"
+            else -> "—"
+        }
+        return PreRecentSeries(
+            eventId = match.eventId.ifBlank { match.matchId },
+            opponentCode = opponent.code.ifBlank { opponent.name },
+            scoreFor = scoreFor,
+            scoreAgainst = scoreAgainst,
+            outcome = outcome,
+            startTimeIso = match.startTimeIso,
+            source = "Unified Schedule · Riot/Cito"
+        )
+    }
+
+    private fun matchesTeamIdentity(candidate: EsportsTeamRef, target: EsportsTeamRef): Boolean {
+        val a = listOf(candidate.id, candidate.code, candidate.name, candidate.slug)
+            .map(::teamIdentityToken)
+            .filter { it.isNotBlank() }
+            .toSet()
+        val b = listOf(target.id, target.code, target.name, target.slug)
+            .map(::teamIdentityToken)
+            .filter { it.isNotBlank() }
+            .toSet()
+        return a.any { token -> token in b }
+    }
+
+    private fun teamIdentityToken(value: String): String =
+        value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
         if (team.id.isNotBlank()) return team.id

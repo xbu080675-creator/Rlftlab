@@ -108,3 +108,10 @@ dev.71 不要求全世界所有年份一次性达到 100%，但必须做到：
 ```
 
 所以 dev.71 先补全这些底层事实数据；算分引擎在数据可信后接入。
+
+## 2026-09-10 · PRE context tranche
+
+- PRE now separates **confirmed/uniquely resolvable starting five** from the broader roster pool; a multi-player same-role roster is never silently treated as a starting lineup.
+- Team staff/management supplied by the existing team provider chain is surfaced with its own source fields.
+- Recent completed Series and recent H2H are derived only from the verified-completed portion of the current Unified Schedule history window, with an explicit warning that this is not the full historical database.
+- Rank, injuries/absence, transfers and lineup-change claims remain empty until an independent trustworthy source is connected.
