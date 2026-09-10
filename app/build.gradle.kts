@@ -32,8 +32,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 59
-        versionName = "1.0.0-dev.59"
+        versionCode = 60
+        versionName = "1.0.0-dev.60"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URL",
@@ -77,7 +77,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-compose:1.12.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
@@ -133,3 +132,5 @@ dependencies {
 // dev.58: fix annual research compilation and add mainland-first dual-channel OTA with verified GitHub fallback.
 
 // dev.59: GitHub remains the only build/version/release source. The app tries GitHub directly first, then temporarily enables a GitHub-only accelerator for manifest/APK requests, supports Range resume, and releases the accelerated connection immediately after the update request.
+
+// dev.60: add a lifecycle-driven animated LIVE badge and a unified domestic/global broadcast jump hub. GAME_LIVE shows LIVE; EVENT_LIVE/BETWEEN_GAMES stay distinct as ON AIR. Add LoL Esports, YouTube, Twitch and X global entries alongside Bilibili/Huya.
