@@ -278,12 +278,16 @@ private fun PreScreen() {
         item {
             Panel {
                 Text(
-                    if (data.recentHeadToHead.isEmpty()) "当前历史窗口没有可核实的近期直接交手。" else recentSeriesLabel(data.blue, data.recentHeadToHead),
+                    if (data.recentHeadToHead.isEmpty()) {
+                        "当前历史窗口没有可核实的近期直接交手。"
+                    } else {
+                        "${data.blue} 视角（W/L 均以 ${data.blue} 为准）\n" + recentSeriesRows(data.recentHeadToHead)
+                    },
                     color = RiftText,
-                    fontSize = 9.sp,
-                    lineHeight = 14.sp
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
                 )
-                Text("SOURCE  Unified Schedule · Riot/Cito", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE  Unified Schedule · Riot/Cito · 结果视角已标明", color = RiftMuted, fontSize = 9.sp)
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -640,7 +644,11 @@ private fun staffLabel(team: String, staff: List<EsportsStaffRef>): String = bui
 private fun recentSeriesLabel(team: String, rows: List<PreRecentSeries>): String = buildString {
     append(team).append("\n")
     if (rows.isEmpty()) append("当前历史窗口暂无已结束 Series")
-    else rows.forEach { row ->
+    else append(recentSeriesRows(rows))
+}.trimEnd()
+
+private fun recentSeriesRows(rows: List<PreRecentSeries>): String = buildString {
+    rows.forEach { row ->
         append(row.outcome).append("  ")
             .append(row.scoreFor).append(':').append(row.scoreAgainst)
             .append(" vs ").append(row.opponentCode)

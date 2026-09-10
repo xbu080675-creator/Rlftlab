@@ -89,6 +89,8 @@ internal data class TeamArchiveSupplement(
  * The legacy LPL team_archive.json remains a fallback while old datasets migrate.
  */
 internal class TeamArchiveProvider {
+    private val globalProvider = GlobalTeamArchiveProvider()
+
     companion object {
         private const val CACHE_TTL_MS = 30L * 60L * 1000L
         private val GRAPH_ENDPOINTS = listOf(
@@ -105,16 +107,36 @@ internal class TeamArchiveProvider {
 
     suspend fun fetch(team: EsportsTeamRef, details: EsportsTeamDetails): TeamArchiveSupplement {
         val code = resolveCode(team, details)
-        if (code.isBlank()) return TeamArchiveSupplement(sourceMode = "unresolved")
-        val root = directory()
-        return if (root.optJSONArray("teams") != null) {
-            parseGraph(root, code)
-        } else {
-            val node = root.optJSONObject("teams")?.optJSONObject(code)
-                ?: return TeamArchiveSupplement(updatedAt = root.optString("updatedAt"), sourceMode = "missing")
-            parseLegacy(node, root.optString("updatedAt"))
-        }
+        val local = runCatching {
+            if (code.isBlank()) {
+                TeamArchiveSupplement(sourceMode = "local-code-unresolved")
+            } else {
+                val root = directory()
+                if (root.optJSONArray("teams") != null) {
+                    parseGraph(root, code)
+                } else {
+                    val node = root.optJSONObject("teams")?.optJSONObject(code)
+                    if (node == null) TeamArchiveSupplement(updatedAt = root.optString("updatedAt"), sourceMode = "legacy-missing-team")
+                    else parseLegacy(node, root.optString("updatedAt"))
+                }
+            }
+        }.getOrElse { TeamArchiveSupplement(sourceMode = "local-archive-error") }
+
+        if (hasArchiveData(local)) return local
+
+        // dev.72: overseas teams must receive the same archive surface as LPL teams. Riot Teams
+        // remains roster authority; Leaguepedia supplies region/organization/result history with
+        // explicit provenance. A source failure keeps the local result rather than fabricating data.
+        val global = runCatching { globalProvider.fetch(team, details) }.getOrNull()
+        return global?.takeIf(::hasArchiveData) ?: local
     }
+
+    private fun hasArchiveData(value: TeamArchiveSupplement): Boolean =
+        value.identity.foundedAt.isNotBlank() || value.identity.lolDivisionFoundedAt.isNotBlank() ||
+            value.identity.region.isNotBlank() || value.identity.city.isNotBlank() ||
+            value.operators.isNotEmpty() || value.parentOrganizations.isNotEmpty() ||
+            value.peopleInCharge.isNotEmpty() || value.honors.isNotEmpty() || value.results.isNotEmpty() ||
+            value.lineage.isNotEmpty() || value.alumni.isNotEmpty()
 
     private fun directory(): JSONObject {
         val now = System.currentTimeMillis()
@@ -354,9 +376,11 @@ internal class TeamArchiveProvider {
     }
 
     private fun resolveCode(team: EsportsTeamRef, details: EsportsTeamDetails): String {
+        val explicitCodes = listOf(details.code, team.code).map(::token).filter { it.isNotBlank() }
         val candidates = listOf(details.code, team.code, details.name, team.name, details.slug, team.slug).map(::token)
         return candidates.firstNotNullOfOrNull { aliases[it] }
-            ?: candidates.firstOrNull { it in knownCodes }
+            ?: explicitCodes.firstOrNull { it in knownCodes }
+            ?: explicitCodes.firstOrNull()
             .orEmpty()
     }
 
