@@ -13,10 +13,9 @@ import kotlinx.coroutines.launch
 /**
  * dev.70 qualification model.
  *
- * Qualification is deliberately not a synonym for a tournament standings table. League/table
- * points describe one tournament stage; Championship Points are annual qualification currency;
- * route nodes describe how a team can reach a target event. Every route keeps evidence/source so
- * a RiftLab-derived possibility can never be rendered as an official confirmed berth.
+ * Tournament standings, annual Championship Points and qualification routes are three different
+ * concepts. This layer keeps them separate and carries evidence/source on every route node so an
+ * official confirmation can never be confused with a RiftLab-derived possibility.
  */
 enum class QualificationTeamState(val label: String) {
     LOCKED("已锁定"),
@@ -111,9 +110,7 @@ object QualificationCenterStore {
         job = scope.launch {
             combine(TournamentEditionArchiveStore.state, StandingsCenterStore.state) { archive, standings ->
                 rebuild(archive, standings)
-            }.collect { next ->
-                _state.value = next
-            }
+            }.collect { next -> _state.value = next }
         }
     }
 
@@ -137,12 +134,14 @@ object QualificationCenterStore {
                 targetEvent = route.targetEvent,
                 status = route.status.name,
                 path = route.route.map { it.label },
-                source = route.source,
-                verified = route.evidence == QualificationEvidence.OFFICIAL,
-                teamCode = route.teamCode,
-                championshipPoints = route.championshipPoints,
-                leagueStandingPoints = route.leagueStandingPoints,
-                evidence = route.evidence.name
+                source = buildString {
+                    append(route.source)
+                    append(" · ")
+                    append(route.evidence.label)
+                    route.championshipPoints?.let { append(" · Championship Points ").append(it) }
+                    route.leagueStandingPoints?.let { append(" · Standings Points ").append(it) }
+                },
+                verified = route.evidence == QualificationEvidence.OFFICIAL
             )
         }
     }
@@ -154,9 +153,11 @@ object QualificationCenterStore {
         archive: TournamentEditionArchiveState,
         standingsState: StandingsCenterState
     ): QualificationCenterState {
-        val snapshots = archive.editions.associateNotNull { edition ->
-            buildSnapshot(edition, archive, standingsState)?.let { edition.tournamentId to it }
+        val snapshots = linkedMapOf<String, QualificationTournamentSnapshot>()
+        archive.editions.forEach { edition ->
+            buildSnapshot(edition, archive, standingsState)?.let { snapshots[edition.tournamentId] = it }
         }
+
         val selectedTournamentId = archive.selectedTournamentId
             .takeIf { snapshots.containsKey(it) }
             ?: snapshots.keys.lastOrNull().orEmpty()
@@ -167,7 +168,7 @@ object QualificationCenterStore {
             } == true -> manualTeamCode
             else -> selected?.routes?.firstOrNull()?.teamCode.orEmpty()
         }
-        if (selectedTeam != manualTeamCode && manualTeamCode.isNotBlank()) manualTeamCode = ""
+        if (manualTeamCode.isNotBlank() && selectedTeam != manualTeamCode) manualTeamCode = ""
 
         return QualificationCenterState(
             snapshotsByTournamentId = snapshots,
@@ -176,7 +177,7 @@ object QualificationCenterStore {
             lastRefreshEpochMs = System.currentTimeMillis(),
             statusMessage = when {
                 selected == null -> "当前届次尚无可信资格路径源 · 不根据排名猜测晋级"
-                selected.routes.isEmpty() -> "${selected.title} · 资格规则/路径待可信来源"
+                selected.routes.isEmpty() -> "${selected.title} · 资格来源待可信数据"
                 else -> "${selected.title} · ${selected.routes.size} 支队伍资格状态已进入独立路径模型"
             }
         )
@@ -197,20 +198,23 @@ object QualificationCenterStore {
                 matches = detail?.matchedSeries.orEmpty(),
                 standings = standings
             )
-            return build2026LplWorldsSnapshot(edition, standings, governance, detail?.matchedSeries.orEmpty())
+            return build2026LplWorldsSnapshot(
+                edition = edition,
+                standings = standings,
+                governance = governance,
+                matches = detail?.matchedSeries.orEmpty()
+            )
         }
 
-        // The model is global, but we intentionally do not fabricate routes for regions/events that
-        // do not yet expose a trusted qualification source to RiftLab.
-        if (edition.family in setOf("WORLDS", "MSI", "FIRST_STAND")) {
+        // Global model, conservative data policy: establish the archive position for international
+        // editions but do not infer participant qualification origins from the participant list.
+        if (edition.family.uppercase() in setOf("WORLDS", "MSI", "FIRST_STAND")) {
             return QualificationTournamentSnapshot(
                 tournamentId = edition.tournamentId,
                 title = "${edition.displayName} · 参赛资格来源",
                 targetEvent = edition.displayName,
-                routes = emptyList(),
-                rules = emptyList(),
                 sourceSummary = "等待赛事官方 / Riot / 已核实 Provider",
-                note = "该届国际赛已建立资格档案位；参赛队的资格来源未拿到可信映射前保持待确认。"
+                note = "该届国际赛已建立资格档案位；参赛队资格来源未拿到可信映射前保持待确认。"
             )
         }
         return null
@@ -263,12 +267,13 @@ object QualificationCenterStore {
                             evidence = QualificationEvidence.OFFICIAL
                         )
                     )
+
                     LplWorldsStatus.REGIONAL_LOCKED -> {
                         add(
                             QualificationRouteNode(
-                                id = "$teamCode:regional-locked",
-                                label = "区域资格赛 / 后续资格路径",
-                                detail = "资格竞争仍存续；具体对阵只在官方签位明确时写入。",
+                                id = "$teamCode:regional-open",
+                                label = "后续资格路径",
+                                detail = "世界赛资格竞争仍存续；具体路径只按官方规则与已确认签位展开。",
                                 state = QualificationNodeState.AVAILABLE,
                                 source = LplChampionshipPoints2026.sourceLabel,
                                 evidence = QualificationEvidence.OFFICIAL
@@ -289,9 +294,9 @@ object QualificationCenterStore {
                         } else {
                             add(
                                 QualificationRouteNode(
-                                    id = "$teamCode:regional-slot-pending",
-                                    label = "具体资格赛签位",
-                                    detail = "当前已核实签位快照没有该队的确定槽位；保持待确认，不按积分排名自行分配 M1/M2/M3。",
+                                    id = "$teamCode:slot-pending",
+                                    label = "具体签位",
+                                    detail = "当前已核实签位快照没有该队的确定槽位；不按积分排名自行分配 M1/M2/M3。",
                                     state = QualificationNodeState.PENDING,
                                     source = governance.draw.sourceSummary,
                                     evidence = QualificationEvidence.PENDING
@@ -305,15 +310,18 @@ object QualificationCenterStore {
                                 detail = "仍需后续正式赛果满足官方资格规则。",
                                 state = QualificationNodeState.AVAILABLE,
                                 source = governance.rules.sourceSummary,
-                                evidence = if (rules.any { it.evidence == QualificationEvidence.OFFICIAL }) QualificationEvidence.OFFICIAL else QualificationEvidence.DERIVED
+                                evidence = if (rules.any { it.evidence == QualificationEvidence.OFFICIAL }) {
+                                    QualificationEvidence.OFFICIAL
+                                } else QualificationEvidence.DERIVED
                             )
                         )
                     }
+
                     LplWorldsStatus.ELIMINATED -> add(
                         QualificationRouteNode(
                             id = "$teamCode:path-closed",
                             label = "全球总决赛资格路径",
-                            detail = "该快照标记为无缘资格赛；路径关闭。",
+                            detail = "该积分快照标记为无缘资格赛；路径关闭。",
                             state = QualificationNodeState.BLOCKED,
                             source = LplChampionshipPoints2026.sourceLabel,
                             evidence = QualificationEvidence.OFFICIAL
@@ -329,7 +337,7 @@ object QualificationCenterStore {
                 targetEvent = "2026 全球总决赛",
                 status = status,
                 championshipPoints = row.total,
-                leagueStandingPoints = leaguePoints[teamCode],
+                leagueStandingPoints = leaguePoints[teamToken(teamCode)],
                 annualPointBreakdown = "${row.split1} + ${row.split2} + ${row.split3Floor}保底",
                 route = nodes,
                 source = LplChampionshipPoints2026.sourceLabel,
@@ -355,12 +363,11 @@ object QualificationCenterStore {
 
     private fun is2026LplWorldsContext(edition: TournamentEditionArchiveRecord): Boolean {
         val identity = "${edition.leagueSlug} ${edition.leagueName} ${edition.slug} ${edition.family} ${edition.stage}".lowercase()
-        val lpl = identity.contains("lpl")
         val qualificationStage = edition.stage.equals("SPLIT_3", true) ||
             edition.stage.equals("REGIONAL_QUALIFIER", true) ||
             identity.contains("split_3") || identity.contains("split-3") ||
             identity.contains("regional") || identity.contains("资格")
-        return edition.seasonYear == 2026 && lpl && qualificationStage
+        return edition.seasonYear == 2026 && identity.contains("lpl") && qualificationStage
     }
 
     private fun standingsPointsByTeam(standings: TournamentStandings?): Map<String, Int> {
@@ -415,10 +422,4 @@ object QualificationCenterStore {
 
     private fun teamToken(value: String): String =
         value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
-
-    private inline fun <K, V> Iterable<K>.associateNotNull(transform: (K) -> Pair<String, V>?): Map<String, V> {
-        val result = linkedMapOf<String, V>()
-        for (element in this) transform(element)?.let { (key, value) -> result[key] = value }
-        return result
-    }
 }
