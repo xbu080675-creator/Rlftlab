@@ -225,7 +225,9 @@ class RiftOverlayService : Service() {
         draftHud?.setEditMode(enabled)
         draftHudParams?.let { lp ->
             lp.flags = if (enabled) editableHudFlags() else lockedHudFlags()
-            runCatching { windowManager.updateViewLayout(draftHud, lp) }
+            draftHud?.let { hud ->
+                runCatching { windowManager.updateViewLayout(hud, lp) }
+            }
         }
         refreshDraftDock()
     }
