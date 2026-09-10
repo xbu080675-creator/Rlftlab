@@ -22,6 +22,18 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
+      - name: Skip already-wired OTA generator block
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tools/apply_dev71_resilience_lcp_points.py')
+          text = p.read_text(encoding='utf-8')
+          start = text.index('# Release build bundles the global resilience seeds')
+          end = text.index('# Official LCP 2026 Championship Points formula')
+          text = text[:start] + '# OTA global seeds are already wired by repository connector.\n\n' + text[end:]
+          p.write_text(text, encoding='utf-8')
+          PY
       - name: Apply LCP points and global resilience patch
         run: python3 tools/apply_dev71_resilience_lcp_points.py
       - name: Static guards
@@ -57,8 +69,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Workflow files are committed only through the repository connector; the Actions token
-          # pushes source/data changes only so workflow-permission restrictions cannot block them.
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
