@@ -315,12 +315,17 @@ object MatchSessionStore {
         val right = target.teams.getOrNull(1) ?: return "0/2"
         _rosterStatus.value = "ROSTER · 正在同步队伍资料源…"
 
-        val leftDetails = runCatching {
-            teamLookupSlug(left)?.let { teamSource.fetchTeam(it) }
-        }.getOrNull()
-        val rightDetails = runCatching {
-            teamLookupSlug(right)?.let { teamSource.fetchTeam(it) }
-        }.getOrNull()
+        val externalProviderTarget = isExternalProviderTarget(target)
+        val leftDetails = if (externalProviderTarget) {
+            null
+        } else {
+            runCatching { teamLookupSlug(left)?.let { teamSource.fetchTeam(it) } }.getOrNull()
+        }
+        val rightDetails = if (externalProviderTarget) {
+            null
+        } else {
+            runCatching { teamLookupSlug(right)?.let { teamSource.fetchTeam(it) } }.getOrNull()
+        }
 
         val leftRiotRoster = leftDetails?.players.orEmpty().toPlayerCards()
         val rightRiotRoster = rightDetails?.players.orEmpty().toPlayerCards()
@@ -347,6 +352,8 @@ object MatchSessionStore {
             blueRoster = leftRoster,
             redRoster = rightRoster,
             rosterNote = when {
+                externalProviderTarget ->
+                    "当前赛程来自外部赛事 Provider；Provider team id 不会冒充 Riot team id。尚未建立可信跨源映射前，Roster / Staff 保持未知。"
                 connectedCount == 2 && autoStarterCount == 2 ->
                     "两队 roster 已连接且五位置均唯一；可作为当前 roster 五人展示，但仍不把 roster pool 额外成员擅自标成替补。Rank 继续等待独立 Ranked 数据源。"
                 connectedCount == 2 ->
@@ -364,7 +371,11 @@ object MatchSessionStore {
             redRecentSeries = rightRecent,
             recentHeadToHead = recentH2h
         )
-        _rosterStatus.value = "ROSTER · TEAM SOURCES $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        _rosterStatus.value = if (externalProviderTarget) {
+            "ROSTER · PROVIDER TEAM NAMESPACE · CROSSWALK PENDING"
+        } else {
+            "ROSTER · TEAM SOURCES $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        }
         return "$connectedCount/2"
     }
 
@@ -431,12 +442,17 @@ object MatchSessionStore {
         )
     }
 
+    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =
+        match.eventId.startsWith("provider:") ||
+            match.matchId.startsWith("provider:") ||
+            match.leagueId.startsWith("rft-event:")
+
     private fun matchesTeamIdentity(candidate: EsportsTeamRef, target: EsportsTeamRef): Boolean {
-        val a = listOf(candidate.id, candidate.code, candidate.name, candidate.slug)
+        val a = listOf(candidate.slug, candidate.code, candidate.name)
             .map(::teamIdentityToken)
             .filter { it.isNotBlank() }
             .toSet()
-        val b = listOf(target.id, target.code, target.name, target.slug)
+        val b = listOf(target.slug, target.code, target.name)
             .map(::teamIdentityToken)
             .filter { it.isNotBlank() }
             .toSet()
@@ -447,8 +463,8 @@ object MatchSessionStore {
         value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
-        if (team.id.isNotBlank()) return team.id
         if (team.slug.isNotBlank()) return team.slug
+        if (team.id.isNotBlank()) return team.id
 
         return team.name
             .lowercase()
@@ -464,7 +480,7 @@ object MatchSessionStore {
                     role = player.role,
                     id = player.summonerName,
                     rank = "RANK 待接",
-                    recent = "Riot roster"
+                    recent = "Verified team source"
                 )
             }
 
