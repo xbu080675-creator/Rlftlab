@@ -34,8 +34,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 62
-        versionName = "1.0.0-dev.62"
+        versionCode = 63
+        versionName = "1.0.0-dev.63"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -141,3 +141,5 @@ dependencies {
 // dev.61: repair mainland OTA acceleration after gh-proxy.com stalled on large Release assets. Use GHFast as primary, GHProxy.net as secondary, keep direct GitHub fallback, preserve Range resume and all package/signature verification.
 
 // dev.62: add a local BP HUD simulator before live draft WebSocket integration. Split RiftScreen into a full-screen FLAG_NOT_TOUCHABLE visual HUD plus a tiny touchable control dock, preserve the lower broadcast-safe area, and simulate pick/matchup/counter transitions without polluting real archives.
+
+// dev.63: turn Draft HUD into a user-owned layout. Keep a safe default, add an EDIT/LOCK workflow, draggable modules, per-module scale/alpha/visibility, reset, normalized coordinates, independent landscape/portrait profiles, and full touch pass-through whenever locked.
