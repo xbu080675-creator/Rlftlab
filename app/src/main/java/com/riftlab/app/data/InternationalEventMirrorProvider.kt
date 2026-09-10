@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import com.riftlab.app.RiftLabApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -8,40 +9,62 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Non-Riot international-event schedule adapter.
+ * Non-Riot international-event adapter backed by a repository mirror.
  *
- * The repository mirror is produced by a scheduled data job from explicitly attributed public
- * providers. Provider rows never masquerade as Riot-official data, and a mirror failure simply
- * leaves those events unavailable instead of synthesizing results.
+ * The mirror is generated from explicitly attributed public provider pages. Provider rows never
+ * masquerade as Riot-official data. Network refresh is preferred, while a bundled snapshot keeps
+ * dev/offline builds usable until the same mirror reaches the production branch/CDN.
  */
 internal object InternationalEventMirrorProvider {
     private val endpoints = listOf(
         "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/global/international_events.json",
         "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/global/international_events.json"
     )
-
-    @Volatile private var cachedAt = 0L
-    @Volatile private var cachedMatches: List<ScheduledEsportsMatch> = emptyList()
+    private const val BUNDLED_ASSET = "data/international_events.json"
     private const val TTL_MS = 15L * 60L * 1000L
 
+    @Volatile private var cachedAt = 0L
+    @Volatile private var cachedRoot: JSONObject? = null
+
     suspend fun fetchMatches(): List<ScheduledEsportsMatch> = withContext(Dispatchers.IO) {
+        loadRoot()?.let(::parseMatches).orEmpty()
+    }
+
+    suspend fun fetchTournaments(): List<EsportsTournamentRef> = withContext(Dispatchers.IO) {
+        loadRoot()?.let(::parseTournaments).orEmpty()
+    }
+
+    private fun loadRoot(): JSONObject? {
         val now = System.currentTimeMillis()
-        if (cachedMatches.isNotEmpty() && now - cachedAt < TTL_MS) return@withContext cachedMatches
+        cachedRoot?.takeIf { now - cachedAt < TTL_MS }?.let { return it }
 
         for (endpoint in endpoints) {
             val root = runCatching { getJson(endpoint) }.getOrNull() ?: continue
-            val parsed = parse(root)
-            if (parsed.isNotEmpty()) {
-                cachedMatches = parsed
-                cachedAt = now
-                return@withContext parsed
-            }
+            if (!valid(root)) continue
+            cachedRoot = root
+            cachedAt = now
+            return root
         }
-        cachedMatches
+
+        val bundled = runCatching {
+            RiftLabApplication.appContext.assets.open(BUNDLED_ASSET)
+                .bufferedReader()
+                .use { JSONObject(it.readText()) }
+        }.getOrNull()?.takeIf(::valid)
+        if (bundled != null) {
+            cachedRoot = bundled
+            cachedAt = now
+            return bundled
+        }
+
+        // Keep the last known good in-memory snapshot if both refresh paths fail.
+        return cachedRoot
     }
 
-    private fun parse(root: JSONObject): List<ScheduledEsportsMatch> {
-        if (root.optInt("schemaVersion", 0) <= 0) return emptyList()
+    private fun valid(root: JSONObject): Boolean =
+        root.optInt("schemaVersion", 0) > 0 && (root.optJSONArray("events")?.length() ?: 0) > 0
+
+    private fun parseMatches(root: JSONObject): List<ScheduledEsportsMatch> {
         val events = root.optJSONArray("events") ?: JSONArray()
         return buildList {
             for (i in 0 until events.length()) {
@@ -53,6 +76,8 @@ internal object InternationalEventMirrorProvider {
                 val matches = event.optJSONArray("matches") ?: JSONArray()
                 for (j in 0 until matches.length()) {
                     val row = matches.optJSONObject(j) ?: continue
+                    val startTime = row.optString("scheduledAt")
+                    if (startTime.isBlank()) continue
                     val teamsJson = row.optJSONArray("teams") ?: JSONArray()
                     val teams = buildList {
                         for (k in 0 until teamsJson.length()) {
@@ -81,7 +106,7 @@ internal object InternationalEventMirrorProvider {
                             matchId = "provider:$id",
                             league = eventName,
                             blockName = row.optString("stage").ifBlank { "$provider · Provider" },
-                            startTimeIso = row.optString("scheduledAt"),
+                            startTimeIso = startTime,
                             state = row.optString("state").ifBlank { "unstarted" },
                             bestOf = row.optInt("bestOf", 0),
                             teams = teams,
@@ -92,6 +117,43 @@ internal object InternationalEventMirrorProvider {
                 }
             }
         }.distinctBy { it.matchId }.sortedBy { it.startTimeIso }
+    }
+
+    private fun parseTournaments(root: JSONObject): List<EsportsTournamentRef> {
+        val events = root.optJSONArray("events") ?: JSONArray()
+        return buildList {
+            for (i in 0 until events.length()) {
+                val event = events.optJSONObject(i) ?: continue
+                val eventId = event.optString("id")
+                val slug = event.optString("slug").ifBlank { eventId }
+                val name = event.optString("name").ifBlank { "International Event" }
+                if (eventId.isBlank() || slug.isBlank()) continue
+
+                val dates = buildList {
+                    val matches = event.optJSONArray("matches") ?: JSONArray()
+                    for (j in 0 until matches.length()) {
+                        matches.optJSONObject(j)
+                            ?.optString("scheduledAt")
+                            ?.take(10)
+                            ?.takeIf { it.length == 10 }
+                            ?.let(::add)
+                    }
+                }.sorted()
+                if (dates.isEmpty()) continue
+
+                add(
+                    EsportsTournamentRef(
+                        id = eventId,
+                        slug = slug,
+                        startDate = dates.first(),
+                        endDate = dates.last(),
+                        leagueId = eventId,
+                        leagueSlug = slug,
+                        leagueName = name
+                    )
+                )
+            }
+        }.distinctBy { it.id }.sortedBy { it.startDate }
     }
 
     private fun getJson(endpoint: String): JSONObject {
