@@ -12,6 +12,20 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
     devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
+// dev.66 restores a mainland-first OTA endpoint while GitHub remains the canonical build/version
+// source. The client tries this Gitee Release manifest first, then falls back to the adaptive GitHub
+// transport pool from dev.65. Override only with another official RiftLab Gitee dev-latest URL.
+val defaultOtaPrimaryManifestUrl =
+    "https://gitee.com/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/latest.json"
+val otaPrimaryManifestUrl = providers.gradleProperty("RIFTLAB_OTA_PRIMARY_MANIFEST_URL")
+    .orElse("")
+    .get()
+    .trim()
+    .ifBlank { defaultOtaPrimaryManifestUrl }
+val otaPrimaryManifestUrlLiteral = otaPrimaryManifestUrl
+    .replace("\\", "\\\\")
+    .replace("\"", "\\\"")
+
 // Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
 // dev.65 stops trusting one fixed public node: the app probes the actual Release APK and picks the
 // fastest path for the user's current network, then keeps Range-resume fallback across the pool.
@@ -36,8 +50,13 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 65
-        versionName = "1.0.0-dev.65"
+        versionCode = 66
+        versionName = "1.0.0-dev.66"
+        buildConfigField(
+            "String",
+            "OTA_PRIMARY_MANIFEST_URL",
+            "\"$otaPrimaryManifestUrlLiteral\""
+        )
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -149,3 +168,5 @@ dependencies {
 // dev.64: polish the watch HUD after real-screen testing. Auto-hide the finished DRAFT LOCKED status after a brief confirmation, keep it visible while editing, and compress matchup intelligence into a two-line horizontal strip to reduce broadcast obstruction.
 
 // dev.65: make GitHub OTA acceleration network-adaptive. Probe the real APK through direct GitHub and multiple GitHub-only accelerators, rank by measured throughput, download from the fastest path, keep Range resume/fallback, and stop sending no-cache on immutable versioned APK assets so CDN caches can actually help.
+
+// dev.66: restore Gitee Release as the China-mainland first OTA source while keeping GitHub as the canonical build/version source. GitHub Actions mirrors the signed APK + latest.json to Gitee; the app falls back to dev.65 adaptive GitHub transports and only resumes across sources when versionCode/SHA-256 identity matches.
