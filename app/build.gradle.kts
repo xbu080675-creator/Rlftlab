@@ -50,8 +50,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 68
-        versionName = "1.0.0-dev.68"
+        versionCode = 69
+        versionName = "1.0.0-dev.69"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -169,3 +169,5 @@ dependencies {
 // dev.67: icon-only repack. No product/runtime changes; package the new RiftLab launcher icon and republish OTA for normal-network download testing without VPN/system proxy.
 
 // dev.68: begin the comprehensive-data line: normalized Tournament/Series/Game/Team/Player graph, provenance and explicit coverage gaps; existing providers remain the source of truth.
+
+// dev.69: persist Tournament Edition identities and explicit archival slots so old seasons remain queryable and can be enriched without being overwritten by the current tournament window.
