@@ -32,21 +32,28 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
-          p=Path('data/global/international_events.json')
-          root=json.loads(p.read_text())
-          assert root.get('schemaVersion', 0) > 0
-          events=root.get('events') or []
-          assert events, 'events must not be empty'
-          matches=[m for e in events for m in (e.get('matches') or [])]
-          assert matches, 'matches must not be empty'
-          assert all(m.get('scheduledAt') and len(m.get('teams') or []) == 2 for m in matches)
-          print(f'validated {len(events)} events / {len(matches)} matches')
+          paths = [
+              Path('data/global/international_events.json'),
+              Path('app/src/main/assets/data/international_events.json'),
+          ]
+          payloads = []
+          for p in paths:
+              root=json.loads(p.read_text())
+              assert root.get('schemaVersion', 0) > 0
+              events=root.get('events') or []
+              assert events, f'{p}: events must not be empty'
+              matches=[m for e in events for m in (e.get('matches') or [])]
+              assert matches, f'{p}: matches must not be empty'
+              assert all(m.get('scheduledAt') and len(m.get('teams') or []) == 2 for m in matches)
+              payloads.append(root)
+          assert payloads[0] == payloads[1], 'repository mirror and bundled mirror must match'
+          print(f'validated {len(payloads[0]["events"])} events and bundled parity')
           PY
       - name: Commit changed mirror
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/global/international_events.json
+          git add data/global/international_events.json app/src/main/assets/data/international_events.json
           if git diff --cached --quiet; then
             echo "Mirror unchanged"
             exit 0
