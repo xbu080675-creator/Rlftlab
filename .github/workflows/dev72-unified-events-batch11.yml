@@ -6,6 +6,7 @@ on:
     branches: [ dev72-unified-events-batch11 ]
     paths:
       - 'tools/apply_dev72_unified_events_batch11.py'
+      - 'tools/apply_dev72_unified_events_ui_batch11.py'
       - '.github/workflows/dev72-unified-events-batch11.yml'
 
 permissions:
@@ -21,12 +22,15 @@ jobs:
           ref: dev72-unified-events-batch11
           fetch-depth: 0
       - name: Apply unified event model
-        run: python3 tools/apply_dev72_unified_events_batch11.py
+        run: |
+          python3 tools/apply_dev72_unified_events_batch11.py
+          python3 tools/apply_dev72_unified_events_ui_batch11.py
       - name: Audit event contract
         shell: bash
         run: |
           set -euo pipefail
           FILE=app/src/main/java/com/riftlab/app/data/MatchTimelineStore.kt
+          UI=app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt
           grep -q 'MULTI_KILL_WINDOW' "$FILE"
           grep -q 'TEAM_FIGHT_WINDOW' "$FILE"
           grep -q 'GOLD_LEAD_CHANGE' "$FILE"
@@ -39,9 +43,12 @@ jobs:
           grep -q 'ATAKHAN' "$FILE"
           grep -q 'ITEM_SPIKE' "$FILE"
           grep -q 'GAME_PAUSE' "$FILE"
+          grep -q 'GAME_RESUME' "$FILE"
           grep -q 'TimelineEventEvidence' "$FILE"
           grep -q '不等同官方 Double / Triple / Quadra / Penta Kill' "$FILE"
           grep -q '若上游只提供小龙总数，不推断龙种、龙魂或远古龙' "$FILE"
+          grep -q 'TimelineEventType.TEAM_FIGHT_WINDOW' "$UI"
+          grep -q 'TimelineEventType.ATAKHAN' "$UI"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -55,7 +62,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/riftlab/app/data/MatchTimelineStore.kt
+          git add app/src/main/java/com/riftlab/app/data/MatchTimelineStore.kt \
+                  app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt
           if git diff --cached --quiet; then
             echo "No source changes"
             exit 0
