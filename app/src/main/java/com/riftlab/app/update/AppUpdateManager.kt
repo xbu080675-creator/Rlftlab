@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -40,6 +41,14 @@ internal data class AppUpdateState(
     val error: String? = null
 )
 
+private enum class UpdateTransport(
+    val label: String,
+    val accelerated: Boolean
+) {
+    DIRECT("GitHub 直连", false),
+    ACCELERATED("GitHub 更新加速", true)
+}
+
 private data class ReleaseCandidate(
     val sourceLabel: String,
     val versionName: String,
@@ -56,10 +65,12 @@ private data class PreferredRelease(
 )
 
 internal object AppUpdateManager {
-    private const val RELEASE_API =
-        "https://api.github.com/repos/xbu080675-creator/Rlftlab/releases/tags/dev-latest"
-    private const val SOURCE_CN = "国内 OTA 镜像"
-    private const val SOURCE_GITHUB = "GitHub DEV 备用源"
+    private const val GITHUB_MANIFEST_URL =
+        "https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json"
+    private const val GITHUB_RELEASE_PATH_PREFIX =
+        "/xbu080675-creator/Rlftlab/releases/download/dev-latest/"
+    private const val SOURCE_GITHUB = "GitHub 直连"
+    private const val SOURCE_ACCELERATED = "GitHub 更新加速"
     private const val DEV_SIGNER_SHA256 =
         "769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
 
@@ -76,15 +87,10 @@ internal object AppUpdateManager {
     fun checkForUpdates() {
         if (_state.value.checking) return
         scope.launch {
-            val hasCn = BuildConfig.OTA_CN_MANIFEST_URL.isNotBlank()
             _state.value = _state.value.copy(
                 checking = true,
                 error = null,
-                status = if (hasCn) {
-                    "正在检查国内 OTA 镜像…"
-                } else {
-                    "国内 OTA 镜像尚未配置 · 正在检查 GitHub 备用源…"
-                }
+                status = "正在检查 GitHub DEV 更新…"
             )
             val result = runCatching { fetchPreferredRelease() }
             _state.value = result.fold(
@@ -125,14 +131,19 @@ internal object AppUpdateManager {
                 progressPercent = 0,
                 downloadedBytes = 0,
                 error = null,
-                status = "正在通过 ${current.sourceLabel.ifBlank { "OTA" }} 下载 ${current.latestVersionName}…"
+                status = "正在准备下载 ${current.latestVersionName}…"
             )
             val result = runCatching { downloadWithFallback(current) }
             result.onSuccess { apk ->
+                val accelerated = _state.value.sourceLabel == SOURCE_ACCELERATED
                 _state.value = _state.value.copy(
                     downloading = false,
                     progressPercent = 100,
-                    status = "下载与安全校验完成 · 正在打开系统安装器"
+                    status = if (accelerated) {
+                        "下载与安全校验完成 · GitHub 更新加速连接已释放 · 正在打开系统安装器"
+                    } else {
+                        "下载与安全校验完成 · 正在打开系统安装器"
+                    }
                 )
                 withContext(Dispatchers.Main) { launchInstaller(context, apk) }
             }.onFailure { t ->
@@ -146,29 +157,35 @@ internal object AppUpdateManager {
     }
 
     private fun fetchPreferredRelease(): PreferredRelease {
-        val cnManifest = BuildConfig.OTA_CN_MANIFEST_URL.trim()
-        if (cnManifest.isBlank()) {
-            return PreferredRelease(fetchGithubRelease(), "国内镜像待配置")
-        }
-
+        requireOfficialGithubManifest(GITHUB_MANIFEST_URL)
         return try {
-            PreferredRelease(fetchDomesticManifest(cnManifest))
-        } catch (_: Throwable) {
-            PreferredRelease(
-                fetchGithubRelease(),
-                "国内镜像不可用，已自动切换 GitHub"
-            )
+            PreferredRelease(fetchGithubManifest(UpdateTransport.DIRECT))
+        } catch (directError: Throwable) {
+            if (!acceleratorAvailable()) throw directError
+            try {
+                PreferredRelease(
+                    fetchGithubManifest(UpdateTransport.ACCELERATED),
+                    "GitHub 直连不可用 · 本次检查已临时启用更新加速，连接已释放"
+                )
+            } catch (acceleratedError: Throwable) {
+                acceleratedError.addSuppressed(directError)
+                throw acceleratedError
+            }
         }
     }
 
-    private fun fetchDomesticManifest(manifestUrl: String): ReleaseCandidate {
-        requireHttps(manifestUrl, "国内 OTA manifest")
-        val root = getJson(manifestUrl, "application/json", "国内镜像")
+    private fun fetchGithubManifest(transport: UpdateTransport): ReleaseCandidate {
+        val root = getJson(
+            originalUrl = GITHUB_MANIFEST_URL,
+            accept = "application/json",
+            failurePrefix = transport.label,
+            transport = transport
+        )
         val schemaVersion = root.optInt("schemaVersion", 1)
-        if (schemaVersion < 1) error("国内镜像 manifest schema 无效")
+        if (schemaVersion < 1) error("GitHub OTA manifest schema 无效")
         val channel = root.optString("channel", "dev")
         if (channel.isNotBlank() && !channel.equals("dev", ignoreCase = true)) {
-            error("国内镜像 channel 非 dev")
+            error("GitHub OTA manifest channel 非 dev")
         }
 
         val versionName = root.optString("versionName").trim()
@@ -180,59 +197,20 @@ internal object AppUpdateManager {
         val size = root.optLong("size", 0L).coerceAtLeast(0L)
 
         if (versionName.isBlank() || versionCode <= 0 || apkRef.isBlank()) {
-            error("国内镜像 manifest 元数据不完整")
+            error("GitHub OTA manifest 元数据不完整")
         }
         validateSha256(sha256)
 
-        val apkUrl = URL(URL(manifestUrl), apkRef).toString()
-        requireHttps(apkUrl, "国内 OTA APK")
+        val apkUrl = URL(URL(GITHUB_MANIFEST_URL), apkRef).toString()
+        requireOfficialGithubApk(apkUrl)
         return ReleaseCandidate(
-            sourceLabel = SOURCE_CN,
+            sourceLabel = transport.label,
             versionName = versionName,
             versionCode = versionCode,
             changelog = changelog,
             apkUrl = apkUrl,
             sha256 = sha256,
             size = size
-        )
-    }
-
-    private fun fetchGithubRelease(): ReleaseCandidate {
-        val root = getJson(RELEASE_API, "application/vnd.github+json", "GitHub")
-        val body = root.optString("body")
-        val versionName = lineValue(body, "versionName")
-        val versionCode = lineValue(body, "versionCode").toIntOrNull() ?: 0
-        val sha256 = lineValue(body, "sha256").lowercase()
-        val changelog = body.substringAfter("changelog=", "")
-            .trim()
-            .ifBlank { root.optString("name") }
-
-        val assets = root.optJSONArray("assets")
-        var apkUrl = ""
-        var total = 0L
-        if (assets != null) {
-            for (i in 0 until assets.length()) {
-                val asset = assets.optJSONObject(i) ?: continue
-                if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
-                    apkUrl = asset.optString("browser_download_url").trim()
-                    total = asset.optLong("size", 0L).coerceAtLeast(0L)
-                    break
-                }
-            }
-        }
-        if (versionCode <= 0 || versionName.isBlank() || apkUrl.isBlank()) {
-            error("GitHub DEV release metadata incomplete")
-        }
-        validateSha256(sha256)
-        requireHttps(apkUrl, "GitHub OTA APK")
-        return ReleaseCandidate(
-            sourceLabel = SOURCE_GITHUB,
-            versionName = versionName,
-            versionCode = versionCode,
-            changelog = changelog,
-            apkUrl = apkUrl,
-            sha256 = sha256,
-            size = total
         )
     }
 
@@ -259,7 +237,7 @@ internal object AppUpdateManager {
     }
 
     private fun downloadWithFallback(current: AppUpdateState): File {
-        val primary = ReleaseCandidate(
+        val candidate = ReleaseCandidate(
             sourceLabel = current.sourceLabel,
             versionName = current.latestVersionName,
             versionCode = current.latestVersionCode,
@@ -268,99 +246,165 @@ internal object AppUpdateManager {
             sha256 = current.expectedSha256,
             size = current.totalBytes
         )
+        requireOfficialGithubApk(candidate.apkUrl)
 
-        return try {
-            downloadApk(primary)
-        } catch (primaryError: Throwable) {
-            if (primary.sourceLabel != SOURCE_CN) throw primaryError
+        val preferred = if (current.sourceLabel == SOURCE_ACCELERATED) {
+            UpdateTransport.ACCELERATED
+        } else {
+            UpdateTransport.DIRECT
+        }
+        val transports = if (preferred == UpdateTransport.ACCELERATED) {
+            listOf(UpdateTransport.ACCELERATED, UpdateTransport.DIRECT)
+        } else {
+            listOf(UpdateTransport.DIRECT, UpdateTransport.ACCELERATED)
+        }
 
+        var firstError: Throwable? = null
+        var lastError: Throwable? = null
+        for (transport in transports) {
+            if (transport.accelerated && !acceleratorAvailable()) continue
             _state.value = _state.value.copy(
-                progressPercent = 0,
-                downloadedBytes = 0,
-                status = "国内镜像下载失败 · 正在切换 GitHub 备用源…"
-            )
-            val fallback = fetchGithubRelease()
-            if (fallback.versionCode != primary.versionCode ||
-                !fallback.sha256.equals(primary.sha256, ignoreCase = true)
-            ) {
-                error("国内镜像与 GitHub 备用源版本或 SHA-256 不一致，请重新检查更新")
-            }
-            _state.value = _state.value.copy(
-                sourceLabel = fallback.sourceLabel,
-                apkUrl = fallback.apkUrl,
-                totalBytes = fallback.size,
-                status = "已切换 ${fallback.sourceLabel} · 正在继续下载…"
+                sourceLabel = transport.label,
+                status = if (transport.accelerated) {
+                    "GitHub 直连下载不稳定 · 临时启用 GitHub 更新加速…"
+                } else {
+                    "正在通过 GitHub 直连下载 ${candidate.versionName}…"
+                }
             )
             try {
-                downloadApk(fallback)
-            } catch (fallbackError: Throwable) {
-                fallbackError.addSuppressed(primaryError)
-                throw fallbackError
-            }
-        }
-    }
-
-    private fun downloadApk(candidate: ReleaseCandidate): File {
-        val context = appContext ?: error("AppUpdateManager not initialized")
-        val dir = File(context.cacheDir, "updates").apply { mkdirs() }
-        val out = File(dir, "RiftLab-update.apk")
-        if (out.exists()) out.delete()
-
-        val connection = URL(candidate.apkUrl).openConnection() as HttpURLConnection
-        try {
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = 12_000
-            connection.readTimeout = 35_000
-            connection.useCaches = false
-            connection.setRequestProperty("Accept", "application/octet-stream")
-            connection.setRequestProperty("Cache-Control", "no-cache")
-            connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
-            connection.connect()
-            if (connection.responseCode !in 200..299) {
-                error("${candidate.sourceLabel} HTTP ${connection.responseCode}")
-            }
-            if (!connection.url.protocol.equals("https", ignoreCase = true)) {
-                error("${candidate.sourceLabel} 重定向到了非 HTTPS 地址")
-            }
-
-            val responseTotal = connection.contentLengthLong.coerceAtLeast(0L)
-            val total = if (responseTotal > 0L) responseTotal else candidate.size
-            val digest = MessageDigest.getInstance("SHA-256")
-            connection.inputStream.use { input ->
-                FileOutputStream(out).use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    var downloaded = 0L
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        digest.update(buffer, 0, read)
-                        downloaded += read
-                        val percent = if (total > 0L) {
-                            ((downloaded * 100L) / total).toInt().coerceIn(0, 100)
-                        } else {
-                            0
-                        }
-                        _state.value = _state.value.copy(
-                            downloadedBytes = downloaded,
-                            totalBytes = total,
-                            progressPercent = percent,
-                            status = "正在通过 ${candidate.sourceLabel} 下载 ${candidate.versionName} · $percent%"
-                        )
-                    }
+                return downloadApk(candidate, transport)
+            } catch (t: Throwable) {
+                if (firstError == null) firstError = t
+                lastError = t
+                if (transport == UpdateTransport.DIRECT && acceleratorAvailable()) {
+                    _state.value = _state.value.copy(
+                        status = "GitHub 直连下载失败 · 将使用断点续传切换更新加速…"
+                    )
                 }
             }
-
-            val actual = digest.digest().joinToString("") { "%02x".format(it) }
-            if (!actual.equals(candidate.sha256, ignoreCase = true)) {
-                out.delete()
-                error("${candidate.sourceLabel} SHA-256 校验失败")
-            }
-            verifyArchiveIdentity(context, out, candidate.versionCode)
-            return out
-        } finally {
-            connection.disconnect()
         }
+
+        val failure = lastError ?: error("没有可用的 GitHub 更新传输通道")
+        if (firstError != null && firstError !== failure) failure.addSuppressed(firstError)
+        throw failure
+    }
+
+    private fun downloadApk(candidate: ReleaseCandidate, transport: UpdateTransport): File {
+        val context = appContext ?: error("AppUpdateManager not initialized")
+        val dir = File(context.cacheDir, "updates").apply { mkdirs() }
+        val part = File(dir, "RiftLab-update-${candidate.versionCode}.apk.part")
+        val out = File(dir, "RiftLab-update.apk")
+        if (out.exists()) out.delete()
+        if (candidate.size > 0L && part.exists() && part.length() > candidate.size) {
+            part.delete()
+        }
+
+        var allowResume = true
+        while (true) {
+            val existing = if (allowResume && part.exists()) part.length() else 0L
+            val requestUrl = transportUrl(candidate.apkUrl, transport)
+            val connection = URL(requestUrl).openConnection() as HttpURLConnection
+            try {
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = if (transport.accelerated) 10_000 else 12_000
+                connection.readTimeout = 45_000
+                connection.useCaches = false
+                connection.setRequestProperty("Accept", "application/octet-stream")
+                connection.setRequestProperty("Cache-Control", "no-cache")
+                connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
+                if (transport.accelerated) {
+                    // This is request-scoped acceleration only. Do not leave a reusable proxy connection.
+                    connection.setRequestProperty("Connection", "close")
+                }
+                if (existing > 0L) {
+                    connection.setRequestProperty("Range", "bytes=$existing-")
+                }
+                connection.connect()
+
+                val code = connection.responseCode
+                if (code == HttpURLConnection.HTTP_REQUESTED_RANGE_NOT_SATISFIABLE && existing > 0L) {
+                    part.delete()
+                    allowResume = false
+                    continue
+                }
+                if (code !in 200..299) {
+                    error("${transport.label} HTTP $code")
+                }
+                if (!connection.url.protocol.equals("https", ignoreCase = true)) {
+                    error("${transport.label} 重定向到了非 HTTPS 地址")
+                }
+
+                val append = existing > 0L && code == HttpURLConnection.HTTP_PARTIAL
+                if (append) {
+                    val range = connection.getHeaderField("Content-Range").orEmpty()
+                    if (!range.startsWith("bytes $existing-")) {
+                        part.delete()
+                        error("${transport.label} 断点续传范围不一致")
+                    }
+                } else if (existing > 0L) {
+                    // Server ignored Range and returned a full body. Restart locally from byte 0.
+                    part.delete()
+                }
+
+                val startBytes = if (append) existing else 0L
+                val rangedTotal = contentRangeTotal(connection.getHeaderField("Content-Range"))
+                val responseLength = connection.contentLengthLong.coerceAtLeast(0L)
+                val total = when {
+                    candidate.size > 0L -> candidate.size
+                    rangedTotal > 0L -> rangedTotal
+                    responseLength > 0L -> startBytes + responseLength
+                    else -> 0L
+                }
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(part, append).use { output ->
+                        val buffer = ByteArray(128 * 1024)
+                        var downloaded = startBytes
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloaded += read
+                            val percent = if (total > 0L) {
+                                ((downloaded * 100L) / total).toInt().coerceIn(0, 100)
+                            } else {
+                                0
+                            }
+                            _state.value = _state.value.copy(
+                                downloadedBytes = downloaded,
+                                totalBytes = total,
+                                progressPercent = percent,
+                                status = buildString {
+                                    append("正在通过 ${transport.label} 下载 ${candidate.versionName} · $percent%")
+                                    if (startBytes > 0L) append(" · 断点续传")
+                                }
+                            )
+                        }
+                    }
+                }
+                break
+            } finally {
+                connection.disconnect()
+            }
+        }
+
+        if (candidate.size > 0L && part.length() != candidate.size) {
+            error("${transport.label} 下载长度不完整，可在下次重试时断点续传")
+        }
+
+        val actual = sha256Of(part)
+        if (!actual.equals(candidate.sha256, ignoreCase = true)) {
+            part.delete()
+            error("${transport.label} SHA-256 校验失败")
+        }
+
+        if (out.exists()) out.delete()
+        if (!part.renameTo(out)) {
+            part.copyTo(out, overwrite = true)
+            part.delete()
+        }
+        verifyArchiveIdentity(context, out, candidate.versionCode)
+        return out
     }
 
     private fun verifyArchiveIdentity(context: Context, apk: File, expectedVersionCode: Int) {
@@ -402,17 +446,26 @@ internal object AppUpdateManager {
         context.startActivity(intent)
     }
 
-    private fun getJson(url: String, accept: String, failurePrefix: String): JSONObject {
-        val connection = URL(url).openConnection() as HttpURLConnection
+    private fun getJson(
+        originalUrl: String,
+        accept: String,
+        failurePrefix: String,
+        transport: UpdateTransport
+    ): JSONObject {
+        val requestUrl = transportUrl(originalUrl, transport)
+        val connection = URL(requestUrl).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = true
-            connection.connectTimeout = 8_000
+            connection.connectTimeout = if (transport.accelerated) 8_000 else 7_000
             connection.readTimeout = 12_000
             connection.useCaches = false
             connection.setRequestProperty("Accept", accept)
             connection.setRequestProperty("Cache-Control", "no-cache")
             connection.setRequestProperty("Pragma", "no-cache")
             connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
+            if (transport.accelerated) {
+                connection.setRequestProperty("Connection", "close")
+            }
             val code = connection.responseCode
             if (code !in 200..299) error("$failurePrefix HTTP $code")
             if (!connection.url.protocol.equals("https", ignoreCase = true)) {
@@ -422,6 +475,70 @@ internal object AppUpdateManager {
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun transportUrl(originalUrl: String, transport: UpdateTransport): String {
+        if (!transport.accelerated) return originalUrl
+        requireOfficialGithubSource(originalUrl)
+        val base = BuildConfig.GITHUB_ACCELERATOR_BASE_URL.trim().trimEnd('/')
+        if (base.isBlank()) error("GitHub 更新加速未配置")
+        requireHttps(base, "GitHub 更新加速地址")
+        return "$base/$originalUrl"
+    }
+
+    private fun acceleratorAvailable(): Boolean {
+        val base = BuildConfig.GITHUB_ACCELERATOR_BASE_URL.trim()
+        return base.isNotBlank() && base.startsWith("https://", ignoreCase = true)
+    }
+
+    private fun requireOfficialGithubSource(value: String) {
+        val url = URL(value)
+        val allowed = url.protocol.equals("https", ignoreCase = true) &&
+            url.host.equals("github.com", ignoreCase = true) &&
+            (url.path == URL(GITHUB_MANIFEST_URL).path || url.path.startsWith(GITHUB_RELEASE_PATH_PREFIX))
+        if (!allowed) error("更新加速只允许访问 RiftLab 官方 GitHub Release 资源")
+    }
+
+    private fun requireOfficialGithubManifest(value: String) {
+        val url = URL(value)
+        val expected = URL(GITHUB_MANIFEST_URL)
+        if (!url.protocol.equals("https", ignoreCase = true) ||
+            !url.host.equals(expected.host, ignoreCase = true) ||
+            url.path != expected.path
+        ) {
+            error("GitHub OTA manifest 地址无效")
+        }
+    }
+
+    private fun requireOfficialGithubApk(value: String) {
+        val url = URL(value)
+        if (!url.protocol.equals("https", ignoreCase = true) ||
+            !url.host.equals("github.com", ignoreCase = true) ||
+            !url.path.startsWith(GITHUB_RELEASE_PATH_PREFIX) ||
+            !url.path.endsWith(".apk", ignoreCase = true)
+        ) {
+            error("GitHub OTA APK 必须来自 RiftLab 官方 dev-latest Release")
+        }
+    }
+
+    private fun contentRangeTotal(header: String?): Long = header
+        ?.substringAfterLast('/', "")
+        ?.trim()
+        ?.takeIf { it != "*" }
+        ?.toLongOrNull()
+        ?: 0L
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(128 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun validateSha256(value: String) {
@@ -435,10 +552,4 @@ internal object AppUpdateManager {
             error("$label 必须使用 HTTPS")
         }
     }
-
-    private fun lineValue(body: String, key: String): String = body.lineSequence()
-        .firstOrNull { it.trim().startsWith("$key=") }
-        ?.substringAfter('=')
-        ?.trim()
-        .orEmpty()
 }
