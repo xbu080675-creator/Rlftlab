@@ -41,7 +41,20 @@ fun TournamentEditionArchiveInlinePanel() {
                 Text("TOURNAMENT EDITIONS / 年度赛事档案", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 8.sp)
             }
-            Text("${state.editions.size} EDITIONS", color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            Column {
+                Text("${state.editions.size} EDITIONS", color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                if (!state.followingCurrent) {
+                    Text(
+                        "跟随当前赛事",
+                        color = RiftCyan,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clickable { TournamentEditionArchiveStore.followCurrentTournament() }
+                            .padding(vertical = 4.dp)
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(8.dp))
@@ -86,7 +99,7 @@ fun TournamentEditionArchiveInlinePanel() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                "SERIES ${detail.matchedSeries.size} · TEAMS ${detail.edition.participantTeamCodes.size} · ${detail.research?.version?.versionLabel ?: "PATCH 待同步"}",
+                "SERIES ${detail.edition.scheduleSeriesCount} · TEAMS ${detail.edition.participantTeamCodes.size} · ${detail.research?.version?.versionLabel ?: detail.edition.archivedSlots.firstOrNull { it.key == "patch" }?.detail ?: "PATCH 待同步"}",
                 color = RiftMuted,
                 fontSize = 8.sp
             )
