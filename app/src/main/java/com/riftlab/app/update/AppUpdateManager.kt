@@ -11,6 +11,9 @@ import com.riftlab.app.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +26,8 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.Locale
+import kotlin.math.abs
 
 internal data class AppUpdateState(
     val checking: Boolean = false,
@@ -62,6 +67,11 @@ private data class PreferredRelease(
     val note: String = ""
 )
 
+private data class TransportProbe(
+    val transport: UpdateTransport,
+    val bytesPerSecond: Long
+)
+
 internal object AppUpdateManager {
     private const val GITHUB_MANIFEST_URL =
         "https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json"
@@ -70,6 +80,10 @@ internal object AppUpdateManager {
     private const val SOURCE_ACCELERATED_PREFIX = "GitHub 更新加速"
     private const val DEV_SIGNER_SHA256 =
         "769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
+    private const val PROBE_BYTES = 384 * 1024
+    private const val PROBE_MIN_BYTES = 64 * 1024
+    private const val SPEED_SAMPLE_NS = 1_000_000_000L
+    private const val SLOW_SWITCH_NS = 8_000_000_000L
 
     private val directTransport = UpdateTransport("GitHub 直连", accelerated = false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -129,7 +143,7 @@ internal object AppUpdateManager {
                 progressPercent = 0,
                 downloadedBytes = 0,
                 error = null,
-                status = "正在准备下载 ${current.latestVersionName}…"
+                status = "正在测速 GitHub 更新通道…"
             )
             val result = runCatching { downloadWithFallback(current) }
             result.onSuccess { apk ->
@@ -243,7 +257,7 @@ internal object AppUpdateManager {
         )
     }
 
-    private fun downloadWithFallback(current: AppUpdateState): File {
+    private suspend fun downloadWithFallback(current: AppUpdateState): File {
         val candidate = ReleaseCandidate(
             sourceLabel = current.sourceLabel,
             versionName = current.latestVersionName,
@@ -257,33 +271,44 @@ internal object AppUpdateManager {
 
         val accelerators = acceleratorTransports()
         val preferredAccelerator = accelerators.firstOrNull { it.label == current.sourceLabel }
-        val transports = when {
+        val fallbackOrder = when {
             preferredAccelerator != null -> listOf(preferredAccelerator) +
                 accelerators.filterNot { it == preferredAccelerator } + directTransport
             current.sourceLabel.startsWith(SOURCE_ACCELERATED_PREFIX) && accelerators.isNotEmpty() ->
                 accelerators + directTransport
             else -> listOf(directTransport) + accelerators
+        }.distinct()
+
+        val probes = rankTransportsForDownload(candidate, fallbackOrder)
+        val probeRates = probes.associate { it.transport to it.bytesPerSecond }
+        val transports = probes.map { it.transport } + fallbackOrder.filterNot { probeRates.containsKey(it) }
+
+        probes.firstOrNull()?.let { best ->
+            _state.value = _state.value.copy(
+                sourceLabel = best.transport.label,
+                status = "测速完成 · ${best.transport.label} ${formatRate(best.bytesPerSecond)} · 开始下载"
+            )
         }
 
         var firstError: Throwable? = null
         var lastError: Throwable? = null
         transports.forEachIndexed { index, transport ->
+            val measured = probeRates[transport] ?: 0L
             _state.value = _state.value.copy(
                 sourceLabel = transport.label,
-                status = if (transport.accelerated) {
-                    "正在通过 ${transport.label} 下载 ${candidate.versionName}…"
-                } else {
-                    "正在通过 GitHub 直连下载 ${candidate.versionName}…"
+                status = buildString {
+                    append("正在通过 ${transport.label} 下载 ${candidate.versionName}")
+                    if (measured > 0L) append(" · 测速 ${formatRate(measured)}")
                 }
             )
             try {
-                return downloadApk(candidate, transport)
+                return downloadApk(candidate, transport, measured)
             } catch (t: Throwable) {
                 if (firstError == null) firstError = t
                 lastError = t
                 if (index < transports.lastIndex) {
                     _state.value = _state.value.copy(
-                        status = "${transport.label} 无响应或失败 · 自动切换下一更新通道…"
+                        status = "${transport.label} 速度过低、无响应或失败 · 保留断点并切换下一通道…"
                     )
                 }
             }
@@ -296,7 +321,74 @@ internal object AppUpdateManager {
         throw failure
     }
 
-    private fun downloadApk(candidate: ReleaseCandidate, transport: UpdateTransport): File {
+    private suspend fun rankTransportsForDownload(
+        candidate: ReleaseCandidate,
+        transports: List<UpdateTransport>
+    ): List<TransportProbe> = coroutineScope {
+        _state.value = _state.value.copy(
+            status = "正在并发测速 ${transports.size} 条 GitHub 更新通道…"
+        )
+        transports.map { transport ->
+            async(Dispatchers.IO) {
+                runCatching { probeTransport(candidate, transport) }.getOrNull()
+            }
+        }.awaitAll()
+            .filterNotNull()
+            .sortedByDescending { it.bytesPerSecond }
+    }
+
+    private fun probeTransport(
+        candidate: ReleaseCandidate,
+        transport: UpdateTransport
+    ): TransportProbe {
+        val requestUrl = transportUrl(candidate.apkUrl, transport)
+        val connection = URL(requestUrl).openConnection() as HttpURLConnection
+        val startedNs = System.nanoTime()
+        return try {
+            connection.instanceFollowRedirects = true
+            connection.connectTimeout = if (transport.accelerated) 4_000 else 5_000
+            connection.readTimeout = 5_000
+            connection.useCaches = true
+            connection.setRequestProperty("Accept", "application/octet-stream")
+            connection.setRequestProperty("Accept-Encoding", "identity")
+            connection.setRequestProperty("Range", "bytes=0-${PROBE_BYTES - 1}")
+            connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
+            if (transport.accelerated) connection.setRequestProperty("Connection", "close")
+            connection.connect()
+
+            val code = connection.responseCode
+            if (code !in 200..299) error("${transport.label} 测速 HTTP $code")
+            if (!connection.url.protocol.equals("https", ignoreCase = true)) {
+                error("${transport.label} 测速重定向到了非 HTTPS 地址")
+            }
+            val rangedTotal = contentRangeTotal(connection.getHeaderField("Content-Range"))
+            if (candidate.size > 0L && rangedTotal > 0L && rangedTotal != candidate.size) {
+                error("${transport.label} 测速源文件长度异常")
+            }
+
+            var received = 0
+            connection.inputStream.use { input ->
+                val buffer = ByteArray(64 * 1024)
+                while (received < PROBE_BYTES) {
+                    val read = input.read(buffer, 0, minOf(buffer.size, PROBE_BYTES - received))
+                    if (read < 0) break
+                    received += read
+                }
+            }
+            if (received < PROBE_MIN_BYTES) error("${transport.label} 测速数据不足")
+            val elapsedNs = (System.nanoTime() - startedNs).coerceAtLeast(1L)
+            val bps = (received.toLong() * 1_000_000_000L / elapsedNs).coerceAtLeast(1L)
+            TransportProbe(transport, bps)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun downloadApk(
+        candidate: ReleaseCandidate,
+        transport: UpdateTransport,
+        measuredBps: Long
+    ): File {
         val context = appContext ?: error("AppUpdateManager not initialized")
         val dir = File(context.cacheDir, "updates").apply { mkdirs() }
         val part = File(dir, "RiftLab-update-${candidate.versionCode}.apk.part")
@@ -315,10 +407,11 @@ internal object AppUpdateManager {
                 connection.instanceFollowRedirects = true
                 connection.connectTimeout = if (transport.accelerated) 7_000 else 12_000
                 connection.readTimeout = if (transport.accelerated) 20_000 else 30_000
-                connection.useCaches = false
+                connection.useCaches = true
                 connection.setRequestProperty("Accept", "application/octet-stream")
                 connection.setRequestProperty("Accept-Encoding", "identity")
-                connection.setRequestProperty("Cache-Control", "no-cache")
+                // The APK filename is versioned and immutable for this update. Do not send no-cache:
+                // public accelerator/CDN caches are precisely what make the large Release asset faster.
                 connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
                 if (transport.accelerated) {
                     // Request-scoped acceleration only: never install a VPN or system proxy.
@@ -378,11 +471,44 @@ internal object AppUpdateManager {
                     FileOutputStream(part, append).use { output ->
                         val buffer = ByteArray(128 * 1024)
                         var downloaded = startBytes
+                        var speedSampleNs = System.nanoTime()
+                        var speedSampleBytes = downloaded
+                        var slowWindowNs = speedSampleNs
+                        var slowWindowBytes = downloaded
+                        var shownRate = measuredBps
+
                         while (true) {
                             val read = input.read(buffer)
                             if (read < 0) break
                             output.write(buffer, 0, read)
                             downloaded += read
+                            val nowNs = System.nanoTime()
+
+                            if (nowNs - speedSampleNs >= SPEED_SAMPLE_NS) {
+                                val deltaNs = (nowNs - speedSampleNs).coerceAtLeast(1L)
+                                shownRate = ((downloaded - speedSampleBytes) * 1_000_000_000L / deltaNs)
+                                    .coerceAtLeast(0L)
+                                speedSampleNs = nowNs
+                                speedSampleBytes = downloaded
+                            }
+
+                            if (transport.accelerated && measuredBps >= 512L * 1024L &&
+                                nowNs - slowWindowNs >= SLOW_SWITCH_NS
+                            ) {
+                                val deltaNs = (nowNs - slowWindowNs).coerceAtLeast(1L)
+                                val actualBps = ((downloaded - slowWindowBytes) * 1_000_000_000L / deltaNs)
+                                    .coerceAtLeast(0L)
+                                val minimumBps = maxOf(128L * 1024L, measuredBps / 8L)
+                                if (actualBps < minimumBps) {
+                                    error(
+                                        "${transport.label} 实际速度 ${formatRate(actualBps)} " +
+                                            "低于测速预期，切换下一通道"
+                                    )
+                                }
+                                slowWindowNs = nowNs
+                                slowWindowBytes = downloaded
+                            }
+
                             val percent = if (total > 0L) {
                                 ((downloaded * 100L) / total).toInt().coerceIn(0, 100)
                             } else {
@@ -394,6 +520,7 @@ internal object AppUpdateManager {
                                 progressPercent = percent,
                                 status = buildString {
                                     append("正在通过 ${transport.label} 下载 ${candidate.versionName} · $percent%")
+                                    if (shownRate > 0L) append(" · ${formatRate(shownRate)}")
                                     if (startBytes > 0L) append(" · 断点续传")
                                 }
                             )
@@ -522,9 +649,22 @@ internal object AppUpdateManager {
 
     private fun acceleratorNodeLabel(base: String): String {
         return when (runCatching { URL(base).host.lowercase() }.getOrDefault("")) {
+            "gh.llkk.cc" -> "GH LLKK"
+            "cors.isteed.cc" -> "iSteed"
+            "gh.xmly.dev" -> "XMLY"
+            "gh.ddlc.top" -> "DDLC"
             "ghfast.top" -> "GHFast"
             "ghproxy.net" -> "GHProxy.net"
             else -> runCatching { URL(base).host }.getOrDefault("第三方节点").ifBlank { "第三方节点" }
+        }
+    }
+
+    private fun formatRate(bytesPerSecond: Long): String {
+        val mib = 1024.0 * 1024.0
+        return if (bytesPerSecond >= 1024L * 1024L) {
+            String.format(Locale.US, "%.1f MB/s", bytesPerSecond / mib)
+        } else {
+            String.format(Locale.US, "%.0f KB/s", bytesPerSecond / 1024.0)
         }
     }
 
