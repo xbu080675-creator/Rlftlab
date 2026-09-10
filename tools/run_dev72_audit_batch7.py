@@ -28,5 +28,17 @@ if live_old not in text:
     raise SystemExit("failed to repair live-loop patch block")
 text = text.replace(live_old, live_new, 1)
 
+# The current live source has no selectScheduleEvent helper. Insert the external-provider predicate
+# immediately before teamLabel instead.
+helper_old = '''    ''' + "'''" + '''    private fun selectScheduleEvent(\\n''' + "'''" + ''',
+    ''' + "'''" + '''    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =\\n        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")\\n\\n    private fun selectScheduleEvent(\\n''' + "'''" + '''
+'''
+helper_new = '''    ''' + "'''" + '''    private fun teamLabel(match: ScheduledEsportsMatch): String =\\n''' + "'''" + ''',
+    ''' + "'''" + '''    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =\\n        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")\\n\\n    private fun teamLabel(match: ScheduledEsportsMatch): String =\\n''' + "'''" + '''
+'''
+if helper_old not in text:
+    raise SystemExit("failed to repair external-provider helper patch block")
+text = text.replace(helper_old, helper_new, 1)
+
 p.write_text(text, encoding="utf-8")
 runpy.run_path(str(p), run_name="__main__")
