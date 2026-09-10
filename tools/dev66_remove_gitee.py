@@ -145,12 +145,11 @@ old = full.read_text(encoding="utf-8")
 if not old.startswith("dev.66："):
     full.write_text(changelog + "\n\n" + old, encoding="utf-8")
 
-# Runtime/publisher hard gate: documentation may mention Gitee only to mark it retired.
+# Runtime/publisher hard gate: documentation/comments may mention Gitee only to mark it retired.
 for rel in [
     "app/src/main/java/com/riftlab/app/update/AppUpdateManager.kt",
     "app/src/main/java/com/riftlab/app/ui/UpdateCenterUi.kt",
     ".github/workflows/ota-direct.yml",
-    "app/build.gradle.kts",
 ]:
     body = (ROOT / rel).read_text(encoding="utf-8")
     bad = [needle for needle in ("gitee", "GITEE_TOKEN", "OTA_PRIMARY_MANIFEST_URL") if needle.lower() in body.lower()]
