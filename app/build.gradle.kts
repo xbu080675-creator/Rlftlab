@@ -12,10 +12,13 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
     devSigningStore.writeBytes(Base64.getDecoder().decode(devSigningB64.readText().trim()))
 }
 
+val defaultOtaCnManifestUrl =
+    "https://gitee.com/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/latest.json"
 val otaCnManifestUrl = providers.gradleProperty("RIFTLAB_OTA_CN_MANIFEST_URL")
     .orElse("")
     .get()
     .trim()
+    .ifBlank { defaultOtaCnManifestUrl }
 val otaCnManifestLiteral = otaCnManifestUrl
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
@@ -28,8 +31,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 58
-        versionName = "1.0.0-dev.58"
+        versionCode = 59
+        versionName = "1.0.0-dev.59"
         buildConfigField("String", "OTA_CN_MANIFEST_URL", "\"$otaCnManifestLiteral\"")
     }
 
@@ -123,3 +126,5 @@ dependencies {
 // dev.57: annual Tournament Research editions: version/update/rules/draw/schedule unified per year for international events and regional leagues.
 
 // dev.58: fix annual research compilation and add mainland-first dual-channel OTA with verified GitHub fallback.
+
+// dev.59: GitHub remains the only build/version source; Gitee dev-latest Release becomes the default mainland OTA mirror, with GitHub fallback and optional S3 extension.
