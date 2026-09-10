@@ -6,6 +6,7 @@ on:
     branches: [ dev72-audit-batch7 ]
     paths:
       - 'tools/apply_dev72_audit_batch7.py'
+      - 'tools/run_dev72_audit_batch7.py'
       - '.github/workflows/dev72-audit-batch7.yml'
 
 permissions:
@@ -20,7 +21,7 @@ jobs:
           ref: dev72-audit-batch7
           fetch-depth: 0
       - name: Apply source-truth repairs
-        run: python3 tools/apply_dev72_audit_batch7.py
+        run: python3 tools/run_dev72_audit_batch7.py
       - name: Source-truth assertions
         shell: bash
         run: |
@@ -31,7 +32,7 @@ jobs:
           grep -q '当前赛事使用非 Riot Event ID' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
           grep -q 'INTERNATIONAL_PARTICIPATION_FAMILIES' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
           grep -q 'Provider mirror 档案已载入' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
-          if grep -q 'Regex("(\^|\[\^a-z\])wsc\[il\]' app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt; then
+          if grep -Fq 'wsc[il]' app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt; then
             echo 'WSCI is still collapsed into WSCL in ScheduleCenterUi'
             exit 1
           fi
@@ -48,7 +49,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/riftlab/app/data/ComprehensiveData.kt \
+          git add tools/apply_dev72_audit_batch7.py \
+                  app/src/main/java/com/riftlab/app/data/ComprehensiveData.kt \
                   app/src/main/java/com/riftlab/app/data/TournamentResearch.kt \
                   app/src/main/java/com/riftlab/app/data/TournamentGovernance.kt \
                   app/src/main/java/com/riftlab/app/data/StandingsCenterStore.kt \
