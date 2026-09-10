@@ -12,10 +12,11 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * Live bridge from the existing RiftLab stores into the dev.68 comprehensive graph.
+ * Live bridge from the existing RiftLab stores into the comprehensive graph.
  *
  * Existing providers remain authoritative. This object does not fetch a second copy of the same
  * data and does not invent missing fields; it only normalizes identity/provenance and reports gaps.
+ * dev.70 also attaches qualification paths without collapsing Championship Points into Standings.
  */
 object ComprehensiveDataCenter {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -33,12 +34,14 @@ object ComprehensiveDataCenter {
     private data class ArchiveState(
         val completed: LiveSnapshot?,
         val standings: StandingsCenterState,
-        val scheduleStatus: String
+        val scheduleStatus: String,
+        val qualification: QualificationCenterState
     )
 
     fun ensureRunning() {
         if (job?.isActive == true) return
         StandingsCenterStore.ensureRunning()
+        QualificationCenterStore.ensureRunning()
 
         val current = combine(
             MatchSessionStore.targetMatch,
@@ -51,9 +54,10 @@ object ComprehensiveDataCenter {
         val archive = combine(
             MatchSessionStore.completedGame,
             StandingsCenterStore.state,
-            MatchSessionStore.scheduleStatus
-        ) { completed, standings, scheduleStatus ->
-            ArchiveState(completed, standings, scheduleStatus)
+            MatchSessionStore.scheduleStatus,
+            QualificationCenterStore.state
+        ) { completed, standings, scheduleStatus, qualification ->
+            ArchiveState(completed, standings, scheduleStatus, qualification)
         }
 
         job = scope.launch {
@@ -74,7 +78,7 @@ object ComprehensiveDataCenter {
                         add(ComprehensiveDataDomain.LIVE)
                     }
                 }
-                ComprehensiveDataAssembler.fromExisting(
+                val normalized = ComprehensiveDataAssembler.fromExisting(
                     scheduled = liveState.target,
                     tournament = tournament,
                     prematch = liveState.prematch.takeIf { liveState.target != null },
@@ -85,6 +89,34 @@ object ComprehensiveDataCenter {
                     standings = standings,
                     sourceErrors = errors
                 )
+                val qualificationPaths = QualificationCenterStore.comprehensivePathsForTournament(
+                    state = archiveState.qualification,
+                    tournamentId = tournament?.id.orEmpty()
+                )
+                if (qualificationPaths.isEmpty()) {
+                    normalized
+                } else {
+                    val authority = if (qualificationPaths.all { it.verified }) {
+                        DataAuthority.OFFICIAL
+                    } else {
+                        DataAuthority.DERIVED
+                    }
+                    val graph = normalized.graph.copy(
+                        qualificationPaths = qualificationPaths,
+                        provenance = (normalized.graph.provenance + DataProvenance(
+                            sourceId = "qualification-center",
+                            displayName = "RiftLab Qualification Center",
+                            authority = authority,
+                            freshness = DataFreshnessClass.DAILY,
+                            verified = authority == DataAuthority.OFFICIAL
+                        )).distinctBy { it.sourceId + ":" + it.displayName }
+                    )
+                    normalized.copy(
+                        graph = graph,
+                        coverage = ComprehensiveCoverageEngine.evaluate(graph, errors),
+                        updatedAtEpochMs = System.currentTimeMillis()
+                    )
+                }
             }.collect { normalized ->
                 _snapshot.value = normalized
             }

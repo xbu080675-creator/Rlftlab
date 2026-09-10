@@ -12,6 +12,7 @@ import com.riftlab.app.data.MatchLifecycleCapture
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineCapture
 import com.riftlab.app.data.MatchTimelineStore
+import com.riftlab.app.data.QualificationCenterStore
 import com.riftlab.app.data.RiotPersistedMirror
 import com.riftlab.app.data.TournamentEditionArchiveStore
 
@@ -38,12 +39,13 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         MatchTimelineCapture.start()
         MatchLifecycleCapture.start()
 
-        // Existing providers remain the source of truth. dev.68 normalizes the active graph while
-        // dev.69 keeps every discovered Tournament Edition in an append/merge local archive so an
-        // older season is not lost when upstream pagination moves on.
+        // Existing providers remain the source of truth. dev.68 normalizes the active graph,
+        // dev.69 retains Tournament Editions, and dev.70 keeps qualification paths/annual points
+        // separate from ordinary standings while preserving evidence on each route.
         MatchSessionStore.ensureDataRunning()
-        ComprehensiveDataCenter.ensureRunning()
         TournamentEditionArchiveStore.ensureRunning()
+        QualificationCenterStore.ensureRunning()
+        ComprehensiveDataCenter.ensureRunning()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)

@@ -19,15 +19,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riftlab.app.data.QualificationCenterStore
 import com.riftlab.app.data.TournamentEditionArchiveRecord
 import com.riftlab.app.data.TournamentEditionArchiveStore
 import com.riftlab.app.data.TournamentEditionSlotState
 
-/** Compact dev.69 surface: browse durable Tournament Edition identities and inspect real slot gaps. */
+/** Browse durable Tournament Edition identities and inspect real archival/qualification gaps. */
 @Composable
 fun TournamentEditionArchiveInlinePanel() {
     val state by TournamentEditionArchiveStore.state.collectAsState()
+    val qualificationCenter by QualificationCenterStore.state.collectAsState()
     val selected = state.selected
+    val qualification = qualificationCenter.snapshotsByTournamentId[state.selectedTournamentId]
 
     Column(
         Modifier
@@ -108,6 +111,11 @@ fun TournamentEditionArchiveInlinePanel() {
             detail.slots.chunked(2).forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     row.forEach { slot ->
+                        val qualificationAvailable = slot.key == "qualification" && qualification?.routes?.isNotEmpty() == true
+                        val displayState = if (qualificationAvailable) TournamentEditionSlotState.PARTIAL else slot.state
+                        val displayDetail = if (qualificationAvailable) {
+                            "已接入 ${qualification?.routes?.size ?: 0} 支队伍的 Championship Points / 晋级路径；详细节点见下方 Qualification Center。"
+                        } else slot.detail
                         Column(
                             Modifier
                                 .weight(1f)
@@ -116,8 +124,8 @@ fun TournamentEditionArchiveInlinePanel() {
                         ) {
                             Text(slot.label, color = RiftText, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
                             Text(
-                                slot.state.label,
-                                color = when (slot.state) {
+                                displayState.label,
+                                color = when (displayState) {
                                     TournamentEditionSlotState.COMPLETE -> RiftCyan
                                     TournamentEditionSlotState.PARTIAL -> RiftText
                                     TournamentEditionSlotState.PENDING -> RiftMuted
@@ -125,7 +133,7 @@ fun TournamentEditionArchiveInlinePanel() {
                                 },
                                 fontSize = 8.sp
                             )
-                            Text(slot.detail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp, maxLines = 3)
+                            Text(displayDetail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp, maxLines = 3)
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
