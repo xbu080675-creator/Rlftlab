@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+from pathlib import Path
+
+path = Path("app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt")
+text = path.read_text(encoding="utf-8")
+old = '''private fun replayTimelineTitle(event: MatchTimelineEvent): String = when (event.type) {\n    TimelineEventType.GAME_START -> "比赛开始"\n    TimelineEventType.KILL -> event.title.ifBlank { "击杀" }\n    TimelineEventType.TOWER -> event.title.ifBlank { "防御塔" }\n    TimelineEventType.DRAGON -> event.title.ifBlank { "元素亚龙" }\n    TimelineEventType.BARON -> event.title.ifBlank { "纳什男爵" }\n    TimelineEventType.GOLD_SWING -> event.title.ifBlank { "经济领先变化" }\n    TimelineEventType.GAME_END -> "比赛结束"\n}\n'''
+new = '''private fun replayTimelineTitle(event: MatchTimelineEvent): String = when (event.type) {\n    TimelineEventType.GAME_START -> "比赛开始"\n    TimelineEventType.KILL -> event.title.ifBlank { "击杀" }\n    TimelineEventType.MULTI_KILL_WINDOW -> event.title.ifBlank { "多击杀窗口" }\n    TimelineEventType.TEAM_FIGHT_WINDOW -> event.title.ifBlank { "团战窗口候选" }\n    TimelineEventType.TOWER -> event.title.ifBlank { "防御塔" }\n    TimelineEventType.DRAGON -> event.title.ifBlank { "小龙" }\n    TimelineEventType.SOUL -> event.title.ifBlank { "龙魂" }\n    TimelineEventType.ELDER_DRAGON -> event.title.ifBlank { "远古巨龙" }\n    TimelineEventType.HERALD -> event.title.ifBlank { "峡谷先锋" }\n    TimelineEventType.ATAKHAN -> event.title.ifBlank { "厄塔汗" }\n    TimelineEventType.BARON -> event.title.ifBlank { "纳什男爵" }\n    TimelineEventType.GOLD_LEAD_CHANGE -> event.title.ifBlank { "经济领先易手" }\n    TimelineEventType.GOLD_SWING -> event.title.ifBlank { "经济快速摆动" }\n    TimelineEventType.ITEM_SPIKE -> event.title.ifBlank { "装备节点" }\n    TimelineEventType.PLAYER_LEVEL_CHANGE -> event.title.ifBlank { "等级变化" }\n    TimelineEventType.PLAYER_CS_CHANGE -> event.title.ifBlank { "补刀节点" }\n    TimelineEventType.PLAYER_KDA_CHANGE -> event.title.ifBlank { "KDA 变化" }\n    TimelineEventType.GAME_PAUSE -> event.title.ifBlank { "比赛暂停" }\n    TimelineEventType.GAME_RESUME -> event.title.ifBlank { "比赛恢复" }\n    TimelineEventType.GAME_END -> "比赛结束"\n}\n'''
+if text.count(old) != 1:
+    raise SystemExit(f"expected replayTimelineTitle once, got {text.count(old)}")
+path.write_text(text.replace(old, new, 1), encoding="utf-8")
+print("dev72 unified-event replay UI mapping applied")
