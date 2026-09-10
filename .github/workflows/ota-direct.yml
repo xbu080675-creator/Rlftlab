@@ -163,29 +163,44 @@ jobs:
             -H "$AUTH" -H 'Accept: application/json' \
             "$API/releases/tags/$TAG")
 
+          RID=""
           if [ "$STATUS" = "200" ]; then
-            RID=$(jq -r '.id' "$RELEASE_JSON")
-          elif [ "$STATUS" = "404" ]; then
-            curl -fsS --retry 2 --request POST \
+            RID=$(jq -r 'if type == "object" then (.id // empty) else empty end' "$RELEASE_JSON")
+            if ! [[ "$RID" =~ ^[0-9]+$ ]]; then
+              echo "::notice::Gitee returned HTTP 200 without a dev-latest Release; creating it."
+              RID=""
+            fi
+          elif [ "$STATUS" != "404" ]; then
+            cat "$RELEASE_JSON"
+            echo "Gitee release lookup failed with HTTP $STATUS" >&2
+            exit 1
+          fi
+
+          if [ -z "$RID" ]; then
+            CREATE_JSON=$(mktemp)
+            CREATE_STATUS=$(curl -sS -o "$CREATE_JSON" -w '%{http_code}' --retry 2 --request POST \
               -H "$AUTH" -H 'Accept: application/json' \
               --data-urlencode "tag_name=$TAG" \
               --data-urlencode "name=RiftLab $RIFTLAB_VERSION_NAME · DEV Mirror" \
               --data-urlencode "body@/tmp/riftlab-release.txt" \
               --data-urlencode "target_commitish=main" \
               --data-urlencode "prerelease=true" \
-              "$API/releases" > "$RELEASE_JSON"
-            RID=$(jq -r '.id' "$RELEASE_JSON")
-          else
-            cat "$RELEASE_JSON"
-            echo "Gitee release lookup failed with HTTP $STATUS" >&2
-            exit 1
+              "$API/releases")
+            if [ "$CREATE_STATUS" -lt 200 ] || [ "$CREATE_STATUS" -ge 300 ]; then
+              cat "$CREATE_JSON"
+              echo "Gitee release create failed with HTTP $CREATE_STATUS" >&2
+              exit 1
+            fi
+            RID=$(jq -r 'if type == "object" then (.id // empty) else empty end' "$CREATE_JSON")
+            cp "$CREATE_JSON" "$RELEASE_JSON"
           fi
 
           if ! [[ "$RID" =~ ^[0-9]+$ ]]; then
             cat "$RELEASE_JSON"
-            echo "Gitee release id is invalid: $RID" >&2
+            echo "Gitee release id is invalid after lookup/create: ${RID:-<empty>}" >&2
             exit 1
           fi
+          echo "Gitee release id: $RID"
 
           # Best-effort metadata refresh. Attachment publishing remains authoritative.
           curl -fsS --retry 2 --request PATCH \
