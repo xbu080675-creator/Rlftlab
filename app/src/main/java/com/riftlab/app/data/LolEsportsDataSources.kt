@@ -50,13 +50,40 @@ internal class LolEsportsScheduleDataSource(
     private fun sameSeries(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
         if (a.matchId.isNotBlank() && b.matchId.isNotBlank() && a.matchId == b.matchId) return true
         if (a.eventId.isNotBlank() && b.eventId.isNotBlank() && a.eventId == b.eventId) return true
-        val aTeams = a.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        val bTeams = b.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        if (aTeams.size < 2 || aTeams != bTeams) return false
+
+        if (a.leagueId.isNotBlank() && b.leagueId.isNotBlank() && a.leagueId != b.leagueId) return false
+        if (a.leagueSlug.isNotBlank() && b.leagueSlug.isNotBlank() && !a.leagueSlug.equals(b.leagueSlug, true)) return false
+        if (a.bestOf > 0 && b.bestOf > 0 && a.bestOf != b.bestOf) return false
+
+        val aStage = teamToken(a.blockName)
+        val bStage = teamToken(b.blockName)
+        if (aStage.isNotBlank() && bStage.isNotBlank() && aStage != bStage) return false
+
         val aDay = a.startTimeIso.take(10)
         val bDay = b.startTimeIso.take(10)
-        return aDay.isNotBlank() && aDay == bDay
+        if (aDay.isBlank() || aDay != bDay) return false
+
+        val aTeams = a.teams.take(2)
+        val bTeams = b.teams.take(2)
+        if (aTeams.size < 2 || bTeams.size < 2) return false
+        return aTeams.all { left ->
+            val leftAliases = teamAliases(left)
+            leftAliases.isNotEmpty() && bTeams.any { right ->
+                leftAliases.intersect(teamAliases(right)).isNotEmpty()
+            }
+        } && bTeams.all { right ->
+            val rightAliases = teamAliases(right)
+            rightAliases.isNotEmpty() && aTeams.any { left ->
+                rightAliases.intersect(teamAliases(left)).isNotEmpty()
+            }
+        }
     }
+
+    private fun teamAliases(team: EsportsTeamRef): Set<String> =
+        listOf(team.id, team.slug, team.code, team.name)
+            .map(::teamToken)
+            .filter { it.isNotBlank() }
+            .toSet()
 
     /**
      * Riot's schedule endpoint can transiently mark a not-yet-played series completed.
