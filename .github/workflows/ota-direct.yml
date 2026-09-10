@@ -234,11 +234,13 @@ jobs:
           # Idempotent retry: remove an existing copy of this exact versioned APK only.
           delete_assets_named "$RIFTLAB_APK_NAME"
 
-          # Publish APK first. The old latest.json continues to point at the previous valid APK.
+          # Gitee's attachment endpoint expects OAuth access_token as a multipart field.
+          # Keep lookup/list/delete on Bearer auth, but match Gitee upload clients here.
           echo "Gitee: upload $RIFTLAB_APK_NAME"
-          curl -fsS --connect-timeout 10 --max-time 180 --retry 1 --retry-delay 2 --request POST \
-            -H "$AUTH" -H 'Accept: application/json' \
-            -F "file=@${RIFTLAB_APK_PATH};type=application/vnd.android.package-archive" \
+          curl --http1.1 -fsS --connect-timeout 10 --max-time 180 --request POST \
+            -H 'Accept: application/json' -H 'Expect:' \
+            -F "access_token=${GITEE_TOKEN}" \
+            -F "file=@${RIFTLAB_APK_PATH};type=application/octet-stream" \
             "$API/releases/$RID/attach_files" > /tmp/gitee-apk.json
           jq -e --arg wanted "$RIFTLAB_APK_NAME" '(.name // "") == $wanted or (.browser_download_url // "" | length > 0)' \
             /tmp/gitee-apk.json >/dev/null
@@ -246,9 +248,10 @@ jobs:
           # Switch the stable manifest last. A very short replacement gap falls back to GitHub in-app.
           delete_assets_named "latest.json"
           echo "Gitee: upload latest.json"
-          curl -fsS --connect-timeout 10 --max-time 60 --retry 1 --retry-delay 2 --request POST \
-            -H "$AUTH" -H 'Accept: application/json' \
-            -F "file=@/tmp/latest.json;type=application/json" \
+          curl --http1.1 -fsS --connect-timeout 10 --max-time 60 --request POST \
+            -H 'Accept: application/json' -H 'Expect:' \
+            -F "access_token=${GITEE_TOKEN}" \
+            -F "file=@/tmp/latest.json;type=application/octet-stream" \
             "$API/releases/$RID/attach_files" > /tmp/gitee-manifest.json
 
           MANIFEST_URL="https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases/download/${TAG}/latest.json"
