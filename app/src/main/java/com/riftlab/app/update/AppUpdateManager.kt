@@ -27,6 +27,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
+import kotlin.math.abs
 
 internal data class AppUpdateState(
     val checking: Boolean = false,
@@ -76,9 +77,6 @@ internal object AppUpdateManager {
         "https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json"
     private const val GITHUB_RELEASE_PATH_PREFIX =
         "/xbu080675-creator/Rlftlab/releases/download/dev-latest/"
-    private const val GITEE_RELEASE_PATH_PREFIX =
-        "/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/"
-    private const val SOURCE_CN = "Gitee 国内 OTA"
     private const val SOURCE_ACCELERATED_PREFIX = "GitHub 更新加速"
     private const val DEV_SIGNER_SHA256 =
         "769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
@@ -88,7 +86,6 @@ internal object AppUpdateManager {
     private const val SLOW_SWITCH_NS = 8_000_000_000L
 
     private val directTransport = UpdateTransport("GitHub 直连", accelerated = false)
-    private val domesticTransport = UpdateTransport(SOURCE_CN, accelerated = false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var appContext: Context? = null
 
@@ -105,7 +102,7 @@ internal object AppUpdateManager {
             _state.value = _state.value.copy(
                 checking = true,
                 error = null,
-                status = "正在检查国内优先 DEV 更新…"
+                status = "正在检查 GitHub DEV 更新…"
             )
             val result = runCatching { fetchPreferredRelease() }
             _state.value = result.fold(
@@ -146,7 +143,7 @@ internal object AppUpdateManager {
                 progressPercent = 0,
                 downloadedBytes = 0,
                 error = null,
-                status = "正在准备国内优先更新通道…"
+                status = "正在测速 GitHub 更新通道…"
             )
             val result = runCatching { downloadWithFallback(current) }
             result.onSuccess { apk ->
@@ -172,30 +169,9 @@ internal object AppUpdateManager {
     }
 
     private fun fetchPreferredRelease(): PreferredRelease {
-        val primaryManifest = BuildConfig.OTA_PRIMARY_MANIFEST_URL.trim()
-        if (primaryManifest.isNotBlank()) {
-            requireOfficialGiteeManifest(primaryManifest)
-            try {
-                return PreferredRelease(fetchDomesticManifest(primaryManifest))
-            } catch (domesticError: Throwable) {
-                _state.value = _state.value.copy(
-                    status = "Gitee 国内 OTA 检查失败 · 自动回退 GitHub…"
-                )
-                return try {
-                    fetchGithubPreferred("Gitee 国内 OTA 暂不可用 · 已自动回退")
-                } catch (githubError: Throwable) {
-                    githubError.addSuppressed(domesticError)
-                    throw githubError
-                }
-            }
-        }
-        return fetchGithubPreferred()
-    }
-
-    private fun fetchGithubPreferred(fallbackNote: String = ""): PreferredRelease {
         requireOfficialGithubManifest(GITHUB_MANIFEST_URL)
         return try {
-            PreferredRelease(fetchGithubManifest(directTransport), fallbackNote)
+            PreferredRelease(fetchGithubManifest(directTransport))
         } catch (directError: Throwable) {
             val accelerators = acceleratorTransports()
             if (accelerators.isEmpty()) throw directError
@@ -206,11 +182,10 @@ internal object AppUpdateManager {
                     status = "GitHub 直连检查失败 · 尝试 ${transport.label}…"
                 )
                 try {
-                    val acceleratedNote = listOf(
-                        fallbackNote,
+                    return PreferredRelease(
+                        fetchGithubManifest(transport),
                         "GitHub 直连不可用 · 本次检查已临时启用 ${transport.label}，连接已释放"
-                    ).filter { it.isNotBlank() }.joinToString(" · ")
-                    return PreferredRelease(fetchGithubManifest(transport), acceleratedNote)
+                    )
                 } catch (acceleratedError: Throwable) {
                     acceleratedError.addSuppressed(previousError)
                     previousError = acceleratedError
@@ -218,47 +193,6 @@ internal object AppUpdateManager {
             }
             throw previousError
         }
-    }
-
-    private fun fetchDomesticManifest(manifestUrl: String): ReleaseCandidate {
-        requireOfficialGiteeManifest(manifestUrl)
-        val root = getJson(
-            originalUrl = manifestUrl,
-            accept = "application/json",
-            failurePrefix = SOURCE_CN,
-            transport = domesticTransport
-        )
-        val schemaVersion = root.optInt("schemaVersion", 1)
-        if (schemaVersion < 1) error("Gitee OTA manifest schema 无效")
-        val channel = root.optString("channel", "dev")
-        if (channel.isNotBlank() && !channel.equals("dev", ignoreCase = true)) {
-            error("Gitee OTA manifest channel 非 dev")
-        }
-
-        val versionName = root.optString("versionName").trim()
-        val versionCode = root.optInt("versionCode", 0)
-        val sha256 = root.optString("sha256").trim().lowercase()
-        val apkRef = root.optString("apkUrl").trim()
-            .ifBlank { root.optString("apk").trim() }
-        val changelog = root.optString("changelog").trim()
-        val size = root.optLong("size", 0L).coerceAtLeast(0L)
-
-        if (versionName.isBlank() || versionCode <= 0 || apkRef.isBlank()) {
-            error("Gitee OTA manifest 元数据不完整")
-        }
-        validateSha256(sha256)
-
-        val apkUrl = URL(URL(manifestUrl), apkRef).toString()
-        requireOfficialGiteeApk(apkUrl)
-        return ReleaseCandidate(
-            sourceLabel = SOURCE_CN,
-            versionName = versionName,
-            versionCode = versionCode,
-            changelog = changelog,
-            apkUrl = apkUrl,
-            sha256 = sha256,
-            size = size
-        )
     }
 
     private fun fetchGithubManifest(transport: UpdateTransport): ReleaseCandidate {
@@ -333,67 +267,14 @@ internal object AppUpdateManager {
             sha256 = current.expectedSha256,
             size = current.totalBytes
         )
-
-        return when {
-            isOfficialGiteeApk(candidate.apkUrl) -> downloadDomesticThenGithub(candidate)
-            isOfficialGithubApk(candidate.apkUrl) -> downloadGithubCandidate(candidate, current.sourceLabel)
-            else -> error("OTA APK 来源不在 RiftLab 官方白名单")
-        }
-    }
-
-    private suspend fun downloadDomesticThenGithub(candidate: ReleaseCandidate): File {
-        requireOfficialGiteeApk(candidate.apkUrl)
-        _state.value = _state.value.copy(
-            sourceLabel = SOURCE_CN,
-            status = "正在通过 $SOURCE_CN 下载 ${candidate.versionName}…"
-        )
-        try {
-            return downloadApk(candidate, domesticTransport, measuredBps = 0L)
-        } catch (domesticError: Throwable) {
-            _state.value = _state.value.copy(
-                status = "$SOURCE_CN 下载中断或失败 · 保留断点并校验 GitHub 同版本兜底…"
-            )
-            val githubPreferred = try {
-                fetchGithubPreferred("$SOURCE_CN 下载失败 · 已切换 GitHub 兜底")
-            } catch (githubError: Throwable) {
-                githubError.addSuppressed(domesticError)
-                throw githubError
-            }
-            val githubCandidate = githubPreferred.candidate
-            requireSameReleaseIdentity(candidate, githubCandidate)
-            return try {
-                downloadGithubCandidate(githubCandidate, githubCandidate.sourceLabel)
-            } catch (githubDownloadError: Throwable) {
-                githubDownloadError.addSuppressed(domesticError)
-                throw githubDownloadError
-            }
-        }
-    }
-
-    private fun requireSameReleaseIdentity(primary: ReleaseCandidate, fallback: ReleaseCandidate) {
-        if (primary.versionCode != fallback.versionCode ||
-            primary.versionName != fallback.versionName ||
-            !primary.sha256.equals(fallback.sha256, ignoreCase = true)
-        ) {
-            error("国内 OTA 与 GitHub 兜底不是同一版本，已拒绝跨源续传")
-        }
-        if (primary.size > 0L && fallback.size > 0L && primary.size != fallback.size) {
-            error("国内 OTA 与 GitHub 兜底文件长度不一致，已拒绝跨源续传")
-        }
-    }
-
-    private suspend fun downloadGithubCandidate(
-        candidate: ReleaseCandidate,
-        preferredSourceLabel: String
-    ): File {
         requireOfficialGithubApk(candidate.apkUrl)
 
         val accelerators = acceleratorTransports()
-        val preferredAccelerator = accelerators.firstOrNull { it.label == preferredSourceLabel }
+        val preferredAccelerator = accelerators.firstOrNull { it.label == current.sourceLabel }
         val fallbackOrder = when {
             preferredAccelerator != null -> listOf(preferredAccelerator) +
                 accelerators.filterNot { it == preferredAccelerator } + directTransport
-            preferredSourceLabel.startsWith(SOURCE_ACCELERATED_PREFIX) && accelerators.isNotEmpty() ->
+            current.sourceLabel.startsWith(SOURCE_ACCELERATED_PREFIX) && accelerators.isNotEmpty() ->
                 accelerators + directTransport
             else -> listOf(directTransport) + accelerators
         }.distinct()
@@ -460,7 +341,6 @@ internal object AppUpdateManager {
         candidate: ReleaseCandidate,
         transport: UpdateTransport
     ): TransportProbe {
-        requireOfficialGithubApk(candidate.apkUrl)
         val requestUrl = transportUrl(candidate.apkUrl, transport)
         val connection = URL(requestUrl).openConnection() as HttpURLConnection
         val startedNs = System.nanoTime()
@@ -518,7 +398,6 @@ internal object AppUpdateManager {
             part.delete()
         }
 
-        val domestic = isOfficialGiteeApk(candidate.apkUrl)
         var allowResume = true
         while (true) {
             val existing = if (allowResume && part.exists()) part.length() else 0L
@@ -526,20 +405,13 @@ internal object AppUpdateManager {
             val connection = URL(requestUrl).openConnection() as HttpURLConnection
             try {
                 connection.instanceFollowRedirects = true
-                connection.connectTimeout = when {
-                    transport.accelerated -> 7_000
-                    domestic -> 8_000
-                    else -> 12_000
-                }
-                connection.readTimeout = when {
-                    transport.accelerated -> 20_000
-                    domestic -> 20_000
-                    else -> 30_000
-                }
+                connection.connectTimeout = if (transport.accelerated) 7_000 else 12_000
+                connection.readTimeout = if (transport.accelerated) 20_000 else 30_000
                 connection.useCaches = true
                 connection.setRequestProperty("Accept", "application/octet-stream")
                 connection.setRequestProperty("Accept-Encoding", "identity")
-                // Versioned APK assets are immutable. Allow Gitee/CDN/GitHub accelerator caches.
+                // The APK filename is versioned and immutable for this update. Do not send no-cache:
+                // public accelerator/CDN caches are precisely what make the large Release asset faster.
                 connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
                 if (transport.accelerated) {
                     // Request-scoped acceleration only: never install a VPN or system proxy.
@@ -796,22 +668,6 @@ internal object AppUpdateManager {
         }
     }
 
-    private fun isOfficialGithubApk(value: String): Boolean = runCatching {
-        val url = URL(value)
-        url.protocol.equals("https", ignoreCase = true) &&
-            url.host.equals("github.com", ignoreCase = true) &&
-            url.path.startsWith(GITHUB_RELEASE_PATH_PREFIX) &&
-            url.path.endsWith(".apk", ignoreCase = true)
-    }.getOrDefault(false)
-
-    private fun isOfficialGiteeApk(value: String): Boolean = runCatching {
-        val url = URL(value)
-        url.protocol.equals("https", ignoreCase = true) &&
-            url.host.equals("gitee.com", ignoreCase = true) &&
-            url.path.startsWith(GITEE_RELEASE_PATH_PREFIX) &&
-            url.path.endsWith(".apk", ignoreCase = true)
-    }.getOrDefault(false)
-
     private fun requireOfficialGithubSource(value: String) {
         val url = URL(value)
         val allowed = url.protocol.equals("https", ignoreCase = true) &&
@@ -832,25 +688,13 @@ internal object AppUpdateManager {
     }
 
     private fun requireOfficialGithubApk(value: String) {
-        if (!isOfficialGithubApk(value)) {
-            error("GitHub OTA APK 必须来自 RiftLab 官方 dev-latest Release")
-        }
-    }
-
-    private fun requireOfficialGiteeManifest(value: String) {
         val url = URL(value)
-        val expectedPath = "${GITEE_RELEASE_PATH_PREFIX}latest.json"
         if (!url.protocol.equals("https", ignoreCase = true) ||
-            !url.host.equals("gitee.com", ignoreCase = true) ||
-            url.path != expectedPath
+            !url.host.equals("github.com", ignoreCase = true) ||
+            !url.path.startsWith(GITHUB_RELEASE_PATH_PREFIX) ||
+            !url.path.endsWith(".apk", ignoreCase = true)
         ) {
-            error("Gitee OTA manifest 必须来自 RiftLab 官方国内 dev-latest Release")
-        }
-    }
-
-    private fun requireOfficialGiteeApk(value: String) {
-        if (!isOfficialGiteeApk(value)) {
-            error("Gitee OTA APK 必须来自 RiftLab 官方国内 dev-latest Release")
+            error("GitHub OTA APK 必须来自 RiftLab 官方 dev-latest Release")
         }
     }
 

@@ -53,21 +53,9 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
 
             if (state.sourceLabel.isNotBlank()) {
                 Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 9.sp)
-                when {
-                    state.sourceLabel == "Gitee 国内 OTA" -> Text(
-                        "中国大陆优先更新源 · 失败会自动校验同版本并回退 GitHub 自适应更新通道",
-                        color = RiftMuted,
-                        fontSize = 8.sp,
-                        lineHeight = 12.sp
-                    )
-                    state.sourceLabel.startsWith("GitHub 更新加速") -> Text(
+                if (state.sourceLabel.startsWith("GitHub 更新加速")) {
+                    Text(
                         "仅作用于本次 RiftLab GitHub 更新请求 · 非 VPN / 非系统代理 · 节点失败会自动切换",
-                        color = RiftMuted,
-                        fontSize = 8.sp,
-                        lineHeight = 12.sp
-                    )
-                    state.sourceLabel == "GitHub 直连" -> Text(
-                        "GitHub 官方兜底通道 · APK 仍执行 SHA-256、包名、版本号与固定签名校验",
                         color = RiftMuted,
                         fontSize = 8.sp,
                         lineHeight = 12.sp

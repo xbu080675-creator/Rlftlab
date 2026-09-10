@@ -1,3 +1,5 @@
+dev.66：锁定 RiftLab OTA 架构并补齐开发文档。撤销误重新引入的 Gitee OTA / Gitee Release 二进制镜像依赖；APP 恢复并继续使用 GitHub canonical dev-latest + GitHub 直连/多个 GitHub-only 加速节点真实 APK Range 自适应测速、断点续传和自动换线；GitHub Actions 不上传 APK/latest.json 到 Gitee，不需要 GITEE_TOKEN。SHA-256、包名、versionCode 与固定 DEV 签名校验保持不变。补齐 dev.31～dev.66 开发履历、更新 README/OTA 文档，并从 dev.67 重新排定后续路线。版本升级至 1.0.0-dev.66 / versionCode 66。
+
 dev.48：修复四项问题：赛区订阅真正控制首页与实时目标，避免只订 LPL 却被全球其他 LIVE 赛事抢占；非 LPL 详情不再错误调用 LPL BMatch/TJStats，改走 Riot/OP.GG 全球链路；海外 Riot/YouTube 官方回放改为 RiftLab 内嵌播放，不再跳出 APP，海外 WebView 与 LPL Media3 全屏均启用传感器旋转；性能上延迟排名中心加载、减少长尾赛区启动分页请求，并降低回放 UI 高频重组。
 dev.47：重做全球赛事入口层级：首页新增常驻“赛区订阅”，订阅持久保存并在赛事中心优先排序；赛事中心一级改为“联赛 / 国际赛”，联赛二级先选赛区再看赛程，国际赛二级固定提供“全球先锋赛 / 季中冠军赛 / 美洲杯 / 全球总决赛 / EWC / EMEA 大师赛”。Riot 联赛发现范围扩展到 FLS、LCK CL、LCP Wild Card、LDL、NLC、LIT、TCL、EMEA Masters、Esports Balkan League、Hitpoint Masters、Rift Legends、Americas Cup 等官方目录项目，战队页同时用整个赛区当前赛程补全参赛队；当 Riot team identity 有但 roster 为空时，用 OP.GG 最近正式比赛的可核实五人和位置补齐，不猜人。海外/国际赛事回放彻底与 Bilibili 解耦：非 LPL 比赛不再触发 B站解析，改读 Riot getEventDetails 的官方 VOD 元数据，优先直达 YouTube，并始终提供 LoL Esports 官方 VOD 页；LPL 继续保留 B站官方赛事源。所有赛程时间改为“本机当地时间 + UTC 时区偏移”显式标注，避免跨赛区时间歧义。
 

@@ -50,17 +50,18 @@ UI 应明确来源，不把缓存、结构推导或第三方 Provider 伪装成�
 
 ## APP 内 OTA
 
-`dev.66` 起：
+当前架构（dev.59 起，dev.65 完成自适应测速，dev.66 锁定决策）：
 
 ```text
-Gitee 国内 OTA
-→ 失败后 GitHub canonical Release
-→ GitHub 直连 / 多个 GitHub-only 加速节点按真实 APK 吞吐自适应选路
+GitHub canonical dev-latest Release
+→ GitHub 直连 + GitHub-only 加速节点并发测速
+→ 按真实 APK 吞吐选择最快路径
+→ 失败/过慢时保留断点自动换线
 ```
 
-GitHub 仍是唯一代码、版本、构建和 canonical Release 真源；Gitee 只镜像 GitHub Actions 已构建并签名的 APK，不在 Gitee 重新构建。
+**Gitee OTA 已废弃。** Gitee 不参与 RiftLab APK / `latest.json` 分发，不需要 `GITEE_TOKEN`，也不得重新成为 APP 运行时或发布工作流的更新依赖；如保留 Gitee 仓库，只作为源码镜像使用。
 
-安装前强制验证 SHA-256、包名、versionCode 和固定 DEV 签名证书。详见 `docs/OTA_CN.md`。
+安装前继续强制验证 SHA-256、包名、versionCode 和固定 DEV 签名证书。详见 `docs/OTA_CN.md`。
 
 ## 构建环境
 

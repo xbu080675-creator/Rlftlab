@@ -294,33 +294,38 @@ Provider 返回值仍要带来源，不能冒充 Riot 官方确认。
 
 ---
 
-## 9. dev.66 — Gitee 大陆第一源 + GitHub 自适应兜底
+## 9. dev.66 — OTA 架构锁定与开发文档补全
 
-这一版不是回到 dev.59 早期“把 Gitee 当第二套发布系统”的方案，而是重新明确角色：
+这一版不再引入新的分发平台，而是把 dev.59～dev.65 已经跑通的更新方案正式写死，避免后续开发再次误把已淘汰方案接回来。
 
 ```text
-GitHub = version/build/canonical release truth
-Gitee = China binary transport mirror
-APP = source selection + verification + fallback
+GitHub = code / version / build / canonical Release truth
+APP = GitHub direct + request-scoped GitHub acceleration + verification + fallback
+Gitee = source mirror only (optional), NOT OTA
 ```
 
-发布侧：
+客户端继续完整继承 dev.65：
 
-- GitHub Actions 构建唯一 APK；
-- 先完成 GitHub canonical `dev-latest`；
-- 再把同一 APK 与同一 `latest.json` 上传 Gitee Release；
-- Gitee 不运行 CI；
-- Gitee 镜像失败不能回滚 GitHub Release。
+- 官方 `dev-latest` 的 `latest.json` 与 APK 都来自 GitHub Release；
+- 下载前对 GitHub 直连与多个 GitHub-only 节点使用真实 APK Range 并发测速；
+- 按当前网络实际吞吐排序，优先最快路径；
+- 节点失败或实际速度长期明显低于测速预期时保留 `.part` 自动换线；
+- APK 允许 CDN/反代缓存，manifest 保持 no-cache；
+- SHA-256、包名、versionCode 和固定 DEV 签名继续强制校验。
 
-客户端：
+### 已废弃：Gitee OTA
 
-- 优先检查/下载 `Gitee 国内 OTA`；
-- Gitee 失败自动回退 GitHub；
-- GitHub 路径完整继承 dev.65 的真实 APK 自适应测速；
-- Gitee → GitHub 跨源续传必须验证版本号、SHA-256 和文件长度身份；
-- 任意来源最终仍必须通过包名、versionCode、SHA-256 和固定签名验证后才允许安装。
+Gitee Release / `latest.json` / APK 镜像分发方案已经废弃：
 
-这一版的实际目标只有一个：**用户在国内点 APP 的“下载并安装”时，优先拿到国内 Release 的速度，同时镜像挂掉也不会失去更新能力。**
+- 不在 APP 中读取 Gitee OTA manifest；
+- 不从 Gitee 下载更新 APK；
+- GitHub Actions 不上传 APK 或 `latest.json` 到 Gitee；
+- 不需要 `GITEE_TOKEN`；
+- 后续不得把 Gitee 重新引入 OTA 运行时或 canonical 发布链。
+
+若保留 Gitee 仓库，仅用于源码镜像和国内代码浏览，不参与版本判断、APK 发布、更新检查或安装。
+
+这一版同时补齐 dev.31～dev.66 的真实开发履历，并从 dev.67 重新排定后续路线，解决旧 dev.59～78 计划版本号已被实际开发占用的问题。
 
 ---
 
@@ -339,7 +344,7 @@ APP = source selection + verification + fallback
 + Championship Points / Tournament Governance / Tournament Research
 + RiftScreen 实时副屏与可编辑 Draft HUD
 + APP 内完整 OTA 下载、校验、安装
-+ Gitee 大陆第一源 + GitHub 自适应兜底
++ GitHub canonical OTA + 自适应 GitHub 加速兜底
 ```
 
 它已经不再是“一个英雄联盟比分 APP”。更准确的当前产品形态是：
