@@ -490,7 +490,7 @@ object TournamentEditionArchiveStore {
                 key = "qualification",
                 label = "资格来源",
                 state = TournamentEditionSlotState.PENDING,
-                detail = "资格路径已留独立槽位；dev.70 接入 Championship Points / 资格赛节点后回填，不从参赛名单反推。"
+                detail = "资格体系使用独立模型：Championship Points、名次直通、资格赛与国际赛参赛来源分开记录；不从参赛名单反推具体 Seed / 晋级原因。"
             ),
             TournamentEditionSlot(
                 key = "rules",

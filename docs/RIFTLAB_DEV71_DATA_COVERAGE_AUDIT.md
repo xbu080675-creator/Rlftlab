@@ -1,5 +1,13 @@
 # RiftLab dev.71 — 全局赛事数据查漏补缺
 
+## 2026-09-10 · Qualification semantics repair
+
+- Added an explicit qualification-mechanism layer: Championship Points, direct placement, regional qualifier, participant origin, mixed and unknown are no longer collapsed into one concept.
+- International Tournament Editions now expose observed participants as provider-backed participation facts while keeping Region / Seed / Qualification Origin pending until a trusted mapping exists.
+- Non-points systems no longer render an empty Championship Points card. Unknown regional rules are labelled as unknown rather than as missing points.
+- 2026 LPL remains a mixed official model because its current path combines direct champion qualification, annual Championship Points and the regional qualifier.
+- Archive/UI wording was made mechanism-neutral so the same surface can correctly represent LPL, LCK, LCP and international target events without inventing rules.
+
 > 目标：不是只修 UI 中出现“待同步”的卡片，而是从整个 APP、整个赛事数据链路反查所有缺口。
 >
 > 原则：无可信来源时明确标记未知；不拿 LPL 数据替代其他赛区，不用结构推导冒充官方规则，不为了填满页面编数据。

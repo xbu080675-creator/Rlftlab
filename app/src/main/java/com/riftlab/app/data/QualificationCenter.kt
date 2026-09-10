@@ -38,6 +38,15 @@ enum class QualificationNodeState(val label: String) {
     PENDING("待确认")
 }
 
+enum class QualificationMechanism(val label: String) {
+    CHAMPIONSHIP_POINTS("Championship Points"),
+    DIRECT_PLACEMENT("联赛 / 季后赛名次直通"),
+    REGIONAL_QUALIFIER("区域资格赛 / 附加赛"),
+    PARTICIPANT_ORIGIN("国际赛参赛资格来源"),
+    MIXED("混合资格体系"),
+    UNKNOWN("资格规则待确认")
+}
+
 data class QualificationRouteNode(
     val id: String,
     val label: String,
@@ -76,7 +85,10 @@ data class QualificationTournamentSnapshot(
     val routes: List<TeamQualificationRoute> = emptyList(),
     val rules: List<QualificationRuleRecord> = emptyList(),
     val sourceSummary: String = "",
-    val note: String = ""
+    val note: String = "",
+    val mechanism: QualificationMechanism = QualificationMechanism.UNKNOWN,
+    val mechanismEvidence: QualificationEvidence = QualificationEvidence.PENDING,
+    val mechanismDetail: String = ""
 )
 
 data class QualificationCenterState(
@@ -206,18 +218,82 @@ object QualificationCenterStore {
             )
         }
 
-        // Global model, conservative data policy: establish the archive position for international
-        // editions but do not infer participant qualification origins from the participant list.
+        // International target events use participant-origin semantics. Observing a team in the
+        // tournament participant set proves participation, not the region/seed/path that qualified it.
         if (edition.family.uppercase() in setOf("WORLDS", "MSI", "FIRST_STAND")) {
-            return QualificationTournamentSnapshot(
+            return buildInternationalParticipationSnapshot(edition)
+        }
+
+        // Regional editions can use points, direct placement, qualifiers or a mixed system. Until a
+        // trusted rule source says which one applies, classify the mechanism as UNKNOWN instead of
+        // presenting an empty Championship Points cell as if points were expected.
+        return QualificationTournamentSnapshot(
+            tournamentId = edition.tournamentId,
+            title = "${edition.displayName} · 资格体系",
+            targetEvent = "后续资格目标待确认",
+            sourceSummary = "等待赛事官方 / Riot / 已核实 Provider",
+            note = "当前尚未确认该届采用 Championship Points、直接名次、资格赛还是混合规则；RiftLab 不把未知机制误报为积分缺失。",
+            mechanism = QualificationMechanism.UNKNOWN,
+            mechanismEvidence = QualificationEvidence.PENDING,
+            mechanismDetail = "资格机制未核实；不根据 Standings 或参赛名单自行推断。"
+        )
+    }
+
+    private fun buildInternationalParticipationSnapshot(
+        edition: TournamentEditionArchiveRecord
+    ): QualificationTournamentSnapshot {
+        val participantSource = "Tournament Edition participant set · Schedule / Standings / Completed Events"
+        val pendingSource = "等待赛事官方 / Riot / 已核实 Provider"
+        val teams = edition.participantTeamCodes
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() && it != "TBD" && it != "—" }
+            .distinct()
+            .sorted()
+        val routes = teams.map { teamCode ->
+            TeamQualificationRoute(
                 tournamentId = edition.tournamentId,
-                title = "${edition.displayName} · 参赛资格来源",
+                teamId = stableLocalTeamId(teamCode),
+                teamCode = teamCode,
                 targetEvent = edition.displayName,
-                sourceSummary = "等待赛事官方 / Riot / 已核实 Provider",
-                note = "该届国际赛已建立资格档案位；参赛队资格来源未拿到可信映射前保持待确认。"
+                status = QualificationTeamState.LOCKED,
+                route = listOf(
+                    QualificationRouteNode(
+                        id = "$teamCode:participant-observed",
+                        label = "参赛席位已观测",
+                        detail = "该队已出现在此 Tournament Edition 的可信参赛集合中；这只确认参赛事实，不等于已确认赛区、Seed 或晋级原因。",
+                        state = QualificationNodeState.CONFIRMED,
+                        source = participantSource,
+                        evidence = QualificationEvidence.PROVIDER
+                    ),
+                    QualificationRouteNode(
+                        id = "$teamCode:origin-pending",
+                        label = "赛区 / Seed / 晋级来源",
+                        detail = "等待可信映射。未拿到官方或可核实 Provider 记录前，不从队名、排名或对阵自行反推。",
+                        state = QualificationNodeState.PENDING,
+                        source = pendingSource,
+                        evidence = QualificationEvidence.PENDING
+                    )
+                ),
+                source = participantSource,
+                evidence = QualificationEvidence.PROVIDER,
+                updatedThrough = edition.endDate.ifBlank { edition.startDate }
             )
         }
-        return null
+        return QualificationTournamentSnapshot(
+            tournamentId = edition.tournamentId,
+            title = "${edition.displayName} · 参赛资格来源",
+            targetEvent = edition.displayName,
+            routes = routes,
+            sourceSummary = if (routes.isEmpty()) pendingSource else "$participantSource + $pendingSource",
+            note = if (routes.isEmpty()) {
+                "该届国际赛已建立资格档案位；参赛集合本身尚未恢复，等待历史赛程 / Standings / Completed Events。"
+            } else {
+                "已确认的是参赛事实；Region / Seed / Qualification Origin 仍需可信映射。国际赛本身没有理由显示一张虚构的 Championship Points 缺失表。"
+            },
+            mechanism = QualificationMechanism.PARTICIPANT_ORIGIN,
+            mechanismEvidence = if (routes.isEmpty()) QualificationEvidence.PENDING else QualificationEvidence.PROVIDER,
+            mechanismDetail = "目标赛事按 Qualification Origin / Region / Seed 建档；Championship Points 只在确实采用该规则的赛区显示。"
+        )
     }
 
     private fun build2026LplWorldsSnapshot(
@@ -357,7 +433,10 @@ object QualificationCenterStore {
                 governance.rules.sourceSummary,
                 governance.draw.sourceSummary
             ).filter { it.isNotBlank() }.distinct().joinToString(" + "),
-            note = "Championship Points 与本届 Standings Points 分栏显示；S3 当前值为保底积分。官方确认与 RiftLab 推导必须分开标识。"
+            note = "Championship Points 与本届 Standings Points 分栏显示；S3 当前值为保底积分。官方确认与 RiftLab 推导必须分开标识。",
+            mechanism = QualificationMechanism.MIXED,
+            mechanismEvidence = QualificationEvidence.OFFICIAL,
+            mechanismDetail = "2026 LPL 世界赛资格同时包含赛段冠军直通、年度 Championship Points 与区域资格赛节点，因此按混合资格体系记录。"
         )
     }
 
