@@ -1,51 +1,57 @@
-name: dev71 LCP points and resilience compile
+name: dev71 final release validation
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_resilience_lcp_points.py'
+      - 'tools/apply_dev71_release_prep.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-lcp-resilience-compile
+  group: dev71-final-release-validation
   cancel-in-progress: true
 
 jobs:
-  apply-and-compile:
+  finalize-and-compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Skip already-wired OTA generator block
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('tools/apply_dev71_resilience_lcp_points.py')
-          text = p.read_text(encoding='utf-8')
-          start = text.index('# Release build bundles the global resilience seeds')
-          end = text.index('# Official LCP 2026 Championship Points formula')
-          text = text[:start] + '# OTA global seeds are already wired by repository connector.\n\n' + text[end:]
-          p.write_text(text, encoding='utf-8')
-          PY
-      - name: Apply LCP points and global resilience patch
-        run: python3 tools/apply_dev71_resilience_lcp_points.py
-      - name: Static guards
+      - name: Apply dev71 release metadata
+        run: python3 tools/apply_dev71_release_prep.py
+      - name: Bundle all resilient data seeds
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p app/src/main/assets
+          for name in riot_persisted_mirror.json team_profiles.json people.json team_archive.json; do
+            if [ -f "data/lpl/$name" ]; then cp "data/lpl/$name" "app/src/main/assets/$name"; fi
+          done
+          for name in team_staff.json match_awards.json; do
+            if [ -f "data/global/$name" ]; then cp "data/global/$name" "app/src/main/assets/$name"; fi
+          done
+          if [ -f data/esports/esports_graph.json ]; then
+            cp data/esports/esports_graph.json app/src/main/assets/esports_graph.json
+          fi
+      - name: Final static guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'versionCode = 71' app/build.gradle.kts
+          grep -q 'versionName = "1.0.0-dev.71"' app/build.gradle.kts
+          grep -q '^dev.71：' DEV_CURRENT_CHANGELOG.txt
+          grep -q '^dev.71：' DEV_CHANGELOG.txt
+          grep -q '^dev.70：' DEV_CHANGELOG.txt
+          grep -q '^dev.69：' DEV_CHANGELOG.txt
           grep -q 'OfficialLcpChampionshipPoints2026.rules' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q 'Split 3 Swiss' app/src/main/java/com/riftlab/app/data/OfficialLcpChampionshipPoints2026.kt
           grep -q 'loadBundled("team_staff.json")' app/src/main/java/com/riftlab/app/data/GlobalTeamStaffProvider.kt
           grep -q 'loadBundled("match_awards.json")' app/src/main/java/com/riftlab/app/data/GlobalVerifiedAwardsProvider.kt
-          grep -q 'data/global/\$name' .github/workflows/ota-direct.yml
-          grep -q 'LCP Championship Points + global offline resilience' docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
+          grep -q 'for name in team_staff.json match_awards.json' .github/workflows/ota-direct.yml
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -57,29 +63,31 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Bundle global resilience seeds for compile
+      - name: Clean compile dev71
+        run: gradle clean :app:assembleDebug --stacktrace
+      - name: Verify fixed dev signature
         shell: bash
         run: |
-          mkdir -p app/src/main/assets
-          cp data/global/team_staff.json app/src/main/assets/team_staff.json
-          cp data/global/match_awards.json app/src/main/assets/match_awards.json
-      - name: Compile dev71 LCP/resilience tranche
-        run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated source
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" verify --print-certs "$APK"
+          DIGEST=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          EXPECTED=769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24
+          echo "RiftLab dev signing SHA-256: $DIGEST"
+          test "$DIGEST" = "$EXPECTED"
+          sha256sum "$APK"
+          stat -c '%s bytes' "$APK"
+      - name: Commit validated release metadata
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            app/src/main/java/com/riftlab/app/data/GlobalTeamStaffProvider.kt \
-            app/src/main/java/com/riftlab/app/data/GlobalVerifiedAwardsProvider.kt \
-            app/src/main/java/com/riftlab/app/data/OfficialLcpChampionshipPoints2026.kt \
-            app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
-            docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
+          git add app/build.gradle.kts DEV_CURRENT_CHANGELOG.txt DEV_CHANGELOG.txt docs/RIFTLAB_DEV_67_86.md
           if git diff --cached --quiet; then
-            echo "No generated changes to commit"
+            echo "No release metadata changes to commit"
             exit 0
           fi
-          git commit -m "dev71: add LCP points rules and global APK seed fallback"
+          git commit -m "dev71: finalize release metadata after clean build"
           git push origin HEAD:dev71-data-coverage-repair
