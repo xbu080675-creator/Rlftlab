@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-09T23:18:48Z",
+  "updatedAt": "2026-09-10T04:50:06Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -452,7 +452,11 @@
           "source": "",
           "stintId": "st_f18f1372d791"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:03Z",
+        "attempts": 1
+      }
     },
     "p_89f13f7d0ed7": {
       "displayName": "BigWei",
@@ -498,7 +502,11 @@
           "source": "",
           "stintId": "st_86e10aa52abf"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:04Z",
+        "attempts": 1
+      }
     },
     "p_6ad542a4bd5e": {
       "displayName": "Teacherma",
@@ -836,7 +844,11 @@
           "source": "",
           "stintId": "st_d17d7fdb678f"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:05Z",
+        "attempts": 1
+      }
     },
     "p_e7101912c31f": {
       "displayName": "River",
@@ -857,7 +869,11 @@
           "source": "",
           "stintId": "st_ce789042f768"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:06Z",
+        "attempts": 1
+      }
     },
     "p_51dd3cd81931": {
       "displayName": "Shuijing",
@@ -1600,7 +1616,11 @@
           "source": "",
           "stintId": "st_980a60fe6562"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:04Z",
+        "attempts": 1
+      }
     },
     "p_90770ef3f786": {
       "displayName": "Benny",
@@ -1995,7 +2015,11 @@
           "source": "",
           "stintId": "st_9841a4f7025a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:02Z",
+        "attempts": 1
+      }
     },
     "p_e3fad4e4f943": {
       "displayName": "Cluo",
@@ -2133,7 +2157,11 @@
           "source": "",
           "stintId": "st_fff004e95889"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:02Z",
+        "attempts": 1
+      }
     },
     "p_335b5d2543bc": {
       "displayName": "Smallorc",
@@ -2229,7 +2257,11 @@
           "source": "",
           "stintId": "st_e41540315740"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T04:50:03Z",
+        "attempts": 1
+      }
     },
     "p_b4b7bb002cdc": {
       "displayName": "Condi",
