@@ -143,6 +143,7 @@ jobs:
               --prerelease
           fi
       - name: Publish mainland Gitee Release mirror
+        timeout-minutes: 8
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           GITEE_OWNER: xiaobaiaaa1
@@ -159,7 +160,9 @@ jobs:
           TAG="dev-latest"
           AUTH="Authorization: Bearer ${GITEE_TOKEN}"
           RELEASE_JSON=$(mktemp)
-          STATUS=$(curl -sS -o "$RELEASE_JSON" -w '%{http_code}' \
+
+          echo "Gitee: lookup release $TAG"
+          STATUS=$(curl -sS --connect-timeout 10 --max-time 30 -o "$RELEASE_JSON" -w '%{http_code}' \
             -H "$AUTH" -H 'Accept: application/json' \
             "$API/releases/tags/$TAG")
 
@@ -177,8 +180,9 @@ jobs:
           fi
 
           if [ -z "$RID" ]; then
+            echo "Gitee: create release $TAG"
             CREATE_JSON=$(mktemp)
-            CREATE_STATUS=$(curl -sS -o "$CREATE_JSON" -w '%{http_code}' --retry 2 --request POST \
+            CREATE_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 -o "$CREATE_JSON" -w '%{http_code}' --retry 1 --request POST \
               -H "$AUTH" -H 'Accept: application/json' \
               --data-urlencode "tag_name=$TAG" \
               --data-urlencode "name=RiftLab $RIFTLAB_VERSION_NAME · DEV Mirror" \
@@ -202,24 +206,17 @@ jobs:
           fi
           echo "Gitee release id: $RID"
 
-          # Best-effort metadata refresh. Attachment publishing remains authoritative.
-          curl -fsS --retry 2 --request PATCH \
-            -H "$AUTH" -H 'Accept: application/json' \
-            --data-urlencode "name=RiftLab $RIFTLAB_VERSION_NAME · DEV Mirror" \
-            --data-urlencode "body@/tmp/riftlab-release.txt" \
-            --data-urlencode "prerelease=true" \
-            "$API/releases/$RID" >/dev/null || \
-            echo "::warning::Gitee release metadata refresh failed; continuing with attachment publish."
-
+          # Do not PATCH release metadata here. Gitee currently returns HTTP 400 for that
+          # request on this dev-latest release, while attachment operations are independent.
           list_assets() {
-            curl -fsS --retry 2 \
+            curl -fsS --connect-timeout 10 --max-time 30 --retry 1 \
               -H "$AUTH" -H 'Accept: application/json' \
               "$API/releases/$RID/attach_files?per_page=100&direction=desc"
           }
 
           delete_asset_id() {
             local aid="$1"
-            curl -fsS --retry 2 --request DELETE \
+            curl -fsS --connect-timeout 10 --max-time 30 --retry 1 --request DELETE \
               -H "$AUTH" \
               "$API/releases/$RID/attach_files/$aid" >/dev/null
           }
@@ -227,6 +224,7 @@ jobs:
           delete_assets_named() {
             local wanted="$1"
             local assets
+            echo "Gitee: inspect existing attachment $wanted" >&2
             assets=$(list_assets)
             while read -r aid; do
               [ -n "$aid" ] && delete_asset_id "$aid"
@@ -237,7 +235,8 @@ jobs:
           delete_assets_named "$RIFTLAB_APK_NAME"
 
           # Publish APK first. The old latest.json continues to point at the previous valid APK.
-          curl -fsS --retry 3 --retry-delay 2 --request POST \
+          echo "Gitee: upload $RIFTLAB_APK_NAME"
+          curl -fsS --connect-timeout 10 --max-time 180 --retry 1 --retry-delay 2 --request POST \
             -H "$AUTH" -H 'Accept: application/json' \
             -F "file=@${RIFTLAB_APK_PATH};type=application/vnd.android.package-archive" \
             "$API/releases/$RID/attach_files" > /tmp/gitee-apk.json
@@ -246,14 +245,16 @@ jobs:
 
           # Switch the stable manifest last. A very short replacement gap falls back to GitHub in-app.
           delete_assets_named "latest.json"
-          curl -fsS --retry 3 --retry-delay 2 --request POST \
+          echo "Gitee: upload latest.json"
+          curl -fsS --connect-timeout 10 --max-time 60 --retry 1 --retry-delay 2 --request POST \
             -H "$AUTH" -H 'Accept: application/json' \
             -F "file=@/tmp/latest.json;type=application/json" \
             "$API/releases/$RID/attach_files" > /tmp/gitee-manifest.json
 
           MANIFEST_URL="https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases/download/${TAG}/latest.json"
           for attempt in 1 2 3 4; do
-            if curl -fsSL --retry 1 --connect-timeout 8 -H 'Cache-Control: no-cache' \
+            echo "Gitee: verify latest.json attempt $attempt"
+            if curl -fsSL --retry 1 --connect-timeout 8 --max-time 30 -H 'Cache-Control: no-cache' \
               "${MANIFEST_URL}?ci=${GITHUB_RUN_ID}-${attempt}" > /tmp/gitee-latest-check.json; then
               if python3 - "$RIFTLAB_VERSION_CODE" "$RIFTLAB_APK_NAME" <<'PY'
           import json, sys
@@ -277,6 +278,7 @@ jobs:
           done
 
           # After latest.json points at the new APK, stale versioned APKs can be removed safely.
+          echo "Gitee: clean stale APK attachments"
           assets=$(list_assets)
           while read -r aid; do
             [ -n "$aid" ] && delete_asset_id "$aid"
