@@ -13,14 +13,16 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
 }
 
 // Update acceleration is app-scoped only: no VPNService, no system proxy and no traffic capture.
-// The built-in dev endpoint can be replaced at build time without changing updater code.
-val defaultGithubAcceleratorBaseUrl = "https://gh-proxy.com/"
-val githubAcceleratorBaseUrl = providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URL")
+// dev.61 uses multiple release-file accelerators because public nodes can change availability.
+// Override with RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS="https://node-a/|https://node-b/" when needed.
+val defaultGithubAcceleratorBaseUrls = "https://ghfast.top/|https://ghproxy.net/"
+val githubAcceleratorBaseUrls = providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS")
+    .orElse(providers.gradleProperty("RIFTLAB_GITHUB_ACCELERATOR_BASE_URL"))
     .orElse("")
     .get()
     .trim()
-    .ifBlank { defaultGithubAcceleratorBaseUrl }
-val githubAcceleratorBaseLiteral = githubAcceleratorBaseUrl
+    .ifBlank { defaultGithubAcceleratorBaseUrls }
+val githubAcceleratorBaseUrlsLiteral = githubAcceleratorBaseUrls
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
@@ -32,12 +34,12 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 60
-        versionName = "1.0.0-dev.60"
+        versionCode = 61
+        versionName = "1.0.0-dev.61"
         buildConfigField(
             "String",
-            "GITHUB_ACCELERATOR_BASE_URL",
-            "\"$githubAcceleratorBaseLiteral\""
+            "GITHUB_ACCELERATOR_BASE_URLS",
+            "\"$githubAcceleratorBaseUrlsLiteral\""
         )
     }
 
@@ -135,3 +137,5 @@ dependencies {
 // dev.59: GitHub remains the only build/version/release source. The app tries GitHub directly first, then temporarily enables a GitHub-only accelerator for manifest/APK requests, supports Range resume, and releases the accelerated connection immediately after the update request.
 
 // dev.60: add a lifecycle-driven animated LIVE badge and a unified domestic/global broadcast jump hub. GAME_LIVE shows LIVE; EVENT_LIVE/BETWEEN_GAMES stay distinct as ON AIR. Add LoL Esports, YouTube, Twitch and X global entries alongside Bilibili/Huya.
+
+// dev.61: repair mainland OTA acceleration after gh-proxy.com stalled on large Release assets. Use GHFast as primary, GHProxy.net as secondary, keep direct GitHub fallback, preserve Range resume and all package/signature verification.

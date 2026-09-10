@@ -41,13 +41,11 @@ internal data class AppUpdateState(
     val error: String? = null
 )
 
-private enum class UpdateTransport(
+private data class UpdateTransport(
     val label: String,
-    val accelerated: Boolean
-) {
-    DIRECT("GitHub 直连", false),
-    ACCELERATED("GitHub 更新加速", true)
-}
+    val accelerated: Boolean,
+    val baseUrl: String = ""
+)
 
 private data class ReleaseCandidate(
     val sourceLabel: String,
@@ -69,10 +67,11 @@ internal object AppUpdateManager {
         "https://github.com/xbu080675-creator/Rlftlab/releases/download/dev-latest/latest.json"
     private const val GITHUB_RELEASE_PATH_PREFIX =
         "/xbu080675-creator/Rlftlab/releases/download/dev-latest/"
-    private const val SOURCE_ACCELERATED = "GitHub 更新加速"
+    private const val SOURCE_ACCELERATED_PREFIX = "GitHub 更新加速"
     private const val DEV_SIGNER_SHA256 =
         "769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24"
 
+    private val directTransport = UpdateTransport("GitHub 直连", accelerated = false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var appContext: Context? = null
 
@@ -134,7 +133,7 @@ internal object AppUpdateManager {
             )
             val result = runCatching { downloadWithFallback(current) }
             result.onSuccess { apk ->
-                val accelerated = _state.value.sourceLabel == SOURCE_ACCELERATED
+                val accelerated = _state.value.sourceLabel.startsWith(SOURCE_ACCELERATED_PREFIX)
                 _state.value = _state.value.copy(
                     downloading = false,
                     progressPercent = 100,
@@ -158,18 +157,27 @@ internal object AppUpdateManager {
     private fun fetchPreferredRelease(): PreferredRelease {
         requireOfficialGithubManifest(GITHUB_MANIFEST_URL)
         return try {
-            PreferredRelease(fetchGithubManifest(UpdateTransport.DIRECT))
+            PreferredRelease(fetchGithubManifest(directTransport))
         } catch (directError: Throwable) {
-            if (!acceleratorAvailable()) throw directError
-            try {
-                PreferredRelease(
-                    fetchGithubManifest(UpdateTransport.ACCELERATED),
-                    "GitHub 直连不可用 · 本次检查已临时启用更新加速，连接已释放"
+            val accelerators = acceleratorTransports()
+            if (accelerators.isEmpty()) throw directError
+
+            var previousError: Throwable = directError
+            for (transport in accelerators) {
+                _state.value = _state.value.copy(
+                    status = "GitHub 直连检查失败 · 尝试 ${transport.label}…"
                 )
-            } catch (acceleratedError: Throwable) {
-                acceleratedError.addSuppressed(directError)
-                throw acceleratedError
+                try {
+                    return PreferredRelease(
+                        fetchGithubManifest(transport),
+                        "GitHub 直连不可用 · 本次检查已临时启用 ${transport.label}，连接已释放"
+                    )
+                } catch (acceleratedError: Throwable) {
+                    acceleratedError.addSuppressed(previousError)
+                    previousError = acceleratedError
+                }
             }
+            throw previousError
         }
     }
 
@@ -247,25 +255,23 @@ internal object AppUpdateManager {
         )
         requireOfficialGithubApk(candidate.apkUrl)
 
-        val preferred = if (current.sourceLabel == SOURCE_ACCELERATED) {
-            UpdateTransport.ACCELERATED
-        } else {
-            UpdateTransport.DIRECT
-        }
-        val transports = if (preferred == UpdateTransport.ACCELERATED) {
-            listOf(UpdateTransport.ACCELERATED, UpdateTransport.DIRECT)
-        } else {
-            listOf(UpdateTransport.DIRECT, UpdateTransport.ACCELERATED)
+        val accelerators = acceleratorTransports()
+        val preferredAccelerator = accelerators.firstOrNull { it.label == current.sourceLabel }
+        val transports = when {
+            preferredAccelerator != null -> listOf(preferredAccelerator) +
+                accelerators.filterNot { it == preferredAccelerator } + directTransport
+            current.sourceLabel.startsWith(SOURCE_ACCELERATED_PREFIX) && accelerators.isNotEmpty() ->
+                accelerators + directTransport
+            else -> listOf(directTransport) + accelerators
         }
 
         var firstError: Throwable? = null
         var lastError: Throwable? = null
-        for (transport in transports) {
-            if (transport.accelerated && !acceleratorAvailable()) continue
+        transports.forEachIndexed { index, transport ->
             _state.value = _state.value.copy(
                 sourceLabel = transport.label,
                 status = if (transport.accelerated) {
-                    "GitHub 直连下载不稳定 · 临时启用 GitHub 更新加速…"
+                    "正在通过 ${transport.label} 下载 ${candidate.versionName}…"
                 } else {
                     "正在通过 GitHub 直连下载 ${candidate.versionName}…"
                 }
@@ -275,9 +281,9 @@ internal object AppUpdateManager {
             } catch (t: Throwable) {
                 if (firstError == null) firstError = t
                 lastError = t
-                if (transport == UpdateTransport.DIRECT && acceleratorAvailable()) {
+                if (index < transports.lastIndex) {
                     _state.value = _state.value.copy(
-                        status = "GitHub 直连下载失败 · 将使用断点续传切换更新加速…"
+                        status = "${transport.label} 无响应或失败 · 自动切换下一更新通道…"
                     )
                 }
             }
@@ -307,10 +313,11 @@ internal object AppUpdateManager {
             val connection = URL(requestUrl).openConnection() as HttpURLConnection
             try {
                 connection.instanceFollowRedirects = true
-                connection.connectTimeout = if (transport.accelerated) 10_000 else 12_000
-                connection.readTimeout = 45_000
+                connection.connectTimeout = if (transport.accelerated) 7_000 else 12_000
+                connection.readTimeout = if (transport.accelerated) 20_000 else 30_000
                 connection.useCaches = false
                 connection.setRequestProperty("Accept", "application/octet-stream")
+                connection.setRequestProperty("Accept-Encoding", "identity")
                 connection.setRequestProperty("Cache-Control", "no-cache")
                 connection.setRequestProperty("User-Agent", "RiftLab-Updater/${BuildConfig.VERSION_NAME}")
                 if (transport.accelerated) {
@@ -350,6 +357,16 @@ internal object AppUpdateManager {
                 val startBytes = if (append) existing else 0L
                 val rangedTotal = contentRangeTotal(connection.getHeaderField("Content-Range"))
                 val responseLength = connection.contentLengthLong.coerceAtLeast(0L)
+
+                if (candidate.size > 0L && rangedTotal > 0L && rangedTotal != candidate.size) {
+                    error("${transport.label} 返回的源文件长度与 OTA manifest 不一致")
+                }
+                if (candidate.size > 0L && startBytes == 0L && responseLength > 0L &&
+                    code == HttpURLConnection.HTTP_OK && responseLength != candidate.size
+                ) {
+                    error("${transport.label} 返回的文件长度异常")
+                }
+
                 val total = when {
                     candidate.size > 0L -> candidate.size
                     rangedTotal > 0L -> rangedTotal
@@ -390,7 +407,7 @@ internal object AppUpdateManager {
         }
 
         if (candidate.size > 0L && part.length() != candidate.size) {
-            error("${transport.label} 下载长度不完整，可在下次重试时断点续传")
+            error("${transport.label} 下载长度不完整，可在下一通道继续断点续传")
         }
 
         val actual = sha256Of(part)
@@ -457,8 +474,8 @@ internal object AppUpdateManager {
         val connection = URL(requestUrl).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = true
-            connection.connectTimeout = if (transport.accelerated) 8_000 else 7_000
-            connection.readTimeout = 12_000
+            connection.connectTimeout = if (transport.accelerated) 6_000 else 7_000
+            connection.readTimeout = if (transport.accelerated) 10_000 else 12_000
             connection.useCaches = false
             connection.setRequestProperty("Accept", accept)
             connection.setRequestProperty("Cache-Control", "no-cache")
@@ -481,15 +498,34 @@ internal object AppUpdateManager {
     private fun transportUrl(originalUrl: String, transport: UpdateTransport): String {
         if (!transport.accelerated) return originalUrl
         requireOfficialGithubSource(originalUrl)
-        val base = BuildConfig.GITHUB_ACCELERATOR_BASE_URL.trim().trimEnd('/')
+        val base = transport.baseUrl.trim().trimEnd('/')
         if (base.isBlank()) error("GitHub 更新加速未配置")
         requireHttps(base, "GitHub 更新加速地址")
         return "$base/$originalUrl"
     }
 
-    private fun acceleratorAvailable(): Boolean {
-        val base = BuildConfig.GITHUB_ACCELERATOR_BASE_URL.trim()
-        return base.isNotBlank() && base.startsWith("https://", ignoreCase = true)
+    private fun acceleratorTransports(): List<UpdateTransport> {
+        return BuildConfig.GITHUB_ACCELERATOR_BASE_URLS
+            .split('|')
+            .map { it.trim().trimEnd('/') }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .map { base ->
+                requireHttps(base, "GitHub 更新加速地址")
+                UpdateTransport(
+                    label = "$SOURCE_ACCELERATED_PREFIX · ${acceleratorNodeLabel(base)}",
+                    accelerated = true,
+                    baseUrl = base
+                )
+            }
+    }
+
+    private fun acceleratorNodeLabel(base: String): String {
+        return when (runCatching { URL(base).host.lowercase() }.getOrDefault("")) {
+            "ghfast.top" -> "GHFast"
+            "ghproxy.net" -> "GHProxy.net"
+            else -> runCatching { URL(base).host }.getOrDefault("第三方节点").ifBlank { "第三方节点" }
+        }
     }
 
     private fun requireOfficialGithubSource(value: String) {
