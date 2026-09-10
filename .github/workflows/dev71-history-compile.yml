@@ -1,18 +1,18 @@
-name: dev71 handbook governance compile
+name: dev71 terminal result compile
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_handbook_governance.py'
-      - 'app/src/main/java/com/riftlab/app/data/OfficialHandbookGovernance2026.kt'
+      - 'tools/apply_dev71_terminal_results.py'
+      - 'tools/fix_dev71_terminal_generator.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-handbook-governance-compile
+  group: dev71-terminal-result-compile
   cancel-in-progress: true
 
 jobs:
@@ -23,17 +23,18 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Apply official handbook governance
-        run: python3 tools/apply_dev71_handbook_governance.py
-      - name: Static handbook guards
+      - name: Fix terminal generator
+        run: python3 tools/fix_dev71_terminal_generator.py
+      - name: Apply terminal result repair
+        run: python3 tools/apply_dev71_terminal_results.py
+      - name: Static terminal guards
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'OfficialHandbookGovernance2026.rulesFor' app/src/main/java/com/riftlab/app/data/TournamentGovernance.kt
-          grep -q 'participantCodesFor' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
-          grep -q 'handbookQualification' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
-          grep -q '2026 Worlds · Riot 官方赛制' app/src/main/java/com/riftlab/app/data/OfficialHandbookGovernance2026.kt
-          grep -q 'third Worlds place' docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
+          grep -q 'resolveTerminalOutcome(matches, standings)' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'explicit Final Series' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'terminal bracket structure (DERIVED)' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'terminal result tranche' docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -45,21 +46,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile dev71 handbook tranche
+      - name: Compile dev71 terminal tranche
         run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated handbook wiring
+      - name: Commit validated terminal source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
-            app/src/main/java/com/riftlab/app/data/TournamentGovernance.kt \
             app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt \
             docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           if git diff --cached --quiet; then
-            echo "No generated handbook changes to commit"
+            echo "No generated terminal changes to commit"
             exit 0
           fi
-          git commit -m "dev71: wire Riot 2026 handbook rules and qualifiers"
+          git commit -m "dev71: prefer explicit final-series results"
           git push origin HEAD:dev71-data-coverage-repair
