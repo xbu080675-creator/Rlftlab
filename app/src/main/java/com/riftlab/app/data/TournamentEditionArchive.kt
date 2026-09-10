@@ -93,6 +93,8 @@ object TournamentEditionArchiveStore {
     private var archiveFile: File? = null
     private var syncJob: Job? = null
     private var hydrateJob: Job? = null
+    @Volatile private var autoHydrateTournamentId = ""
+    @Volatile private var autoHydrateAttemptEpochMs = 0L
     @Volatile private var initialized = false
     @Volatile private var manualSelectedTournamentId = ""
 
@@ -296,6 +298,25 @@ object TournamentEditionArchiveStore {
             }
         )
         persist(ordered)
+        if (manualSelectedTournamentId.isBlank()) selectedRecord?.let(::maybeAutoHydrateCurrentEdition)
+    }
+
+    private fun maybeAutoHydrateCurrentEdition(record: TournamentEditionArchiveRecord) {
+        if (cachedHydratedHistory(record.tournamentId) != null) return
+        val now = System.currentTimeMillis()
+        if (autoHydrateTournamentId == record.tournamentId && now - autoHydrateAttemptEpochMs < 15L * 60L * 1000L) return
+        autoHydrateTournamentId = record.tournamentId
+        autoHydrateAttemptEpochMs = now
+        scope.launch {
+            val history = runCatching { eventHistoryProvider.fetch(record) }.getOrNull()?.takeIf(::hasHistoryData)
+            val standings = runCatching { historicalStandingsClient.fetchTournamentStandings(record.tournamentId) }
+                .getOrNull()?.takeIf(::hasStandingsRows)
+            if (history != null) synchronized(hydratedHistory) { hydratedHistory[record.tournamentId] = history }
+            if (standings != null) synchronized(hydratedStandings) { hydratedStandings[record.tournamentId] = standings }
+            if (history != null || standings != null) {
+                rebuild(MatchSessionStore.schedule.value, MatchSessionStore.targetMatch.value, StandingsCenterStore.state.value)
+            }
+        }
     }
 
     private fun buildDetail(
@@ -339,13 +360,16 @@ object TournamentEditionArchiveStore {
             .map { it.code.ifBlank { it.name }.trim().uppercase() }
             .filter { it.isNotBlank() && it != "TBD" && it != "—" }
         val handbookTeams = OfficialHandbookGovernance2026.participantCodesFor(ref, record.displayName)
+        val officialWorldsTeams = if (record.seasonYear == 2026 && record.family.uppercase() == "WORLDS") {
+            Worlds2026QualifiedTeams.teams.map { it.code }
+        } else emptyList()
         val handbookParticipantSource = OfficialHandbookGovernance2026.participantSourceFor(ref, record.displayName)
         val qualificationSummary = OfficialHandbookGovernance2026.qualificationSummaryFor(
             tournament = ref,
             competitionTitle = record.displayName,
             identity = "${record.family} ${record.stage} ${record.slug} ${record.leagueSlug} ${record.leagueName}"
         )
-        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams)
+        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams + officialWorldsTeams)
             .distinct()
             .sorted()
         val provisional = record.copy(
