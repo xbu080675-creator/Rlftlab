@@ -1,0 +1,65 @@
+name: dev72 live target affinity batch17
+
+on:
+  push:
+    branches:
+      - dev72-live-target-affinity-batch17
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply live target affinity safeguards
+        run: python3 tools/apply_dev72_live_target_affinity_batch17.py
+
+      - name: Audit target affinity contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'fun snapshotBelongsTo' app/src/main/java/com/riftlab/app/data/LiveMatchTargetRegistry.kt
+          grep -q 'providerMatchesCurrentTargetLocked(candidate, requireFrame = true)' app/src/main/java/com/riftlab/app/data/LplOfficialLiveDataSource.kt
+          grep -q 'observedTargetKey' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'ws != null && gameId.isNotBlank()' app/src/main/java/com/riftlab/app/data/CitoDataPlane.kt
+          grep -q 'val nextTargetKey = LiveMatchTargetRegistry.key' app/src/main/java/com/riftlab/app/data/LplCommRealtimeDataSource.kt
+          grep -q 'ranked.firstOrNull()?.takeIf { it.second >= 95 }' app/src/main/java/com/riftlab/app/data/LplMatchDetailLiveDataSource.kt
+          grep -q 'eventId = targetEventId()' app/src/main/java/com/riftlab/app/data/LplMatchDetailLiveDataSource.kt
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+
+      - name: Compile Android
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Commit verified target affinity safeguards
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riftlab/app/data/LiveMatchTargetRegistry.kt \
+                  app/src/main/java/com/riftlab/app/data/LplOfficialLiveDataSource.kt \
+                  app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt \
+                  app/src/main/java/com/riftlab/app/data/CitoDataPlane.kt \
+                  app/src/main/java/com/riftlab/app/data/LplCommRealtimeDataSource.kt \
+                  app/src/main/java/com/riftlab/app/data/LplMatchDetailLiveDataSource.kt
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'dev72: bind live provider frames to current schedule target'
+          git push
