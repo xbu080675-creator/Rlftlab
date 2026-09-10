@@ -1,0 +1,59 @@
+name: dev71 historical source compile
+
+on:
+  push:
+    branches: [ dev71-data-coverage-repair ]
+    paths:
+      - '.github/workflows/dev71-history-compile.yml'
+      - 'tools/apply_dev71_tournament_history.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dev71-history-compile
+  cancel-in-progress: true
+
+jobs:
+  apply-and-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev71-data-coverage-repair
+          fetch-depth: 0
+      - name: Apply dev71 history wiring
+        run: python3 tools/apply_dev71_tournament_history.py
+      - name: Static data-source guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'getCompletedEvents' app/src/main/java/com/riftlab/app/data/TournamentEventHistoryProvider.kt
+          grep -q 'gameMetadata.patchVersion' app/src/main/java/com/riftlab/app/data/TournamentResearch.kt
+          grep -q 'completedEventsByTournament' app/src/main/java/com/riftlab/app/data/RiotResilientHttp.kt
+          grep -q 'collect_completed_events' tools/sync_riot_persisted_mirror.py
+          grep -q 'branches: \[ main \]' .github/workflows/riot-mirror-sync.yml
+          git diff --check
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+      - name: Compile dev71 source tranche
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Commit validated tranche
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/dev71-history-compile.yml
+          rm -f tools/apply_dev71_tournament_history.py
+          git add -A
+          git commit -m "dev71: wire Riot historical events and patch metadata"
+          git push origin HEAD:dev71-data-coverage-repair
