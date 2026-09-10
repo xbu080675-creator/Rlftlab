@@ -1,17 +1,17 @@
-name: dev71 qualification handbook compile
+name: dev71 LCP points and resilience compile
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_qualification_handbook.py'
+      - 'tools/apply_dev71_resilience_lcp_points.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-qualification-handbook-compile
+  group: dev71-lcp-resilience-compile
   cancel-in-progress: true
 
 jobs:
@@ -22,16 +22,18 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Apply QualificationCenter handbook wiring
-        run: python3 tools/apply_dev71_qualification_handbook.py
-      - name: Static qualification guards
+      - name: Apply LCP points and global resilience patch
+        run: python3 tools/apply_dev71_resilience_lcp_points.py
+      - name: Static guards
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'buildOfficialRegionalMechanismSnapshot' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q 'QualificationMechanism.DIRECT_PLACEMENT' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q 'QualificationMechanism.MIXED' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q 'qualification center handbook tranche' docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
+          grep -q 'OfficialLcpChampionshipPoints2026.rules' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q 'Split 3 Swiss' app/src/main/java/com/riftlab/app/data/OfficialLcpChampionshipPoints2026.kt
+          grep -q 'loadBundled("team_staff.json")' app/src/main/java/com/riftlab/app/data/GlobalTeamStaffProvider.kt
+          grep -q 'loadBundled("match_awards.json")' app/src/main/java/com/riftlab/app/data/GlobalVerifiedAwardsProvider.kt
+          grep -q 'data/global/\$name' .github/workflows/ota-direct.yml
+          grep -q 'LCP Championship Points + global offline resilience' docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -43,20 +45,30 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile dev71 qualification handbook tranche
+      - name: Bundle global resilience seeds for compile
+        shell: bash
+        run: |
+          mkdir -p app/src/main/assets
+          cp data/global/team_staff.json app/src/main/assets/team_staff.json
+          cp data/global/match_awards.json app/src/main/assets/match_awards.json
+      - name: Compile dev71 LCP/resilience tranche
         run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated QualificationCenter source
+      - name: Commit validated source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add \
+            app/src/main/java/com/riftlab/app/data/GlobalTeamStaffProvider.kt \
+            app/src/main/java/com/riftlab/app/data/GlobalVerifiedAwardsProvider.kt \
+            app/src/main/java/com/riftlab/app/data/OfficialLcpChampionshipPoints2026.kt \
             app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
+            .github/workflows/ota-direct.yml \
             docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
           if git diff --cached --quiet; then
-            echo "No generated qualification changes to commit"
+            echo "No generated changes to commit"
             exit 0
           fi
-          git commit -m "dev71: surface official regional qualification mechanisms"
+          git commit -m "dev71: add LCP points rules and global APK seed fallback"
           git push origin HEAD:dev71-data-coverage-repair
