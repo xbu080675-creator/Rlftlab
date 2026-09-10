@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-10T04:50:06Z",
+  "updatedAt": "2026-09-10T11:26:45Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -527,7 +527,11 @@
           "source": "",
           "stintId": "st_e0bb9bff7e34"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:44Z",
+        "attempts": 1
+      }
     },
     "p_4c30bca85580": {
       "displayName": "Despa1r",
@@ -893,7 +897,11 @@
           "source": "",
           "stintId": "st_ce789042f768"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:43Z",
+        "attempts": 1
+      }
     },
     "p_92af2fc724df": {
       "displayName": "Bobo",
@@ -1070,7 +1078,11 @@
           "source": "",
           "stintId": "st_aa60762eb564"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:42Z",
+        "attempts": 1
+      }
     },
     "p_33e22e92a66c": {
       "displayName": "Vus5o",
@@ -1115,7 +1127,11 @@
           "source": "",
           "stintId": "st_947201830c7a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:44Z",
+        "attempts": 1
+      }
     },
     "p_cf4eb7c57030": {
       "displayName": "Xiasu",
@@ -1892,7 +1908,11 @@
           "source": "",
           "stintId": "st_5bb17efe1e70"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:43Z",
+        "attempts": 1
+      }
     },
     "p_3961c88383ad": {
       "displayName": "kaka",
@@ -2091,7 +2111,11 @@
           "source": "",
           "stintId": "st_a6e8e2400fe5"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:42Z",
+        "attempts": 1
+      }
     },
     "p_54524d1a33ee": {
       "displayName": "Clearlove",
@@ -2184,7 +2208,11 @@
           "source": "",
           "stintId": "st_8d146bdeeb5f"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:44Z",
+        "attempts": 1
+      }
     },
     "p_759b3e9f5c90": {
       "displayName": "Sky",
@@ -2207,7 +2235,11 @@
           "source": "",
           "stintId": "st_eeb4ff98f49a"
         }
-      ]
+      ],
+      "avatarProbe": {
+        "lastAttemptAt": "2026-09-10T11:26:43Z",
+        "attempts": 1
+      }
     },
     "p_55d7576c3d84": {
       "displayName": "Bigsam",
