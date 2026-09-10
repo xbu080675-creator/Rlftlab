@@ -25,12 +25,14 @@ import com.riftlab.app.data.QualificationEvidence
 import com.riftlab.app.data.QualificationNodeState
 import com.riftlab.app.data.QualificationTeamState
 import com.riftlab.app.data.TeamQualificationRoute
+import com.riftlab.app.data.TournamentEditionArchiveStore
 
 /** dev.70: reverse-queryable qualification routes, kept separate from ordinary standings. */
 @Composable
 fun QualificationPathCenterPanel() {
     val center by QualificationCenterStore.state.collectAsState()
-    val snapshot = center.selected
+    val archive by TournamentEditionArchiveStore.state.collectAsState()
+    val snapshot = center.snapshotsByTournamentId[archive.selectedTournamentId]
 
     Column(
         Modifier
@@ -53,7 +55,12 @@ fun QualificationPathCenterPanel() {
         Spacer(Modifier.height(8.dp))
 
         if (snapshot == null) {
-            Text(center.statusMessage, color = RiftMuted, fontSize = 9.sp)
+            Text(
+                archive.selected?.edition?.displayName?.let { "$it · 资格来源尚未接入可信映射，不根据排名猜晋级" }
+                    ?: "当前届次尚无可信资格路径源",
+                color = RiftMuted,
+                fontSize = 9.sp
+            )
             return@Column
         }
 
@@ -62,7 +69,7 @@ fun QualificationPathCenterPanel() {
         Spacer(Modifier.height(7.dp))
 
         if (snapshot.routes.isEmpty()) {
-            Text(snapshot.note.ifBlank { center.statusMessage }, color = RiftMuted, fontSize = 9.sp)
+            Text(snapshot.note.ifBlank { "资格规则/路径等待可信来源" }, color = RiftMuted, fontSize = 9.sp)
             Text("SOURCE  ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 8.sp)
             return@Column
         }
@@ -100,7 +107,9 @@ fun QualificationPathCenterPanel() {
             Spacer(Modifier.height(5.dp))
         }
 
-        val route = center.selectedRoute ?: snapshot.routes.first()
+        val route = snapshot.routes.firstOrNull {
+            it.teamCode.equals(center.selectedTeamCode, ignoreCase = true)
+        } ?: snapshot.routes.first()
         Spacer(Modifier.height(3.dp))
         RouteDetail(route)
 
