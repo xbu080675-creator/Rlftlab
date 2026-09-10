@@ -96,7 +96,7 @@ RiftLab 不因为使用镜像就降低校验标准。下载完成后继续验证
 
 Repository Variables：
 
-- `RIFTLAB_OTA_CN_MANIFEST_URL`
+- `RIFTLAB_OTA_CN_MANIFEST_URL`：S3/CDN 上的公开 `latest.json` 地址，仅用于该扩展的上传后验证
 - `RIFTLAB_OTA_CN_S3_ENDPOINT`
 - `RIFTLAB_OTA_CN_BUCKET`
 - `RIFTLAB_OTA_CN_PREFIX`
@@ -107,4 +107,10 @@ Repository Secrets：
 - `RIFTLAB_OTA_CN_ACCESS_KEY_ID`
 - `RIFTLAB_OTA_CN_SECRET_ACCESS_KEY`
 
-注意：如果设置了 `RIFTLAB_OTA_CN_MANIFEST_URL`，它会覆盖客户端内置的 Gitee 默认 manifest 地址。仅在确实要把另一国内 CDN 提升为客户端首选源时配置该变量。
+这些 S3 配置不会覆盖 dev.59 客户端默认的 Gitee 首选源。
+
+如果未来确实要把另一国内 CDN 升级为客户端首选源，可在构建时显式传入 Gradle 属性：
+
+`RIFTLAB_OTA_PRIMARY_MANIFEST_URL`
+
+未显式设置时始终使用上面的 Gitee `dev-latest/latest.json`。
