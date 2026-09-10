@@ -13,6 +13,7 @@ import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineCapture
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.RiotPersistedMirror
+import com.riftlab.app.data.TournamentEditionArchiveStore
 
 /**
  * One ImageLoader for the whole app.
@@ -33,13 +34,16 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         RiotPersistedMirror.initialize(this)
         MatchTimelineStore.initialize(this)
         MatchLifecycleArchive.initialize(this)
+        TournamentEditionArchiveStore.initialize(this)
         MatchTimelineCapture.start()
         MatchLifecycleCapture.start()
 
-        // dev.68: keep the existing providers as truth, but continuously normalize their output
-        // into one provenance-aware graph. Missing fields stay explicitly missing.
+        // Existing providers remain the source of truth. dev.68 normalizes the active graph while
+        // dev.69 keeps every discovered Tournament Edition in an append/merge local archive so an
+        // older season is not lost when upstream pagination moves on.
         MatchSessionStore.ensureDataRunning()
         ComprehensiveDataCenter.ensureRunning()
+        TournamentEditionArchiveStore.ensureRunning()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
