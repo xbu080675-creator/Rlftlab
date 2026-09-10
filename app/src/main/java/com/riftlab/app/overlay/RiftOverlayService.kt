@@ -38,7 +38,11 @@ class RiftOverlayService : Service() {
     private var overlay: RiftOverlayView? = null
     private var params: WindowManager.LayoutParams? = null
     private var draftHud: DraftHudOverlayView? = null
+    private var draftHudParams: WindowManager.LayoutParams? = null
     private var draftDock: DraftHudControlView? = null
+    private var draftDockParams: WindowManager.LayoutParams? = null
+    private var draftEditing = false
+    private var selectedDraftModule = DraftHudModule.BLUE_PICK
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var collectJob: Job? = null
     private var draftHudJob: Job? = null
@@ -72,7 +76,10 @@ class RiftOverlayService : Service() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         overlay?.post { clampOverlayToDisplay() }
-        draftHud?.post { draftHud?.render(DraftHudSimulation.state.value) }
+        draftHud?.post {
+            draftHud?.render(DraftHudSimulation.state.value)
+            refreshDraftDock()
+        }
     }
 
     private fun syncOverlayVisibility() {
@@ -134,30 +141,67 @@ class RiftOverlayService : Service() {
     private fun createDraftWindows() {
         if (draftHud != null && draftDock != null) return
 
-        val hud = DraftHudOverlayView(this)
+        val hud = DraftHudOverlayView(this) { module ->
+            selectedDraftModule = module
+            refreshDraftDock()
+        }
         val hudParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             overlayType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            lockedHudFlags(),
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
         }
         windowManager.addView(hud, hudParams)
         draftHud = hud
+        draftHudParams = hudParams
 
         val dock = DraftHudControlView(
             this,
             onToggleAuto = { DraftHudSimulation.toggleAuto() },
             onNext = { DraftHudSimulation.next() },
-            onStop = { DraftHudSimulation.stop() }
+            onStop = {
+                setDraftEditMode(false)
+                DraftHudSimulation.stop()
+            },
+            onToggleEdit = { setDraftEditMode(!draftEditing) },
+            onPreviousModule = {
+                draftHud?.cycleSelection(-1)
+                refreshDraftDock()
+            },
+            onNextModule = {
+                draftHud?.cycleSelection(1)
+                refreshDraftDock()
+            },
+            onScaleDown = {
+                draftHud?.adjustSelectedScale(-0.05f)
+                refreshDraftDock()
+            },
+            onScaleUp = {
+                draftHud?.adjustSelectedScale(0.05f)
+                refreshDraftDock()
+            },
+            onAlphaDown = {
+                draftHud?.adjustSelectedAlpha(-0.08f)
+                refreshDraftDock()
+            },
+            onAlphaUp = {
+                draftHud?.adjustSelectedAlpha(0.08f)
+                refreshDraftDock()
+            },
+            onToggleVisibility = {
+                draftHud?.toggleSelectedVisibility()
+                refreshDraftDock()
+            },
+            onResetLayout = {
+                draftHud?.resetCurrentLayout()
+                refreshDraftDock()
+            }
         )
         val dockParams = WindowManager.LayoutParams(
-            dp(56),
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -169,6 +213,36 @@ class RiftOverlayService : Service() {
         }
         windowManager.addView(dock, dockParams)
         draftDock = dock
+        draftDockParams = dockParams
+    }
+
+    private fun setDraftEditMode(enabled: Boolean) {
+        if (draftEditing == enabled) return
+        if (enabled && DraftHudSimulation.state.value.autoPlay) {
+            DraftHudSimulation.toggleAuto()
+        }
+        draftEditing = enabled
+        draftHud?.setEditMode(enabled)
+        draftHudParams?.let { lp ->
+            lp.flags = if (enabled) editableHudFlags() else lockedHudFlags()
+            runCatching { windowManager.updateViewLayout(draftHud, lp) }
+        }
+        refreshDraftDock()
+    }
+
+    private fun refreshDraftDock() {
+        val hud = draftHud ?: return
+        val dock = draftDock ?: return
+        selectedDraftModule = hud.selectedModule()
+        dock.render(
+            state = DraftHudSimulation.state.value,
+            editing = draftEditing,
+            selectedModule = selectedDraftModule,
+            placement = hud.selectedPlacement()
+        )
+        draftDockParams?.let { lp ->
+            runCatching { windowManager.updateViewLayout(dock, lp) }
+        }
     }
 
     private fun updateDraftMode(state: DraftHudState) {
@@ -183,17 +257,27 @@ class RiftOverlayService : Service() {
                 visibility = View.VISIBLE
                 render(state)
             }
-            draftDock?.apply {
-                visibility = View.VISIBLE
-                render(state)
-            }
+            draftDock?.visibility = View.VISIBLE
+            refreshDraftDock()
         } else {
+            if (draftEditing) setDraftEditMode(false)
             draftHud?.visibility = View.GONE
             draftDock?.visibility = View.GONE
             overlay?.visibility = View.VISIBLE
             overlay?.post { clampOverlayToDisplay() }
         }
     }
+
+    private fun lockedHudFlags(): Int =
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+    private fun editableHudFlags(): Int =
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
     private fun attachDrag(view: RiftOverlayView, lp: WindowManager.LayoutParams) {
         var downX = 0f
@@ -281,7 +365,7 @@ class RiftOverlayService : Service() {
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_rift)
         .setContentTitle("RiftScreen 正在运行")
-        .setContentText("赛事副屏 / 全屏 HUD · 仅控制区接收触摸")
+        .setContentText("赛事副屏 / 全屏 HUD · 锁定后全屏触摸穿透")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .build()
@@ -306,6 +390,8 @@ class RiftOverlayService : Service() {
         overlay = null
         draftHud = null
         draftDock = null
+        draftHudParams = null
+        draftDockParams = null
         scope.cancel()
         super.onDestroy()
     }
