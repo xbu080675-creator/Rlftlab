@@ -211,6 +211,9 @@ private fun PreScreen() {
 
         item { SideSelectionPrePanel() }
 
+        item { SectionTitle("DATA COVERAGE / 全面数据") }
+        item { ComprehensiveDataCoveragePanel() }
+
         item { SectionTitle("STARTING ROSTER / 首发") }
         items(data.blueRoster.zip(data.redRoster)) { pair -> RosterRow(pair.first, pair.second) }
         item {
