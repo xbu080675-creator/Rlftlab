@@ -18,7 +18,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply unified live event UI
-        run: python3 tools/apply_dev72_unified_live_event_ui_batch16.py
+        run: |
+          python3 tools/apply_dev72_unified_live_event_ui_batch16.py
+          python3 tools/apply_dev72_overlay_unified_event_batch16.py
 
       - name: Audit event contract
         shell: bash
@@ -27,8 +29,14 @@ jobs:
           grep -q 'MatchTimelineStore.timelines.collectAsState' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           grep -q 'UNIFIED LIVE EVENT / 统一事件' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           grep -q 'Provider 自由文本只保留作诊断' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          grep -q 'MatchTimelineStore.find(snapshot)' app/src/main/java/com/riftlab/app/overlay/RiftOverlayView.kt
+          grep -q '统一事件等待可核实节点' app/src/main/java/com/riftlab/app/overlay/RiftOverlayView.kt
           if grep -n 'Text(snapshot.latestEvent' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt; then
             echo 'LIVE UI still renders provider free-form latestEvent' >&2
+            exit 1
+          fi
+          if grep -n 'event.text = "EVENT · ${snapshot.latestEvent}"' app/src/main/java/com/riftlab/app/overlay/RiftOverlayView.kt; then
+            echo 'Overlay still renders provider free-form latestEvent' >&2
             exit 1
           fi
 
@@ -51,10 +59,11 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          git add app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt \
+                  app/src/main/java/com/riftlab/app/overlay/RiftOverlayView.kt
           if git diff --cached --quiet; then
             echo 'No source changes to commit.'
             exit 0
           fi
-          git commit -m 'dev72: route LIVE UI through unified timeline events'
+          git commit -m 'dev72: route live surfaces through unified timeline events'
           git push
