@@ -50,8 +50,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 68
-        versionName = "1.0.0-dev.68"
+        versionCode = 69
+        versionName = "1.0.0-dev.69"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -117,55 +117,3 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
-
-// dev.48: subscription-driven homepage targeting, league-safe post-match routing, in-app official VOD playback with sensor fullscreen, startup/replay performance tuning.
-// dev.48 verified build passed; publish through dev-latest OTA.
-
-// dev.49: clarify academy team names, restore global series score, isolate overseas timeline from Bilibili, and harden in-app official YouTube VOD playback.
-// Final dev.49 CI/OTA trigger after replay and academy-label fixes.
-
-// dev.50: retire LDL from current subscriptions, promote Worlds 2026, add Demacia Cup Global Invitational and WSCL international catalog entries.
-// Final dev.50 trigger: schedule center opens at directory/subscribed league instead of auto-jumping to NSCL or another active competition.
-
-// dev.51: major international events prefer official Bilibili China VOD while retaining Riot/YouTube; persistent real-UA YouTube WebView session for normal verification/login.
-// Final dev.51 CI/OTA trigger after dual-source replay and YouTube session handling.
-
-// dev.52: Riot GCD-backed global management/coaching identification plus stable hardware-accelerated portrait YouTube embed rendering.
-// Final dev.52 trigger after GCD mirror population and role-label verification.
-
-// dev.53: Bilibili official VOD lookup accepts reversed team order and retries negative search cache.
-// Final dev.53 trigger after validating KT vs T1 / T1 vs KT official VOD matching.
-
-// dev.54: global completed-series operator archive from OP.GG terminal data; unblock Riot/OP.GG history backfill game enumeration; labelled global MVP Point fallback.
-// Final dev.54 CI/OTA trigger after global final-series and operator-history routing changes.
-// Final dev.54 verified-awards trigger: global MVP mirror wiring included in this build.
-
-// dev.55: Cito becomes a first-class full-chain provider: schedule/team/standings supplement,
-// quota-aware REST live fallback, optional WSS transport, raw provider archive, and global postgame backfill.
-
-// dev.56: tournament rulebook + draw/slot governance, verified LPL qualifier correction, and non-overwriting official confirmations.
-// Final dev.56 build/OTA trigger after governance UI integration.
-
-// dev.57: annual Tournament Research editions: version/update/rules/draw/schedule unified per year for international events and regional leagues.
-
-// dev.58: fix annual research compilation and add mainland-first dual-channel OTA with verified GitHub fallback.
-
-// dev.59: GitHub remains the only build/version/release source. The app tries GitHub directly first, then temporarily enables a GitHub-only accelerator for manifest/APK requests, supports Range resume, and releases the accelerated connection immediately after the update request.
-
-// dev.60: add a lifecycle-driven animated LIVE badge and a unified domestic/global broadcast jump hub. GAME_LIVE shows LIVE; EVENT_LIVE/BETWEEN_GAMES stay distinct as ON AIR. Add LoL Esports, YouTube, Twitch and X global entries alongside Bilibili/Huya.
-
-// dev.61: repair mainland OTA acceleration after gh-proxy.com stalled on large Release assets. Use GHFast as primary, GHProxy.net as secondary, keep direct GitHub fallback, preserve Range resume and all package/signature verification.
-
-// dev.62: add a local BP HUD simulator before live draft WebSocket integration. Split RiftScreen into a full-screen FLAG_NOT_TOUCHABLE visual HUD plus a tiny touchable control dock, preserve the lower broadcast-safe area, and simulate pick/matchup/counter transitions without polluting real archives.
-
-// dev.63: turn Draft HUD into a user-owned layout. Keep a safe default, add an EDIT/LOCK workflow, draggable modules, per-module scale/alpha/visibility, reset, normalized coordinates, independent landscape/portrait profiles, and full touch pass-through whenever locked.
-
-// dev.64: polish the watch HUD after real-screen testing. Auto-hide the finished DRAFT LOCKED status after a brief confirmation, keep it visible while editing, and compress matchup intelligence into a two-line horizontal strip to reduce broadcast obstruction.
-
-// dev.65: make GitHub OTA acceleration network-adaptive. Probe the real APK through direct GitHub and multiple GitHub-only accelerators, rank by measured throughput, download from the fastest path, keep Range resume/fallback, and stop sending no-cache on immutable versioned APK assets so CDN caches can actually help.
-
-// dev.66: keep Gitee OTA retired. Continue GitHub canonical dev-latest + request-scoped adaptive GitHub acceleration; refresh project/development documentation.
-
-// dev.67: icon-only repack. No product/runtime changes; package the new RiftLab launcher icon and republish OTA for normal-network download testing without VPN/system proxy.
-
-// dev.68: begin the comprehensive-data line: normalized Tournament/Series/Game/Team/Player graph, provenance and explicit coverage gaps; existing providers remain the source of truth.
