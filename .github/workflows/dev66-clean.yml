@@ -6,6 +6,7 @@ on:
       - dev66-mainland-ota-docs
     paths:
       - '.github/workflows/dev66-clean.yml'
+      - 'tools/dev66_remove_gitee.py'
 
 permissions:
   contents: write
