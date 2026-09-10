@@ -14,7 +14,7 @@ if (!devSigningStore.exists() && devSigningB64.exists()) {
 
 val defaultOtaCnManifestUrl =
     "https://gitee.com/xiaobaiaaa1/Rlftlab/releases/download/dev-latest/latest.json"
-val otaCnManifestUrl = providers.gradleProperty("RIFTLAB_OTA_CN_MANIFEST_URL")
+val otaCnManifestUrl = providers.gradleProperty("RIFTLAB_OTA_PRIMARY_MANIFEST_URL")
     .orElse("")
     .get()
     .trim()
