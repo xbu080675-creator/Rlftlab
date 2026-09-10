@@ -378,8 +378,17 @@ object QualificationCenterStore {
     private fun buildInternationalParticipationSnapshot(
         edition: TournamentEditionArchiveRecord
     ): QualificationTournamentSnapshot {
-        val participantSource = "Tournament Edition participant set · Schedule / Standings / Completed Events"
-        val pendingSource = "等待赛事官方 / Riot / 已核实 Provider"
+        val externalProvider = edition.tournamentId.startsWith("rft-event:") || edition.leagueId.startsWith("rft-event:")
+        val participantSource = if (externalProvider) {
+            "RFT.gg public event mirror · Schedule participant set"
+        } else {
+            "Tournament Edition participant set · Schedule / Standings / Completed Events"
+        }
+        val pendingSource = if (externalProvider) {
+            "等待赛事官方 / 已核实 Provider"
+        } else {
+            "等待赛事官方 / Riot / 已核实 Provider"
+        }
         val officialWorldsTeams = if (edition.seasonYear == 2026 && edition.family.uppercase() == "WORLDS") {
             Worlds2026QualifiedTeams.teams
         } else emptyList()

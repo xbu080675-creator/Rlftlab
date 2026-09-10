@@ -50,13 +50,32 @@ internal class LolEsportsScheduleDataSource(
     private fun sameSeries(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
         if (a.matchId.isNotBlank() && b.matchId.isNotBlank() && a.matchId == b.matchId) return true
         if (a.eventId.isNotBlank() && b.eventId.isNotBlank() && a.eventId == b.eventId) return true
-        val aTeams = a.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        val bTeams = b.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        if (aTeams.size < 2 || aTeams != bTeams) return false
-        val aDay = a.startTimeIso.take(10)
-        val bDay = b.startTimeIso.take(10)
-        return aDay.isNotBlank() && aDay == bDay
+        if (a.bestOf > 0 && b.bestOf > 0 && a.bestOf != b.bestOf) return false
+
+        val aStart = parseStart(a.startTimeIso)
+        val bStart = parseStart(b.startTimeIso)
+        if (aStart != null && bStart != null) {
+            val deltaMs = kotlin.math.abs(aStart.toEpochMilli() - bStart.toEpochMilli())
+            if (deltaMs > 90L * 60L * 1000L) return false
+        } else {
+            val aDay = a.startTimeIso.take(10)
+            val bDay = b.startTimeIso.take(10)
+            if (aDay.isBlank() || aDay != bDay) return false
+        }
+
+        val aTeams = a.teams.take(2).map(::teamAliases)
+        val bTeams = b.teams.take(2).map(::teamAliases)
+        if (aTeams.size < 2 || bTeams.size < 2 || aTeams.any { it.isEmpty() } || bTeams.any { it.isEmpty() }) return false
+
+        return aTeams.all { left -> bTeams.any { right -> left.intersect(right).isNotEmpty() } } &&
+            bTeams.all { right -> aTeams.any { left -> right.intersect(left).isNotEmpty() } }
     }
+
+    private fun teamAliases(team: EsportsTeamRef): Set<String> =
+        listOf(team.slug, team.code, team.name)
+            .map(::teamToken)
+            .filter { it.isNotBlank() }
+            .toSet()
 
     /**
      * Riot's schedule endpoint can transiently mark a not-yet-played series completed.

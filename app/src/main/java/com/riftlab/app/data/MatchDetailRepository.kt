@@ -158,7 +158,7 @@ object MatchDetailRepository {
                     OfficialDraftResult(status = "BP 同步失败 · ${it.message?.take(100) ?: it::class.java.simpleName}")
                 }
             } else {
-                OfficialDraftResult(status = "BP · 非 LPL 使用 Riot/OP.GG 可核实补充")
+                OfficialDraftResult(status = "BP · 非 LPL 使用可核实全球补充源（当前 OP.GG；缺失则保持未知）")
             }
 
             val opgg = runCatching { opggProvider.fetch(matchWithRiotAssets) }.getOrElse {
@@ -193,7 +193,7 @@ object MatchDetailRepository {
                 drafts = decoratedDrafts,
                 status = when {
                     detailSeries != null -> "已加载 ${detailSeries.games.size} 局终局数据 · ${awards.status} · ${draftResult.status} · ${opgg.status}"
-                    !lplMatch -> "${matchWithRiotAssets.league} · Riot/OP.GG 全球赛后链路 · ${opgg.status} · 未调用 LPL BMatch/TJStats"
+                    !lplMatch -> "${matchWithRiotAssets.league} · 全球赛后补充链路 · ${opgg.status} · 未调用 LPL BMatch/TJStats"
                     result.isFailure -> "比赛详情同步失败 · ${opgg.status}"
                     else -> "${resolver.status.value} · ${opgg.status}"
                 },

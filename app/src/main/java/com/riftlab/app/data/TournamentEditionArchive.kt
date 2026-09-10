@@ -421,9 +421,9 @@ object TournamentEditionArchiveStore {
                         DataProvenance(
                             sourceId = "riot-tournament-directory",
                             displayName = "Riot Tournament Directory",
-                            authority = DataAuthority.PROVIDER,
+                            authority = DataAuthority.OFFICIAL,
                             freshness = DataFreshnessClass.DAILY,
-                            verified = false
+                            verified = true
                         )
                     )
                 }
@@ -443,9 +443,9 @@ object TournamentEditionArchiveStore {
                         DataProvenance(
                             sourceId = "riot-standings",
                             displayName = "Riot Standings",
-                            authority = DataAuthority.PROVIDER,
+                            authority = DataAuthority.OFFICIAL,
                             freshness = DataFreshnessClass.MINUTES,
-                            verified = false
+                            verified = true
                         )
                     )
                 }
@@ -454,9 +454,9 @@ object TournamentEditionArchiveStore {
                         DataProvenance(
                             sourceId = "riot-completed-events",
                             displayName = historyOverride.completedEventsSource.ifBlank { "Riot Completed Events" },
-                            authority = DataAuthority.PROVIDER,
+                            authority = DataAuthority.OFFICIAL,
                             freshness = DataFreshnessClass.DAILY,
-                            verified = false
+                            verified = true
                         )
                     )
                 }
@@ -590,7 +590,11 @@ object TournamentEditionArchiveStore {
                     else -> TournamentEditionSlotState.PENDING
                 },
                 detail = if (governance.draw.slots.isEmpty()) {
-                    "等待官方抽签 / Riot Bracket"
+                    if (isExternalProviderEdition(edition)) {
+                        "等待赛事官方 / 已核实 Provider 抽签或 Bracket"
+                    } else {
+                        "等待官方抽签 / Riot Bracket"
+                    }
                 } else {
                     "${governance.draw.slots.size} 个槽位 · $drawVerified 个已核实"
                 },
@@ -613,6 +617,8 @@ object TournamentEditionArchiveStore {
                 state = if (standingsRows > 0) TournamentEditionSlotState.PARTIAL else TournamentEditionSlotState.PENDING,
                 detail = if (standingsRows > 0) {
                     "${standings?.stages?.size ?: 0} 个阶段 · $standingsRows 个排名/签位记录"
+                } else if (isExternalProviderEdition(edition)) {
+                    "当前可信 Provider 未提供 Standings / Bracket，保持未知"
                 } else {
                     "等待该届 Riot Standings"
                 },
