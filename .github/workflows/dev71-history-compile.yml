@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/dev71-history-compile.yml'
       - 'tools/apply_dev71_pre_context.py'
+      - 'tools/fix_dev71_pre_generator.py'
 
 permissions:
   contents: write
@@ -22,6 +23,8 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
+      - name: Fix PRE generator escaping
+        run: python3 tools/fix_dev71_pre_generator.py
       - name: Apply PRE context expansion
         run: python3 tools/apply_dev71_pre_context.py
       - name: Static PRE guards
@@ -33,6 +36,7 @@ jobs:
           grep -q 'recentHeadToHead' app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt
           grep -q 'ROSTER POOL / 名单池（不等于首发）' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           grep -q 'RECENT H2H / 近期交手' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          grep -q 'append("\\n")' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           git diff --check
       - uses: actions/setup-java@v5
         with:
