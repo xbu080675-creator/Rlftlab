@@ -136,3 +136,11 @@ dev.71 不要求全世界所有年份一次性达到 100%，但必须做到：
 - LCK/LCS/CBLOL are classified as direct-placement systems for the matched 2026 Split 3 editions; LCP remains mixed because the official page explicitly combines top-two direct qualification with a Championship Points slot.
 - LEC intentionally remains mechanism `UNKNOWN` with official evidence because Riot's current page does not fully explain the third Worlds place; the official rule text is still shown.
 - Team-level locked/contending/eliminated states are not inferred from participant lists.
+
+## 2026-09-10 · LCP Championship Points + global offline resilience
+
+- Added the Riot-published 2026 LCP Championship Points formula as an OFFICIAL rules layer. Team totals intentionally remain null until complete split results or an explicit official totals table can be ingested.
+- Regional qualification snapshots now create PENDING team routes for observed participants so reverse lookup works without pretending each team's qualification outcome is already known.
+- `GlobalVerifiedAwardsProvider` and `GlobalTeamStaffProvider` now fall back to APK-bundled repository seeds after GitHub Raw/jsDelivr failure.
+- `ota-direct.yml` bundles `data/global/team_staff.json` and `data/global/match_awards.json` into the APK, matching the existing resilient LPL seed pattern.
+- This improves mainland/offline behavior without reviving Gitee OTA or changing the GitHub-only update transport.

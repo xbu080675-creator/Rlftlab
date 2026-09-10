@@ -265,30 +265,72 @@ object QualificationCenterStore {
             matches = detail?.matchedSeries.orEmpty(),
             standings = standings
         )
-        val rules = governance.rules.items.map { rule ->
-            QualificationRuleRecord(
-                title = rule.title,
-                detail = rule.detail,
-                source = rule.source,
-                evidence = if (rule.verified) QualificationEvidence.OFFICIAL else QualificationEvidence.DERIVED
-            )
-        }
         val mechanism = officialRegionalMechanism(edition)
+        val supplementalRules = if (isLcpEdition(edition)) OfficialLcpChampionshipPoints2026.rules() else emptyList()
+        val rules = (
+            governance.rules.items.map { rule ->
+                QualificationRuleRecord(
+                    title = rule.title,
+                    detail = rule.detail,
+                    source = rule.source,
+                    evidence = if (rule.verified) QualificationEvidence.OFFICIAL else QualificationEvidence.DERIVED
+                )
+            } + supplementalRules
+        ).distinctBy { "${it.title}|${it.detail}" }
+        val participantRoutes = edition.participantTeamCodes
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() && it != "TBD" && it != "—" }
+            .distinct()
+            .sorted()
+            .map { teamCode ->
+                TeamQualificationRoute(
+                    tournamentId = edition.tournamentId,
+                    teamId = stableLocalTeamId(teamCode),
+                    teamCode = teamCode,
+                    targetEvent = "2026 全球总决赛",
+                    status = QualificationTeamState.PENDING,
+                    route = listOf(
+                        QualificationRouteNode(
+                            id = "$teamCode:official-mechanism",
+                            label = "赛区资格机制已核实",
+                            detail = "Riot 官方规则已明确该赛区的 Worlds 资格机制；该队当前是已锁定、仍可争夺还是已淘汰，等待足够的正式赛果/席位数据后再判定。",
+                            state = QualificationNodeState.PENDING,
+                            source = handbookQualification.second,
+                            evidence = QualificationEvidence.OFFICIAL
+                        )
+                    ),
+                    source = handbookQualification.second,
+                    evidence = QualificationEvidence.PENDING
+                )
+            }
         return QualificationTournamentSnapshot(
             tournamentId = edition.tournamentId,
             title = "${edition.displayName} · 官方资格体系",
             targetEvent = "2026 全球总决赛",
-            routes = emptyList(),
+            routes = participantRoutes,
             rules = rules,
-            sourceSummary = listOf(handbookQualification.second, governance.rules.sourceSummary)
+            sourceSummary = listOf(
+                handbookQualification.second,
+                governance.rules.sourceSummary,
+                supplementalRules.firstOrNull()?.source.orEmpty()
+            )
                 .filter { it.isNotBlank() }
                 .distinct()
                 .joinToString(" + "),
-            note = "资格机制已由 Riot League Handbook 核实；队伍级已锁定/仍可争夺/已淘汰状态只在正式赛果或明确席位数据足够时生成，不从参赛名单猜。",
+            note = if (supplementalRules.isNotEmpty()) {
+                "资格机制与 Championship Points 计分公式已由 Riot 官方资料核实；当前队伍总分仍保持未知，直到能从完整赛段结果重算或拿到官方总分表，不用不完整赛程窗口硬算。"
+            } else {
+                "资格机制已由 Riot League Handbook 核实；队伍级已锁定/仍可争夺/已淘汰状态只在正式赛果或明确席位数据足够时生成，不从参赛名单猜。"
+            },
             mechanism = mechanism,
             mechanismEvidence = QualificationEvidence.OFFICIAL,
             mechanismDetail = handbookQualification.first
         )
+    }
+
+    private fun isLcpEdition(edition: TournamentEditionArchiveRecord): Boolean {
+        val token = "${edition.leagueId} ${edition.leagueSlug} ${edition.leagueName}".uppercase()
+        return token.contains("113476371197627891") || token.contains("LCP")
     }
 
     private fun officialRegionalMechanism(edition: TournamentEditionArchiveRecord): QualificationMechanism {
