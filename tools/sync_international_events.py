@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 OUTPUT = Path("data/global/international_events.json")
+ASSET_OUTPUT = Path("app/src/main/assets/data/international_events.json")
 USER_AGENT = "RiftLab-InternationalMirrorSync/1"
 SOURCE_PAGES = (
     "https://rft.gg/event/wsci-2026",
@@ -286,9 +287,14 @@ def main() -> int:
         "policy": "Only server-rendered provider facts are mirrored; unknown fields remain unknown and parse failure never creates synthetic data.",
         "events": events,
     }
-    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(root, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {OUTPUT}: {len(events)} events / {len(normalized)} matches", file=sys.stderr)
+    payload = json.dumps(root, ensure_ascii=False, indent=2) + "\n"
+    for output in (OUTPUT, ASSET_OUTPUT):
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(payload, encoding="utf-8")
+    print(
+        f"wrote {OUTPUT} + {ASSET_OUTPUT}: {len(events)} events / {len(normalized)} matches",
+        file=sys.stderr,
+    )
     return 0
 
 

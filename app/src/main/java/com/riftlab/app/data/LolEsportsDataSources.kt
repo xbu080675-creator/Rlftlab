@@ -23,8 +23,13 @@ internal class LolEsportsScheduleDataSource(
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
         val riot = client.fetchGlobalSchedule().map(::verifySeriesCompletion)
-        val citoRows = runCatching { cito.fetch() }.getOrDefault(emptyList()).map(::verifySeriesCompletion)
-        val merged = mergeSchedule(riot, citoRows)
+        val citoRows = runCatching { cito.fetch() }
+            .getOrDefault(emptyList())
+            .map(::verifySeriesCompletion)
+        val internationalRows = runCatching { InternationalEventMirrorProvider.fetchMatches() }
+            .getOrDefault(emptyList())
+            .map(::verifySeriesCompletion)
+        val merged = mergeSchedule(mergeSchedule(riot, citoRows), internationalRows)
         CitoArchiveCoordinator.observe(merged)
         return TeamAssetCatalog.enrichMatches(merged)
     }
@@ -88,13 +93,21 @@ internal class LolEsportsStandingsDataSource(
     private val tournamentRefs = linkedMapOf<String, EsportsTournamentRef>()
 
     override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> {
-        val tournaments = client.fetchGlobalTournaments()
+        val riot = client.fetchGlobalTournaments()
+        val international = runCatching { InternationalEventMirrorProvider.fetchTournaments() }
+            .getOrDefault(emptyList())
+        val tournaments = (riot + international).distinctBy { it.id }
         tournamentRefs.clear()
         tournaments.forEach { tournamentRefs[it.id] = it }
         return tournaments
     }
 
     override suspend fun fetchStandings(tournamentId: String): TournamentStandings? {
+        // Provider-only international events currently contribute schedule / participants / results,
+        // not a fabricated standings table. Keep Standings explicitly unavailable until a verified
+        // provider standings feed is added.
+        if (tournamentId.startsWith("rft-event:")) return null
+
         val riot = runCatching { client.fetchTournamentStandings(tournamentId) }.getOrNull()
         val hasRiotRows = riot?.stages?.any { stage ->
             stage.sections.any { it.rankings.isNotEmpty() || it.matches.isNotEmpty() }
