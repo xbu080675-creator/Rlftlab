@@ -19,10 +19,19 @@ jobs:
           wc -c /tmp/wsci.html
           python3 - <<'PY'
           from pathlib import Path
-          import re
+          import re, html
           s=Path('/tmp/wsci.html').read_text(errors='replace')
-          for pat in ['__NEXT_DATA__','WSCI 2026','TES.C','Dplus Challengers','Bilibili Gaming Junior','Recent Matches']:
-              print(pat, bool(re.search(re.escape(pat), s, re.I)))
-          print('nextdata-bytes', len(re.findall(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', s, re.I|re.S)[0]) if re.findall(r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', s, re.I|re.S) else 0)
-          print('html-prefix', re.sub(r'\s+',' ',s[:500]))
+          for pat in ['WSCI 2026','Recent Matches','TES.C','Dplus Challengers','Bilibili Gaming Junior','Participants']:
+              m=re.search(re.escape(pat), s, re.I)
+              print('\n===',pat,'===', bool(m))
+              if m:
+                  a=max(0,m.start()-900); b=min(len(s),m.end()+1400)
+                  x=html.unescape(s[a:b])
+                  print(re.sub(r'\s+',' ',x))
+          print('\nEvent links sample:')
+          for href,label in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>',s,re.I|re.S)[:400]:
+              plain=re.sub(r'<[^>]+>',' ',html.unescape(label))
+              plain=re.sub(r'\s+',' ',plain).strip()
+              if any(k.lower() in (href+' '+plain).lower() for k in ['match','team','wsci','tes.c','dplus']):
+                  print(href,'=>',plain[:120])
           PY
