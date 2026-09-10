@@ -1,0 +1,60 @@
+name: dev72 unified live event UI batch16
+
+on:
+  push:
+    branches:
+      - dev72-unified-live-event-ui-batch16
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply unified live event UI
+        run: python3 tools/apply_dev72_unified_live_event_ui_batch16.py
+
+      - name: Audit event contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'MatchTimelineStore.timelines.collectAsState' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          grep -q 'UNIFIED LIVE EVENT / 统一事件' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          grep -q 'Provider 自由文本只保留作诊断' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          if grep -n 'Text(snapshot.latestEvent' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt; then
+            echo 'LIVE UI still renders provider free-form latestEvent' >&2
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+
+      - name: Compile Android
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Commit verified unified event UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'dev72: route LIVE UI through unified timeline events'
+          git push
