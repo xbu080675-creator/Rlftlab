@@ -24,7 +24,7 @@ import com.riftlab.app.data.DataCoverageState
 
 /**
  * dev.68 makes missing esports data visible instead of masking it with placeholders.
- * This is a coverage meter, not a confidence/win-rate score.
+ * dev.69 keeps the coverage meter and adds the durable Tournament Edition archive directly below it.
  */
 @Composable
 fun ComprehensiveDataCoveragePanel() {
@@ -81,6 +81,9 @@ fun ComprehensiveDataCoveragePanel() {
                 fontSize = 9.sp
             )
         }
+
+        Spacer(Modifier.height(10.dp))
+        TournamentEditionArchiveInlinePanel()
     }
 }
 
