@@ -636,10 +636,23 @@ private fun buildReplayAnchors(part: BilibiliVodPart?, localTimeline: GameTimeli
 private fun replayTimelineTitle(event: MatchTimelineEvent): String = when (event.type) {
     TimelineEventType.GAME_START -> "比赛开始"
     TimelineEventType.KILL -> event.title.ifBlank { "击杀" }
+    TimelineEventType.MULTI_KILL_WINDOW -> event.title.ifBlank { "多击杀窗口" }
+    TimelineEventType.TEAM_FIGHT_WINDOW -> event.title.ifBlank { "团战窗口候选" }
     TimelineEventType.TOWER -> event.title.ifBlank { "防御塔" }
-    TimelineEventType.DRAGON -> event.title.ifBlank { "元素亚龙" }
+    TimelineEventType.DRAGON -> event.title.ifBlank { "小龙" }
+    TimelineEventType.SOUL -> event.title.ifBlank { "龙魂" }
+    TimelineEventType.ELDER_DRAGON -> event.title.ifBlank { "远古巨龙" }
+    TimelineEventType.HERALD -> event.title.ifBlank { "峡谷先锋" }
+    TimelineEventType.ATAKHAN -> event.title.ifBlank { "厄塔汗" }
     TimelineEventType.BARON -> event.title.ifBlank { "纳什男爵" }
-    TimelineEventType.GOLD_SWING -> event.title.ifBlank { "经济领先变化" }
+    TimelineEventType.GOLD_LEAD_CHANGE -> event.title.ifBlank { "经济领先易手" }
+    TimelineEventType.GOLD_SWING -> event.title.ifBlank { "经济快速摆动" }
+    TimelineEventType.ITEM_SPIKE -> event.title.ifBlank { "装备节点" }
+    TimelineEventType.PLAYER_LEVEL_CHANGE -> event.title.ifBlank { "等级变化" }
+    TimelineEventType.PLAYER_CS_CHANGE -> event.title.ifBlank { "补刀节点" }
+    TimelineEventType.PLAYER_KDA_CHANGE -> event.title.ifBlank { "KDA 变化" }
+    TimelineEventType.GAME_PAUSE -> event.title.ifBlank { "比赛暂停" }
+    TimelineEventType.GAME_RESUME -> event.title.ifBlank { "比赛恢复" }
     TimelineEventType.GAME_END -> "比赛结束"
 }
 
