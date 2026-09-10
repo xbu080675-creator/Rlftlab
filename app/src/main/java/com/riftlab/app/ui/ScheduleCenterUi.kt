@@ -93,6 +93,7 @@ private enum class ScheduleDirectorySection(val label: String) {
 private enum class InternationalCompetitionMenu(val label: String) {
     WORLDS("全球总决赛"),
     DEMACIA_GLOBAL("德杯国际邀请赛"),
+    WSCI("WSCI"),
     WSCL("WSCL"),
     FIRST_STAND("全球先锋赛"),
     MSI("季中冠军赛"),
@@ -505,10 +506,15 @@ private fun InternationalEventPlaceholder(menu: InternationalCompetitionMenu) {
             "最新国际赛事 · 固定入口",
             "德杯国际邀请赛独立归入国际赛事，不归入 LPL 常规联赛。参赛队、分组、赛程和直播信息在可信赛事源可用后自动填充。"
         )
+        InternationalCompetitionMenu.WSCI -> Triple(
+            "WSCI",
+            "国际赛事 · 独立赛事入口",
+            "WSCI 作为独立国际赛事建档。赛程、比分和战队来自已标注 Provider；缺少 Standings、Seed 或晋级来源时保持未知。"
+        )
         InternationalCompetitionMenu.WSCL -> Triple(
             "WSCL",
             "国际赛事 · 当前赛事入口保留",
-            "WSCL 不归入已经停摆的 2026 LDL。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回 LDL。"
+            "WSCL 独立归入国际赛事。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回联赛目录。"
         )
         else -> Triple(
             menu.label,
@@ -604,7 +610,8 @@ private fun internationalCompetitionKind(bucket: ScheduleCompetitionBucket): Int
     ).joinToString(" ").lowercase()
     return when {
         identity.contains("demacia cup") || identity.contains("德玛西亚杯") || identity.contains("德杯国际邀请赛") || identity.contains("demacia global invitational") -> InternationalCompetitionMenu.DEMACIA_GLOBAL
-        Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCL
+        Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCI
+        Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCL
         identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") || identity.contains("全球先锋赛") -> InternationalCompetitionMenu.FIRST_STAND
         identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) || identity.contains("季中冠军赛") -> InternationalCompetitionMenu.MSI
         identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> InternationalCompetitionMenu.AMERICAS_CUP
@@ -800,7 +807,7 @@ private fun StandingsView(standings: TournamentStandings?) {
         stage.sections.filter { it.rankings.isNotEmpty() }
     }
     if (sections.isEmpty()) {
-        EmptyData("等待 Riot Standings 排名数据")
+        EmptyData("当前可信数据源尚未提供 Standings 排名数据")
         return
     }
 
@@ -1003,7 +1010,7 @@ private fun BracketView(
             (stage.slug.contains("playoff", true) || stage.slug.contains("regional", true))
     }
     if (stages.isEmpty()) {
-        EmptyData("等待 Riot Standings 淘汰赛数据")
+        EmptyData("当前可信数据源尚未提供淘汰赛 / Bracket 数据")
         return
     }
 

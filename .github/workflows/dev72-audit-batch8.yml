@@ -1,0 +1,52 @@
+name: dev72 duplicate-source audit batch8
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-audit-batch8 ]
+    paths:
+      - 'tools/apply_dev72_audit_batch8.py'
+      - '.github/workflows/dev72-audit-batch8.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-audit-batch8
+          fetch-depth: 0
+      - name: Apply duplicate/source repairs
+        run: python3 tools/apply_dev72_audit_batch8.py
+      - name: Audit assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'private fun teamAliases' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'RFT.gg public event mirror · Schedule participant set' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q '全球赛后补充链路' app/src/main/java/com/riftlab/app/data/MatchDetailRepository.kt
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Compile Android
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Commit verified repairs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt \
+                  app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
+                  app/src/main/java/com/riftlab/app/data/MatchDetailRepository.kt
+          if git diff --cached --quiet; then
+            echo "No source changes"
+            exit 0
+          fi
+          git commit -m "dev72: dedupe provider series and tighten source labels"
+          git push origin HEAD:dev72-audit-batch8

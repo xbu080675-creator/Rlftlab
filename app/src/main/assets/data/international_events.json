@@ -1,0 +1,750 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-10T18:40:17Z",
+  "provider": "RFT.gg",
+  "sourcePages": [
+    "https://rft.gg/event/wsci-2026",
+    "https://rft.gg/event/wsci-2026/matches"
+  ],
+  "policy": "Only server-rendered provider facts are mirrored; unknown fields remain unknown and parse failure never creates synthetic data.",
+  "events": [
+    {
+      "id": "rft-event:2629",
+      "name": "WSCI 2026 - LPL Regional Qualifier",
+      "slug": "wsci-2026-lpl-regional-qualifier",
+      "source": "RFT.gg public event page",
+      "sourceUrl": "https://rft.gg/event/wsci-2026-lpl-regional-qualifier",
+      "matches": [
+        {
+          "id": "rft:76052",
+          "providerMatchId": "76052",
+          "slug": "bilibili-gaming-junior-vs-zsk-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76052-bilibili-gaming-junior-vs-zsk-2026-08-25",
+          "teams": [
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76053",
+          "providerMatchId": "76053",
+          "slug": "wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76053-wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
+          "teams": [
+            {
+              "id": "11638",
+              "name": "我超威",
+              "code": "",
+              "slug": "wo-chao-wei",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:76054",
+          "providerMatchId": "76054",
+          "slug": "top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76054-top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76055",
+          "providerMatchId": "76055",
+          "slug": "edg-youth-team-vs-xiao-pa-chong-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76055-edg-youth-team-vs-xiao-pa-chong-2026-08-25",
+          "teams": [
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11637",
+              "name": "小爬虫",
+              "code": "",
+              "slug": "xiao-pa-chong",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76056",
+          "providerMatchId": "76056",
+          "slug": "bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76056-bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25",
+          "teams": [
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76057",
+          "providerMatchId": "76057",
+          "slug": "edg-youth-team-vs-top-esports-challenger-2026-08-25",
+          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76057-edg-youth-team-vs-top-esports-challenger-2026-08-25",
+          "teams": [
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76058",
+          "providerMatchId": "76058",
+          "slug": "zsk-vs-wo-chao-wei-2026-08-26",
+          "scheduledAt": "2026-08-26T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76058-zsk-vs-wo-chao-wei-2026-08-26",
+          "teams": [
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "ZSK",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11638",
+              "name": "我超威",
+              "code": "wcw",
+              "slug": "wo-chao-wei",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76059",
+          "providerMatchId": "76059",
+          "slug": "ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
+          "scheduledAt": "2026-08-26T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76059-ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
+          "teams": [
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "OKE",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11637",
+              "name": "小爬虫",
+              "code": "XPC",
+              "slug": "xiao-pa-chong",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:76060",
+          "providerMatchId": "76060",
+          "slug": "edg-youth-team-vs-bilibili-gaming-junior-2026-08-26",
+          "scheduledAt": "2026-08-26T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76060-edg-youth-team-vs-bilibili-gaming-junior-2026-08-26",
+          "teams": [
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "EDG.Y",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "loss"
+            },
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "BLG.J",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:76061",
+          "providerMatchId": "76061",
+          "slug": "weibo-gaming-youth-team-vs-top-esports-challenger-2026-08-26",
+          "scheduledAt": "2026-08-26T10:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76061-weibo-gaming-youth-team-vs-top-esports-challenger-2026-08-26",
+          "teams": [
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "WBG.Y",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "loss"
+            },
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "TES.C",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:76064",
+          "providerMatchId": "76064",
+          "slug": "top-esports-challenger-vs-zsk-2026-08-27",
+          "scheduledAt": "2026-08-27T11:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76064-top-esports-challenger-vs-zsk-2026-08-27",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "TES.C",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "ZSK",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rft-event:2630",
+      "name": "WSCI 2026 - LPL Regional Qualifier",
+      "slug": "wsci-2026-lpl-regional-qualifier",
+      "source": "RFT.gg public event page",
+      "sourceUrl": "https://rft.gg/event/wsci-2026-lpl-regional-qualifier",
+      "matches": [
+        {
+          "id": "rft:83702",
+          "providerMatchId": "83702",
+          "slug": "bilibili-gaming-junior-vs-zsk-2026-08-25-2",
+          "scheduledAt": "2026-08-25T05:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83702-bilibili-gaming-junior-vs-zsk-2026-08-25-2",
+          "teams": [
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83703",
+          "providerMatchId": "83703",
+          "slug": "weibo-gaming-youth-team-vs-wo-chao-wei-2026-08-25",
+          "scheduledAt": "2026-08-25T06:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83703-weibo-gaming-youth-team-vs-wo-chao-wei-2026-08-25",
+          "teams": [
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11638",
+              "name": "我超威",
+              "code": "",
+              "slug": "wo-chao-wei",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83704",
+          "providerMatchId": "83704",
+          "slug": "top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25-2",
+          "scheduledAt": "2026-08-25T07:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83704-top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25-2",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83705",
+          "providerMatchId": "83705",
+          "slug": "edg-youth-team-vs-xiao-pa-chong-2026-08-25-2",
+          "scheduledAt": "2026-08-25T08:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83705-edg-youth-team-vs-xiao-pa-chong-2026-08-25-2",
+          "teams": [
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11637",
+              "name": "小爬虫",
+              "code": "",
+              "slug": "xiao-pa-chong",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83706",
+          "providerMatchId": "83706",
+          "slug": "bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25-2",
+          "scheduledAt": "2026-08-25T09:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83706-bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25-2",
+          "teams": [
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83707",
+          "providerMatchId": "83707",
+          "slug": "top-esports-challenger-vs-edg-youth-team-2026-08-25",
+          "scheduledAt": "2026-08-25T11:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83707-top-esports-challenger-vs-edg-youth-team-2026-08-25",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:83708",
+          "providerMatchId": "83708",
+          "slug": "zsk-vs-wo-chao-wei-2026-08-26-2",
+          "scheduledAt": "2026-08-26T05:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83708-zsk-vs-wo-chao-wei-2026-08-26-2",
+          "teams": [
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11638",
+              "name": "我超威",
+              "code": "",
+              "slug": "wo-chao-wei",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83709",
+          "providerMatchId": "83709",
+          "slug": "ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26-2",
+          "scheduledAt": "2026-08-26T07:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83709-ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26-2",
+          "teams": [
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11637",
+              "name": "小爬虫",
+              "code": "",
+              "slug": "xiao-pa-chong",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83710",
+          "providerMatchId": "83710",
+          "slug": "bilibili-gaming-junior-vs-edg-youth-team-2026-08-26",
+          "scheduledAt": "2026-08-26T09:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83710-bilibili-gaming-junior-vs-edg-youth-team-2026-08-26",
+          "teams": [
+            {
+              "id": "5941",
+              "name": "Bilibili Gaming Junior",
+              "code": "BLG.J",
+              "slug": "bilibili-gaming-junior",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "EDG.Y",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83711",
+          "providerMatchId": "83711",
+          "slug": "weibo-gaming-youth-team-vs-top-esports-challenger-2026-08-26-2",
+          "scheduledAt": "2026-08-26T11:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83711-weibo-gaming-youth-team-vs-top-esports-challenger-2026-08-26-2",
+          "teams": [
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "WBG.Y",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "loss"
+            },
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "TES.C",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:83712",
+          "providerMatchId": "83712",
+          "slug": "zsk-vs-ocean-kimi-tournament-alliance-2026-08-27-2",
+          "scheduledAt": "2026-08-27T07:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83712-zsk-vs-ocean-kimi-tournament-alliance-2026-08-27-2",
+          "teams": [
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "ZSK",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "OKE",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83713",
+          "providerMatchId": "83713",
+          "slug": "edg-youth-team-vs-top-esports-challenger-2026-08-27-2",
+          "scheduledAt": "2026-08-27T09:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83713-edg-youth-team-vs-top-esports-challenger-2026-08-27-2",
+          "teams": [
+            {
+              "id": "875",
+              "name": "EDG Youth Team",
+              "code": "EDG.Y",
+              "slug": "edg-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "TES.C",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:83714",
+          "providerMatchId": "83714",
+          "slug": "top-esports-challenger-vs-zsk-2026-08-27-2",
+          "scheduledAt": "2026-08-27T09:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/83714-top-esports-challenger-vs-zsk-2026-08-27-2",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "TES.C",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "ZSK",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 2,
+              "outcome": "win"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

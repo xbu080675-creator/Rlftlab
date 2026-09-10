@@ -1,0 +1,57 @@
+name: dev72 source-truth audit batch9
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-audit-batch9 ]
+    paths:
+      - 'tools/apply_dev72_audit_batch9.py'
+      - '.github/workflows/dev72-audit-batch9.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-build-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-audit-batch9
+          fetch-depth: 0
+      - name: Apply source-truth repairs
+        run: python3 tools/apply_dev72_audit_batch9.py
+      - name: Audit assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'private fun teamAliases' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q '90L \* 60L \* 1000L' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'RFT.gg public event mirror · Schedule participant set' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q '全球赛后补充链路' app/src/main/java/com/riftlab/app/data/MatchDetailRepository.kt
+          grep -q '当前可信 Provider 未提供 Standings / Bracket，保持未知' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'sourceId = "riot-standings"' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Compile Android
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Commit verified repairs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt \
+                  app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
+                  app/src/main/java/com/riftlab/app/data/MatchDetailRepository.kt \
+                  app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          if git diff --cached --quiet; then
+            echo "No source changes"
+            exit 0
+          fi
+          git commit -m "dev72: tighten provider dedupe and archive provenance"
+          git push origin HEAD:dev72-audit-batch9

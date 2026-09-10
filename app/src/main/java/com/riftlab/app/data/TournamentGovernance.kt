@@ -192,7 +192,7 @@ object TournamentGovernanceProvider {
             items += TournamentRuleItem(
                 title = "对局长度",
                 detail = if (bo.size == 1) "公开赛程中的系列赛为 BO${bo.single()}。" else "公开赛程包含 ${bo.joinToString(" / ") { "BO$it" }}。",
-                source = "Riot Schedule · 结构推导",
+                source = "Unified Schedule · 结构推导",
                 verified = false
             )
         }
