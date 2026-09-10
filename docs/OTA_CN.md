@@ -2,6 +2,8 @@
 
 RiftLab `dev.59` 起采用 **GitHub 唯一正式 Release + APP 内 GitHub 更新加速** 的更新架构。
 
+> **架构锁定（dev.66）**：Gitee OTA / Gitee Release 二进制镜像链路已经废弃。Gitee 不参与 APK 或 `latest.json` 分发，不需要 `GITEE_TOKEN`，不得重新接入 APP 更新运行时或 canonical 发布 workflow；如保留 Gitee 仓库，仅作为源码镜像。
+
 ## 架构边界
 
 - **GitHub `xbu080675-creator/Rlftlab`**：唯一代码真源、版本真源、GitHub Actions 构建源和 APK 正式发布源。
@@ -72,19 +74,20 @@ APK 使用相对文件名，客户端会基于官方 GitHub `dev-latest` manifes
 
 ## 更新加速配置
 
-DEV 构建默认内置 GitHub 文件加速基址：
+DEV 构建默认内置多个 GitHub 文件加速基址，并保留 GitHub 直连。dev.65 起不固定押一个节点，而是对真实版本 APK 做小段 HTTP Range 并发测速，按当前用户网络的实际吞吐排序。
 
-`https://gh-proxy.com/`
+默认池：
 
-它只会收到 RiftLab 官方 GitHub Release 的 URL，不会收到 Gitee Token、GitHub Token、用户账号凭据或赛事请求。
+- `https://gh.llkk.cc/`
+- `https://cors.isteed.cc/`
+- `https://gh.xmly.dev/`
+- `https://gh.ddlc.top/`
+- `https://ghfast.top/`
+- `https://ghproxy.net/`
 
-如以后需要更换加速节点，可通过 Gradle 属性覆盖：
+可通过 Gradle 属性 `RIFTLAB_GITHUB_ACCELERATOR_BASE_URLS` 覆盖完整节点池；兼容旧的单节点属性 `RIFTLAB_GITHUB_ACCELERATOR_BASE_URL`。这些节点只会收到 RiftLab 官方 GitHub `dev-latest` Release 白名单资源，不会收到用户账号凭据或赛事请求。
 
-`RIFTLAB_GITHUB_ACCELERATOR_BASE_URL`
-
-也可以在 GitHub 仓库的 Actions Variables 中创建同名变量，`.github/workflows/ota-direct.yml` 会在构建时传入。没有设置时使用 DEV 默认值。
-
-生产规模扩大后应优先使用可控或有明确服务保障的 GitHub 文件加速节点；客户端传输层不依赖某一家实现，只要求支持 HTTPS GET，APK 最好同时支持 HTTP Range。
+生产规模扩大后应优先使用可控或有明确服务保障的 GitHub 文件加速节点；传输层应继续支持 HTTPS GET，APK 路径最好支持 HTTP Range。
 
 ## 客户端安全校验
 

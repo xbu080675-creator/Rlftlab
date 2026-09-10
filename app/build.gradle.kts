@@ -36,8 +36,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 65
-        versionName = "1.0.0-dev.65"
+        versionCode = 66
+        versionName = "1.0.0-dev.66"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -149,3 +149,5 @@ dependencies {
 // dev.64: polish the watch HUD after real-screen testing. Auto-hide the finished DRAFT LOCKED status after a brief confirmation, keep it visible while editing, and compress matchup intelligence into a two-line horizontal strip to reduce broadcast obstruction.
 
 // dev.65: make GitHub OTA acceleration network-adaptive. Probe the real APK through direct GitHub and multiple GitHub-only accelerators, rank by measured throughput, download from the fastest path, keep Range resume/fallback, and stop sending no-cache on immutable versioned APK assets so CDN caches can actually help.
+
+// dev.66: keep Gitee OTA retired. Continue GitHub canonical dev-latest + request-scoped adaptive GitHub acceleration; refresh project/development documentation.
