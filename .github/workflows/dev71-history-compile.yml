@@ -1,17 +1,17 @@
-name: dev71 qualification semantics compile
+name: dev71 archive integrity compile
 
 on:
   push:
     branches: [ dev71-data-coverage-repair ]
     paths:
       - '.github/workflows/dev71-history-compile.yml'
-      - 'tools/apply_dev71_qualification_semantics.py'
+      - 'tools/apply_dev71_archive_integrity.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: dev71-qualification-compile
+  group: dev71-archive-integrity-compile
   cancel-in-progress: true
 
 jobs:
@@ -22,17 +22,15 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
-      - name: Apply qualification semantics repair
-        run: python3 tools/apply_dev71_qualification_semantics.py
-      - name: Static qualification guards
+      - name: Apply archive integrity fixes
+        run: python3 tools/apply_dev71_archive_integrity.py
+      - name: Static archive guards
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'enum class QualificationMechanism' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q 'PARTICIPANT_ORIGIN' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
-          grep -q '这里不是 Championship Points 缺失' app/src/main/java/com/riftlab/app/ui/QualificationPathUi.kt
-          grep -q '资格路径 / 参赛来源' app/src/main/java/com/riftlab/app/ui/TournamentEditionArchiveUi.kt
-          grep -q 'Championship Points、名次直通、资格赛与国际赛参赛来源' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'patchVersions = old?.patchVersions.orEmpty()' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'standingsOverride = cachedHydratedStandings(record.tournamentId)' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+          grep -q 'record.participantTeamCodes + standingsTeams + matchTeams' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
           git diff --check
       - uses: actions/setup-java@v5
         with:
@@ -44,23 +42,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
-      - name: Compile dev71 qualification tranche
+      - name: Compile dev71 archive tranche
         run: gradle :app:assembleDebug --stacktrace
-      - name: Commit validated qualification source
+      - name: Commit validated archive source
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            app/src/main/java/com/riftlab/app/data/QualificationCenter.kt \
-            app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt \
-            app/src/main/java/com/riftlab/app/ui/QualificationPathUi.kt \
-            app/src/main/java/com/riftlab/app/ui/TournamentEditionArchiveUi.kt \
-            docs/RIFTLAB_DEV71_DATA_COVERAGE_AUDIT.md
+          git add app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
           if git diff --cached --quiet; then
-            echo "No generated qualification changes to commit"
+            echo "No generated archive changes to commit"
             exit 0
           fi
-          git commit -m "dev71: classify qualification mechanisms and participant origins"
+          git commit -m "dev71: preserve historical archive hydration"
           git push origin HEAD:dev71-data-coverage-repair
