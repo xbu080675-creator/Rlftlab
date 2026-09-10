@@ -1,0 +1,37 @@
+name: dev72 RFT probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev72-wsci-batch5 ]
+    paths:
+      - '.github/workflows/dev72-rft-probe.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe WSCI page
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --connect-timeout 12 --max-time 30 -A 'RiftLab-DataSync/1.0' 'https://rft.gg/event/wsci-2026' -o /tmp/wsci.html
+          wc -c /tmp/wsci.html
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, html
+          s=Path('/tmp/wsci.html').read_text(errors='replace')
+          for pat in ['WSCI 2026','Recent Matches','TES.C','Dplus Challengers','Bilibili Gaming Junior','Participants']:
+              m=re.search(re.escape(pat), s, re.I)
+              print('\n===',pat,'===', bool(m))
+              if m:
+                  a=max(0,m.start()-900); b=min(len(s),m.end()+1400)
+                  x=html.unescape(s[a:b])
+                  print(re.sub(r'\s+',' ',x))
+          print('\nEvent links sample:')
+          for href,label in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>',s,re.I|re.S)[:400]:
+              plain=re.sub(r'<[^>]+>',' ',html.unescape(label))
+              plain=re.sub(r'\s+',' ',plain).strip()
+              if any(k.lower() in (href+' '+plain).lower() for k in ['match','team','wsci','tes.c','dplus']):
+                  print(href,'=>',plain[:120])
+          PY
