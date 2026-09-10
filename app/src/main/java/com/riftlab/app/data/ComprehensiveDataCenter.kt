@@ -138,14 +138,12 @@ object ComprehensiveDataCenter {
                 else -> tournament.leagueName.equals(target.league, ignoreCase = true)
             }
         }
+        if (leagueMatched.isEmpty()) return null
         val dated = targetDate?.let { date ->
             leagueMatched.filter { StandingsCenterStore.containsDate(it, date) }
         }.orEmpty()
-        return dated.minByOrNull { it.startDate }
+        return dated.maxByOrNull { it.startDate }
             ?: leagueMatched.maxByOrNull { it.startDate }
-            ?: tournaments.firstOrNull { tournament ->
-                targetDate != null && StandingsCenterStore.containsDate(tournament, targetDate)
-            }
     }
 
     private fun parseDate(value: String): LocalDate? = runCatching {

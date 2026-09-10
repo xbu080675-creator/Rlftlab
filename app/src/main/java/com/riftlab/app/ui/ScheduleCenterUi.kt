@@ -1010,7 +1010,7 @@ private fun BracketView(
             (stage.slug.contains("playoff", true) || stage.slug.contains("regional", true))
     }
     if (stages.isEmpty()) {
-        EmptyData("等待 Riot Standings 淘汰赛数据")
+        EmptyData("当前可信数据源尚未提供淘汰赛 / Bracket 数据")
         return
     }
 

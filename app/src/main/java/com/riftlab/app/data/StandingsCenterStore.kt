@@ -93,14 +93,20 @@ object StandingsCenterStore {
 
     private fun chooseCurrentTournament(tournaments: List<EsportsTournamentRef>): EsportsTournamentRef? {
         val today = LocalDate.now()
-        return tournaments.firstOrNull { tournament ->
-            val start = parseDate(tournament.startDate)
-            val end = parseDate(tournament.endDate)
-            start != null && end != null && !today.isBefore(start) && !today.isAfter(end)
-        } ?: tournaments
-            .filter { parseDate(it.startDate)?.let { date -> !date.isAfter(today) } == true }
+        return tournaments
+            .filter { tournament ->
+                val start = parseDate(tournament.startDate)
+                val end = parseDate(tournament.endDate)
+                start != null && end != null && !today.isBefore(start) && !today.isAfter(end)
+            }
             .maxByOrNull { it.startDate }
-            ?: tournaments.lastOrNull()
+            ?: tournaments
+                .filter { parseDate(it.startDate)?.let { date -> !date.isAfter(today) } == true }
+                .maxByOrNull { it.startDate }
+            ?: tournaments.minByOrNull { tournament ->
+                parseDate(tournament.startDate)?.let { kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(today, it)) }
+                    ?: Long.MAX_VALUE
+            }
     }
 
     fun displayTournamentName(tournament: EsportsTournamentRef): String {
