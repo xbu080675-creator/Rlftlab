@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/dev71-history-compile.yml'
       - 'tools/apply_dev71_release_prep.py'
+      - 'tools/apply_dev71_clean_build_fix.py'
 
 permissions:
   contents: write
@@ -22,6 +23,8 @@ jobs:
         with:
           ref: dev71-data-coverage-repair
           fetch-depth: 0
+      - name: Repair clean-build generated inputs
+        run: python3 tools/apply_dev71_clean_build_fix.py
       - name: Apply dev71 release metadata
         run: python3 tools/apply_dev71_release_prep.py
       - name: Bundle all resilient data seeds
@@ -44,6 +47,7 @@ jobs:
           set -euo pipefail
           grep -q 'versionCode = 71' app/build.gradle.kts
           grep -q 'versionName = "1.0.0-dev.71"' app/build.gradle.kts
+          grep -q 'doLast { materializeTextBackedBuildInputs() }' app/build.gradle.kts
           grep -q '^dev.71：' DEV_CURRENT_CHANGELOG.txt
           grep -q '^dev.71：' DEV_CHANGELOG.txt
           grep -q '^dev.70：' DEV_CHANGELOG.txt
@@ -78,7 +82,7 @@ jobs:
           test "$DIGEST" = "$EXPECTED"
           sha256sum "$APK"
           stat -c '%s bytes' "$APK"
-      - name: Commit validated release metadata
+      - name: Commit validated release metadata and clean-build repair
         shell: bash
         run: |
           set -euo pipefail
@@ -86,8 +90,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/build.gradle.kts DEV_CURRENT_CHANGELOG.txt DEV_CHANGELOG.txt docs/RIFTLAB_DEV_67_86.md
           if git diff --cached --quiet; then
-            echo "No release metadata changes to commit"
+            echo "No release changes to commit"
             exit 0
           fi
-          git commit -m "dev71: finalize release metadata after clean build"
+          git commit -m "dev71: finalize metadata and clean-build inputs"
           git push origin HEAD:dev71-data-coverage-repair
