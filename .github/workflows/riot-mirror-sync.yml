@@ -5,6 +5,7 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch:
   push:
+    branches: [ main ]
     paths:
       - 'tools/sync_riot_persisted_mirror.py'
       - '.github/workflows/riot-mirror-sync.yml'
