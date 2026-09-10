@@ -43,7 +43,9 @@ patch(
             .flatMap { it.teams }
             .map { it.code.ifBlank { it.name }.trim().uppercase() }
             .filter { it.isNotBlank() && it != "TBD" && it != "—" }
-        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams).distinct().sorted()
+        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams)
+            .distinct()
+            .sorted()
 ''',
     '''        val standingsTeams = standings.orEmptyTeamCodes()
         val matchTeams = matches
@@ -57,7 +59,9 @@ patch(
             competitionTitle = record.displayName,
             identity = "${record.family} ${record.stage} ${record.slug} ${record.leagueSlug} ${record.leagueName}"
         )
-        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams).distinct().sorted()
+        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams + handbookTeams)
+            .distinct()
+            .sorted()
 '''
 )
 
