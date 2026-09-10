@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import com.riftlab.app.RiftLabApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -128,6 +129,12 @@ internal class GlobalTeamStaffProvider {
                     last = IllegalStateException("global staff mirror schema invalid")
                 }
                 .onFailure { last = it }
+        }
+        loadBundled("team_staff.json")?.let { root ->
+            if (root.optInt("schemaVersion", 0) > 0 && root.optJSONObject("teams") != null) {
+                directoryCache = DirectoryCache(now, root)
+                return root
+            }
         }
         throw last ?: IllegalStateException("global staff mirror unavailable")
     }
@@ -259,6 +266,10 @@ internal class GlobalTeamStaffProvider {
     private fun cargoEscape(value: String): String = value.replace("\\", "\\\\").replace("\"", "\\\"")
     private fun token(value: String): String = value.uppercase().filter { it.isLetterOrDigit() }
     private fun enc(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name())
+
+    private fun loadBundled(name: String): JSONObject? = runCatching {
+        RiftLabApplication.appContext.assets.open(name).bufferedReader().use { JSONObject(it.readText()) }
+    }.getOrNull()
 
     private fun getJson(url: String, connectTimeoutMs: Int, readTimeoutMs: Int): JSONObject {
         val connection = URL(url).openConnection() as HttpURLConnection

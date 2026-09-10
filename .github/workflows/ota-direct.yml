@@ -42,6 +42,11 @@ jobs:
               cp "data/lpl/$name" "app/src/main/assets/$name"
             fi
           done
+          for name in team_staff.json match_awards.json; do
+            if [ -f "data/global/$name" ]; then
+              cp "data/global/$name" "app/src/main/assets/$name"
+            fi
+          done
           if [ -f "data/esports/esports_graph.json" ]; then
             cp "data/esports/esports_graph.json" "app/src/main/assets/esports_graph.json"
           fi

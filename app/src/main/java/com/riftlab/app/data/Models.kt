@@ -7,6 +7,16 @@ data class PlayerCard(
     val recent: String
 )
 
+data class PreRecentSeries(
+    val eventId: String,
+    val opponentCode: String,
+    val scoreFor: Int,
+    val scoreAgainst: Int,
+    val outcome: String,
+    val startTimeIso: String,
+    val source: String
+)
+
 data class PreMatchInfo(
     val league: String,
     val stage: String,
@@ -17,7 +27,14 @@ data class PreMatchInfo(
     val redForm: String,
     val blueRoster: List<PlayerCard>,
     val redRoster: List<PlayerCard>,
-    val rosterNote: String
+    val rosterNote: String,
+    val blueRosterPool: List<PlayerCard> = emptyList(),
+    val redRosterPool: List<PlayerCard> = emptyList(),
+    val blueStaff: List<EsportsStaffRef> = emptyList(),
+    val redStaff: List<EsportsStaffRef> = emptyList(),
+    val blueRecentSeries: List<PreRecentSeries> = emptyList(),
+    val redRecentSeries: List<PreRecentSeries> = emptyList(),
+    val recentHeadToHead: List<PreRecentSeries> = emptyList()
 )
 
 data class ScheduledEsportsMatch(

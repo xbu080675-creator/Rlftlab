@@ -160,6 +160,16 @@ def collect_standings(tournament_ids: list[str]) -> dict[str, Any]:
     return result
 
 
+def collect_completed_events(tournament_ids: list[str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for tid in tournament_ids:
+        try:
+            result[tid] = fetch("getCompletedEvents", {"tournamentId": tid})
+        except Exception:
+            continue
+    return result
+
+
 def collect_event_details(event_ids: list[str]) -> dict[str, Any]:
     # EventDetails is mainly needed to bridge a persisted-gateway outage during current/upcoming play.
     # Fetch the newest schedule ids; direct LiveStats remains the real-time source.
@@ -177,6 +187,7 @@ def main() -> int:
     tournaments_root, tournament_ids = collect_tournaments()
     team_details, team_lookup = collect_team_details(team_refs)
     standings = collect_standings(tournament_ids)
+    completed_events = collect_completed_events(tournament_ids)
     try:
         live_root = fetch("getLive")
     except Exception:
@@ -192,6 +203,7 @@ def main() -> int:
         "schedulePages": pages,
         "tournaments": tournaments_root,
         "standingsByTournament": standings,
+        "completedEventsByTournament": completed_events,
         "teamLookup": team_lookup,
         "teamDetails": team_details,
         "live": live_root,
@@ -200,7 +212,7 @@ def main() -> int:
 
     print(
         f"mirror candidate: pages={len(pages)} team_refs={len(team_refs)} teams={len(team_details)} "
-        f"standings={len(standings)} events={len(event_details)}"
+        f"standings={len(standings)} completed={len(completed_events)} events={len(event_details)}"
     )
     if not pages:
         raise RuntimeError("refusing to replace mirror without schedule pages")
@@ -209,7 +221,7 @@ def main() -> int:
     OUT.write_text(json.dumps(mirror, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(
         f"mirror updated: pages={len(pages)} teams={len(team_details)} "
-        f"standings={len(standings)} events={len(event_details)}"
+        f"standings={len(standings)} completed={len(completed_events)} events={len(event_details)}"
     )
     return 0
 

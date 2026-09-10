@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import com.riftlab.app.RiftLabApplication
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -131,8 +132,18 @@ internal class GlobalVerifiedAwardsProvider {
                 }
                 .onFailure { last = it }
         }
+        loadBundled("match_awards.json")?.let { root ->
+            if (root.optInt("schemaVersion", 0) > 0 && root.optJSONArray("awards") != null) {
+                cache.set(Cached(now, root))
+                return root
+            }
+        }
         throw last ?: IllegalStateException("global awards mirror unavailable")
     }
+
+    private fun loadBundled(name: String): JSONObject? = runCatching {
+        RiftLabApplication.appContext.assets.open(name).bufferedReader().use { JSONObject(it.readText()) }
+    }.getOrNull()
 
     private fun getJson(url: String): JSONObject {
         val connection = URL(url).openConnection() as HttpURLConnection

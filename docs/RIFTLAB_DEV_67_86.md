@@ -73,6 +73,8 @@
 
 ## dev.71 — PRE / 赛前信息完整化
 
+实际交付同时承担 dev.69/dev.70 实机后暴露的数据全局查漏：PRE 首发/名单池/Staff/近期战绩链路补齐；Tournament Edition 历史、Patch、Final 结果源增强；2026 Riot League Handbook 覆盖主要赛区与国际赛；Qualification Center 扩展 LCK/LCP/LEC/LCS/CBLOL 机制，其中 LCP 保存官方 Championship Points 公式但不在数据不完整时硬算当前总分；海外 Staff/Awards 增加 APK 种子兜底。仍拿不到的 Rank、伤病、转会、完整 Awards 等继续明确标为未知/待同步。
+
 目标：赛前页面不只是一张对阵卡。
 
 - 首发 / 替补 / 教练组；

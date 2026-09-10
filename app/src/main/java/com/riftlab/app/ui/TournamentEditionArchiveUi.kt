@@ -114,7 +114,7 @@ fun TournamentEditionArchiveInlinePanel() {
                         val qualificationAvailable = slot.key == "qualification" && qualification?.routes?.isNotEmpty() == true
                         val displayState = if (qualificationAvailable) TournamentEditionSlotState.PARTIAL else slot.state
                         val displayDetail = if (qualificationAvailable) {
-                            "已接入 ${qualification?.routes?.size ?: 0} 支队伍的 Championship Points / 晋级路径；详细节点见下方 Qualification Center。"
+                            "已接入 ${qualification?.routes?.size ?: 0} 支队伍的资格路径 / 参赛来源；具体机制见下方 Qualification Center。"
                         } else slot.detail
                         Column(
                             Modifier

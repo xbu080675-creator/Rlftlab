@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.QualificationCenterStore
 import com.riftlab.app.data.QualificationEvidence
+import com.riftlab.app.data.QualificationMechanism
 import com.riftlab.app.data.QualificationNodeState
 import com.riftlab.app.data.QualificationTeamState
 import com.riftlab.app.data.TeamQualificationRoute
@@ -42,13 +43,13 @@ fun QualificationPathCenterPanel() {
             .padding(10.dp)
     ) {
         Text(
-            "QUALIFICATION / 年度积分与晋级路径",
+            "QUALIFICATION / 资格体系与晋级路径",
             color = RiftCyan,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Championship Points ≠ 本届 Standings Points；官方确认与 RiftLab 推导分开显示",
+            "积分、名次直通、资格赛与国际赛参赛来源分开建模；未知机制不会伪装成“积分缺失”",
             color = RiftMuted,
             fontSize = 8.sp
         )
@@ -66,6 +67,15 @@ fun QualificationPathCenterPanel() {
 
         Text(snapshot.title, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         Text("TARGET  ${snapshot.targetEvent}", color = RiftMuted, fontSize = 8.sp)
+        Text(
+            "MODE  ${snapshot.mechanism.label} · ${snapshot.mechanismEvidence.label}",
+            color = evidenceColor(snapshot.mechanismEvidence),
+            fontSize = 8.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (snapshot.mechanismDetail.isNotBlank()) {
+            Text(snapshot.mechanismDetail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp)
+        }
         Spacer(Modifier.height(7.dp))
 
         if (snapshot.routes.isEmpty()) {
@@ -111,7 +121,7 @@ fun QualificationPathCenterPanel() {
             it.teamCode.equals(center.selectedTeamCode, ignoreCase = true)
         } ?: snapshot.routes.first()
         Spacer(Modifier.height(3.dp))
-        RouteDetail(route)
+        RouteDetail(route, snapshot.mechanism)
 
         val visibleRules = snapshot.rules.take(5)
         if (visibleRules.isNotEmpty()) {
@@ -142,7 +152,7 @@ fun QualificationPathCenterPanel() {
 }
 
 @Composable
-private fun RouteDetail(route: TeamQualificationRoute) {
+private fun RouteDetail(route: TeamQualificationRoute, mechanism: QualificationMechanism) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -160,18 +170,38 @@ private fun RouteDetail(route: TeamQualificationRoute) {
         }
 
         Spacer(Modifier.height(5.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PointCell(
-                title = "CHAMPIONSHIP POINTS",
-                value = route.championshipPoints?.toString() ?: "—",
-                detail = route.annualPointBreakdown.ifBlank { "年度积分待同步" },
-                modifier = Modifier.weight(1f)
-            )
-            PointCell(
-                title = "STANDINGS POINTS",
-                value = route.leagueStandingPoints?.toString() ?: "—",
-                detail = "仅代表当前届次/阶段返回的排名积分",
-                modifier = Modifier.weight(1f)
+        if (route.championshipPoints != null || route.leagueStandingPoints != null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (route.championshipPoints != null) {
+                    PointCell(
+                        title = "CHAMPIONSHIP POINTS",
+                        value = route.championshipPoints.toString(),
+                        detail = route.annualPointBreakdown.ifBlank { "年度积分" },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (route.leagueStandingPoints != null) {
+                    PointCell(
+                        title = "STANDINGS POINTS",
+                        value = route.leagueStandingPoints.toString(),
+                        detail = "仅代表当前届次/阶段返回的排名积分",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        } else {
+            Text(
+                when (mechanism) {
+                    QualificationMechanism.PARTICIPANT_ORIGIN -> "这里不是 Championship Points 缺失：该目标赛事按参赛席位 / Qualification Origin 建档。"
+                    QualificationMechanism.DIRECT_PLACEMENT -> "该资格体系按联赛或季后赛名次直通，不需要 Championship Points 占位。"
+                    QualificationMechanism.REGIONAL_QUALIFIER -> "该资格体系按资格赛 / 附加赛路径记录，不需要 Championship Points 占位。"
+                    QualificationMechanism.UNKNOWN -> "当前资格机制尚未核实，因此不显示虚假的 Championship Points 缺失项。"
+                    QualificationMechanism.CHAMPIONSHIP_POINTS -> "该赛事确认采用 Championship Points，但当前队伍积分值尚未取得可信数据。"
+                    QualificationMechanism.MIXED -> "该队当前路径没有可核实积分值；混合体系的其他资格节点仍按来源展示。"
+                },
+                color = RiftMuted,
+                fontSize = 7.sp,
+                lineHeight = 10.sp
             )
         }
 
