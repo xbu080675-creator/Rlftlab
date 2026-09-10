@@ -133,6 +133,7 @@ object TournamentEditionArchiveStore {
             record = record,
             schedule = MatchSessionStore.schedule.value,
             standingsState = StandingsCenterStore.state.value,
+            standingsOverride = cachedHydratedStandings(record.tournamentId),
             historyOverride = cachedHydratedHistory(record.tournamentId)
         )
         replaceEdition(initial.edition)
@@ -240,6 +241,7 @@ object TournamentEditionArchiveStore {
                 endDate = ref.endDate,
                 participantTeamCodes = (old?.participantTeamCodes.orEmpty() + knownTeams).distinct().sorted(),
                 scheduleSeriesCount = maxOf(old?.scheduleSeriesCount ?: 0, matches.size),
+                patchVersions = old?.patchVersions.orEmpty(),
                 archivedSlots = old?.archivedSlots.orEmpty(),
                 firstSeenEpochMs = old?.firstSeenEpochMs ?: now,
                 lastSeenEpochMs = now
@@ -332,7 +334,13 @@ object TournamentEditionArchiveStore {
             verifiedPatchVersions = (record.patchVersions + historyOverride?.patchVersions.orEmpty()).distinct()
         )
         val standingsTeams = standings.orEmptyTeamCodes()
-        val participantTeams = (record.participantTeamCodes + standingsTeams).distinct().sorted()
+        val matchTeams = matches
+            .flatMap { it.teams }
+            .map { it.code.ifBlank { it.name }.trim().uppercase() }
+            .filter { it.isNotBlank() && it != "TBD" && it != "—" }
+        val participantTeams = (record.participantTeamCodes + standingsTeams + matchTeams)
+            .distinct()
+            .sorted()
         val provisional = record.copy(
             participantTeamCodes = participantTeams,
             scheduleSeriesCount = maxOf(record.scheduleSeriesCount, matches.size),
