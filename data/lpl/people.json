@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "dataset": "riftlab-lpl-person-directory",
-  "updatedAt": "2026-09-11T16:33:11Z",
+  "updatedAt": "2026-09-11T21:01:20Z",
   "avatarPolicy": {
     "priority": [
       "TEAM_OFFICIAL",
@@ -787,8 +787,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:21Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:17Z",
+        "attempts": 2
       }
     },
     "p_f29046d5df65": {
@@ -1361,8 +1361,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:23Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:19Z",
+        "attempts": 2
       }
     },
     "p_fbd748bc1382": {
@@ -1492,8 +1492,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:22Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:18Z",
+        "attempts": 2
       }
     },
     "p_d96264ed7a8e": {
@@ -1803,8 +1803,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T23:18:45Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:20Z",
+        "attempts": 2
       }
     },
     "p_458c2e1aae9b": {
@@ -1828,8 +1828,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:22Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:17Z",
+        "attempts": 2
       }
     },
     "p_f6bc5b0eb7a6": {
@@ -1985,8 +1985,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:24Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:19Z",
+        "attempts": 2
       }
     },
     "p_4c311333dd84": {
@@ -2012,8 +2012,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:23Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:18Z",
+        "attempts": 2
       }
     },
     "p_d40ab0b453ee": {
@@ -2397,8 +2397,8 @@
         }
       ],
       "avatarProbe": {
-        "lastAttemptAt": "2026-09-09T18:40:23Z",
-        "attempts": 1
+        "lastAttemptAt": "2026-09-11T21:01:19Z",
+        "attempts": 2
       }
     },
     "p_ffe3022a88cf": {
