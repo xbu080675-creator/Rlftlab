@@ -324,11 +324,11 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
                 alignEnd = false
             )
             Column(Modifier.width(86.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("GOLD DIFF", color = RiftMuted, fontSize = 7.sp)
+                Text("GOLD DIFF", color = RiftMuted, fontSize = 10.sp)
                 Text(signedGold(snapshot.goldDiff), color = if (snapshot.goldDiff >= 0) RiftCyan else RiftRed, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Text("K ${snapshot.blueKills}:${snapshot.redKills}", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 if (snapshot.blueXp > 0 || snapshot.redXp > 0) {
-                    Text("XP Δ ${signedGold(snapshot.blueXp - snapshot.redXp)}", color = RiftMuted, fontSize = 7.sp)
+                    Text("XP Δ ${signedGold(snapshot.blueXp - snapshot.redXp)}", color = RiftMuted, fontSize = 10.sp)
                 }
             }
             TeamMetricColumn(
@@ -349,7 +349,7 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
             color = RiftMuted,
             fontSize = 10.sp
         )
-        Text(snapshot.source, color = RiftMuted, fontSize = 7.sp, modifier = Modifier.padding(top = 3.dp))
+        Text(snapshot.source, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
     }
 }
 
@@ -620,18 +620,18 @@ private fun OperatorPlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapsh
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(left?.summonerName ?: "—", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(playerOperatorStats(left), color = RiftMuted, fontSize = 7.sp)
+            Text(playerOperatorStats(left), color = RiftMuted, fontSize = 10.sp)
         }
         Text(
             left?.role?.ifBlank { right?.role.orEmpty() }.orEmpty(),
             color = RiftMuted,
-            fontSize = 7.sp,
+            fontSize = 10.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.width(34.dp)
         )
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
             Text(right?.summonerName ?: "—", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-            Text(playerOperatorStats(right), color = RiftMuted, fontSize = 7.sp, textAlign = TextAlign.End)
+            Text(playerOperatorStats(right), color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.End)
         }
     }
 }

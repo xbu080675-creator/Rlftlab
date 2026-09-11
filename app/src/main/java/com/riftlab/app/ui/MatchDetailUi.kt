@@ -254,7 +254,7 @@ private fun SeriesOverview(games: List<LiveSnapshot>) {
                 centerSubtext = MatchSessionStore.formatTime(game.elapsedSeconds),
                 logoSize = 30.dp,
                 centerFontSize = 15.sp,
-                teamNameFontSize = 9.sp
+                teamNameFontSize = 10.sp
             )
         }
     }
@@ -583,7 +583,7 @@ private fun ChampionTile(champion: String, iconSize: Int) {
         }
         if (iconSize >= 40) {
             Spacer(Modifier.height(2.dp))
-            Text(champion, color = RiftMuted, fontSize = 7.sp, maxLines = 1)
+            Text(champion, color = RiftMuted, fontSize = 10.sp, maxLines = 1)
         }
     }
 }
@@ -663,7 +663,7 @@ private fun DataSourceStrip(
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.width(8.dp))
-        Text(status, color = RiftMuted, fontSize = 7.sp, maxLines = 2, modifier = Modifier.weight(1f))
+        Text(status, color = RiftMuted, fontSize = 10.sp, maxLines = 2, modifier = Modifier.weight(1f))
         if (canRefresh) {
             Button(
                 onClick = onRefresh,
@@ -698,7 +698,7 @@ private fun SourceLabel(source: String) {
     Text(
         source,
         color = RiftMuted,
-        fontSize = 7.sp,
+        fontSize = 10.sp,
         maxLines = 1,
         modifier = Modifier
             .background(RiftPanelAlt, CutCornerShape(5.dp))

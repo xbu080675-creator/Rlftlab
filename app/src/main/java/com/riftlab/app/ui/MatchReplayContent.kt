@@ -334,7 +334,7 @@ private fun ReplayAnchorRow(anchor: ReplayAnchor, onSeek: () -> Unit) {
                 Text(
                     "SOURCE · ${anchor.source}",
                     color = RiftMuted,
-                    fontSize = 7.sp,
+                    fontSize = 10.sp,
                     modifier = Modifier.padding(top = 3.dp),
                     maxLines = 2
                 )
@@ -573,7 +573,7 @@ private fun ReplayPlayerView(
         Text(
             if (fullscreen) "退出全屏" else "全屏 ⛶",
             color = Color.White,
-            fontSize = if (fullscreen) 11.sp else 9.sp,
+            fontSize = if (fullscreen) 11.sp else 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopEnd)
                 .padding(10.dp)

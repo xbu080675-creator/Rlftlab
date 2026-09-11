@@ -786,7 +786,7 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
             centerSubtext = MatchSessionStore.scheduleTimingNote(match),
             logoSize = 44.dp,
             centerFontSize = 18.sp,
-            teamNameFontSize = 8.sp
+            teamNameFontSize = 10.sp
         )
         if (match.blockName.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
@@ -1073,7 +1073,7 @@ private fun BracketMatchCard(
             centerText = if (leftScore != "—" || rightScore != "—") "$leftScore : $rightScore" else "VS",
             logoSize = 30.dp,
             centerFontSize = 14.sp,
-            teamNameFontSize = 8.sp
+            teamNameFontSize = 10.sp
         )
         if (verifiedOverride != null) {
             Spacer(Modifier.height(6.dp))
