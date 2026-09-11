@@ -1,7 +1,9 @@
-dev.89：重做本地 AI 真机基准。取消“一次短推理 > 2500ms 就判失败”的粗暴逻辑。
+dev.90：继续优化本地 AI 运行时，重点解决高性能 Android 设备明明能跑本地 AI，却被 CPU-only 路径拖慢的问题。
 
-真实 LiteRT-LM 基准现在拆成：模型冷启动加载时间、1 次 warm-up、3 次稳态短推理、稳态 median、P90 与热状态前后值。冷启动和 warm-up 只记录，不参与 READY 判定；READY 只看稳态 median <= 2500ms、P90 <= 3500ms 且热状态未达到 severe。
+LiteRT-LM 现在优先尝试 GPU / OpenCL 后端；AndroidManifest 显式声明可选的 libOpenCL.so 与 libvndksupport.so。GPU 初始化失败时自动回退 CPU，不会因为某台设备缺少 OpenCL 而让整个本地 AI 不可用。页面会直接显示当前 BACKEND，方便真机判断究竟跑在 GPU 还是 CPU fallback。
 
-基准失败不删除模型，仍保持 VERIFIED，可在降温、切换性能模式或系统负载降低后重新测试。页面会显示 COLD / WARM-UP / MEDIAN / P90 / SAMPLES / THERMAL，便于判断到底是首轮初始化慢、持续推理慢还是热降频。
+真机基准继续保留 COLD / WARM-UP / 3 次稳态 / MEDIAN / P90 / THERMAL，但 READY 不再用 2500ms 一刀切。按 RiftLab 的事件级场景识别用途分级：稳态 <1.5s 为优秀，<2.5s 为推荐，<4s 为可用；只有 median >4s、P90 >4.5s 或严重热状态才回退规则模式。
 
-这次修改针对红魔 9 Pro+ 实测 Qwen3 0.6B INT4 单次 5350ms 被旧逻辑直接判死的问题；不再让冷启动或首次生成代表整台设备的持续推理能力。
+针对红魔 9 Pro+ 的上一轮实测：冷启动约 2151ms、warm-up 4308ms、稳态 median 3173ms / P90 3242ms。该成绩在 CPU-only 下应判为“可用”，而不是“无法运行”；dev.90 的目标是优先吃到 Adreno/OpenCL 加速，并把实际后端与性能等级透明展示出来。
+
+首发数据链的 JSON/schema 校验、多源 fallback、last-good 缓存和启动竞态修复继续保留，不因本地 AI 优化而回退。
