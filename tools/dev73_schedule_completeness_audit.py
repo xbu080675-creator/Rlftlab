@@ -86,18 +86,17 @@ def kotlin_allowlist() -> tuple[set[str], set[str], set[str]]:
         if not m:
             return set()
         return set(re.findall(r'"([^"]+)"', m.group(1)))
-    slugs = set_for("GLOBAL_MAJOR_LEAGUE_SLUGS")
-    names = set_for("GLOBAL_TRACKED_LEAGUE_NAMES")
-    deep_match = re.search(r"val deepPaged.*?in setOf\((.*?)\n\s*\)", text, re.S)
-    deep = set(re.findall(r'"([^"]+)"', deep_match.group(1))) if deep_match else set()
-    return slugs, names, deep
+    slugs = set_for("GLOBAL_EXCLUDED_LEAGUE_SLUGS")
+    names = set_for("GLOBAL_EXCLUDED_LEAGUE_NAMES")
+    return slugs, names, set()
 
 
 def is_tracked(league: dict[str, Any], slugs: set[str], names: set[str]) -> bool:
     slug = str(league.get("slug", "")).lower()
     normalized = slug.replace("_", "-")
     name = str(league.get("name", "")).strip().lower()
-    return slug in slugs or normalized in slugs or any(name == x or x in name for x in names)
+    excluded = slug in slugs or normalized in slugs or any(name == x or x in name for x in names)
+    return not excluded
 
 
 def summary_row(event: dict[str, Any]) -> dict[str, Any]:
@@ -163,34 +162,12 @@ def main() -> int:
                 "sample": [summary_row(x) for x in rows[:3]],
             })
 
-    # Reproduce the current Android pagination behavior exactly enough to quantify misses.
-    current_events: dict[str, dict[str, Any]] = {}
-    full_tracked_events: dict[str, dict[str, Any]] = {}
+    # Reproduce the new Android primary path: Riot global schedule, six pages each direction.
+    # The per-league catalogue is now only a resilient fallback, so it is audited separately above.
+    runtime_rows = collect_window(None, 6)
+    current_events = {event_key(x): x for x in runtime_rows if event_key(x)}
+    full_tracked_events = dict(current_events)
     pagination_losses = []
-    for league in tracked:
-        lid = str(league.get("id", ""))
-        slug = str(league.get("slug", "")).lower().replace("_", "-")
-        try:
-            current = collect_window(lid, 1 if slug in deep else 0)
-            full = collect_window(lid, 6)
-        except Exception as exc:
-            errors[lid] = repr(exc)
-            continue
-        for row in current:
-            current_events[event_key(row)] = row
-        for row in full:
-            full_tracked_events[event_key(row)] = row
-        missed = [x for x in full if event_key(x) not in {event_key(y) for y in current}]
-        if missed:
-            pagination_losses.append({
-                "id": lid,
-                "slug": league.get("slug", ""),
-                "name": league.get("name", ""),
-                "currentCount": len(current),
-                "sixPageCount": len(full),
-                "missingCount": len(missed),
-                "sampleMissing": [summary_row(x) for x in missed[:8]],
-            })
 
     # Current parser also discards every row with unresolved participants.
     global_tbd = [x for x in global_events if team_count(x) < 2]

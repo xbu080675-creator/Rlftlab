@@ -20,19 +20,15 @@ internal object LolEsportsConfig {
     const val API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"
     const val LPL_LEAGUE_ID = "98767991314006698"
 
-    // Tier-one regional + international competitions tracked by RiftLab. IDs are discovered
-    // dynamically from Riot getLeagues so league reshuffles do not require an APK update.
-    val GLOBAL_MAJOR_LEAGUE_SLUGS = setOf(
-        "worlds", "msi", "first-stand", "first_stand", "firststand", "ewc", "esports-world-cup", "americas-cup", "emea-masters", "demacia-cup", "demacia-cup-global-invitational", "demacia-global-invitational", "wscl",
-        "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta_north", "lta-south", "lta_south", "lcp",
-        "cblol", "cblol-brazil", "pcs", "vcs", "ljl", "lla", "lrn", "lrs", "fls",
-        "lck-cl", "lck_challengers", "lcp-wild-card",
-        "greek-legends-league", "lit", "nlc", "esports-balkan-league", "tcl", "hitpoint-masters", "rift-legends", "nacl"
+    // Riot getLeagues is already the authoritative League of Legends competition catalogue.
+    // Do not maintain a positive allowlist here: it silently drops newly added / renamed regional
+    // leagues (for example LJL, LFL, Prime League, Arabian League and the regional leagues). Keep
+    // only a tiny negative list for products that are not League of Legends.
+    val GLOBAL_EXCLUDED_LEAGUE_SLUGS = setOf(
+        "tft_esports", "tft-esports"
     )
-    val GLOBAL_TRACKED_LEAGUE_NAMES = setOf(
-        "americas cup", "emea masters", "demacia cup global invitational", "demacia cup", "wscl", "fls", "lck cl", "lck challengers", "lcp wild card",
-        "greek legends league", "lit", "nlc", "esports balkan league",
-        "tcl", "hitpoint masters", "rift legends", "nacl"
+    val GLOBAL_EXCLUDED_LEAGUE_NAMES = setOf(
+        "tft esports"
     )
     const val PERSISTED_BASE = "https://esports-api.lolesports.com/persisted/gw"
     const val LIVE_BASE = "https://feed.lolesports.com/livestats/v1"
@@ -67,9 +63,17 @@ internal class LolEsportsApiClient {
      * so the schedule center follows both older/newer page tokens and de-duplicates events.
      */
     suspend fun fetchGlobalSchedule(): List<ScheduledEsportsMatch> {
+        // Prefer Riot's unfiltered schedule. It is both more complete and much cheaper than polling
+        // a hand-maintained subset league-by-league, and it automatically includes newly added LoL
+        // competitions. Six pages in each direction covers the useful current/recent schedule window;
+        // the long-term historical archive remains the responsibility of the central mirror.
+        val global = runCatching { fetchGlobalScheduleWindow() }.getOrDefault(emptyList())
+        if (global.isNotEmpty()) return global
+
+        // Resilient fallback: if Riot's unfiltered endpoint is temporarily unavailable, discover the
+        // live LoL catalogue dynamically and collect a small per-league window. No positive allowlist.
         val leagues = fetchTrackedLeagues()
         if (leagues.isEmpty()) return emptyList()
-
         val semaphore = Semaphore(4)
         val results = coroutineScope {
             leagues.map { league ->
@@ -80,16 +84,37 @@ internal class LolEsportsApiClient {
                 }
             }.awaitAll()
         }
+        return sortAndDeduplicate(results.flatMap { it.second })
+    }
 
-        return results
-            .flatMap { it.second }
+    private suspend fun fetchGlobalScheduleWindow(): List<ScheduledEsportsMatch> {
+        val pages = mutableListOf<JSONObject>()
+        val visitedTokens = mutableSetOf<String>()
+        val center = fetchSchedulePage(null, "")
+        pages += center
+
+        for (direction in listOf("older", "newer")) {
+            var token = schedulePageToken(center, direction)
+            repeat(6) {
+                if (token.isBlank() || !visitedTokens.add("$direction:$token")) return@repeat
+                val page = fetchSchedulePage(token, "")
+                pages += page
+                token = schedulePageToken(page, direction)
+            }
+        }
+
+        val fallback = TrackedLeagueRef(id = "", slug = "global", name = "LoL Esports")
+        return sortAndDeduplicate(pages.flatMap { parseSchedulePage(it, fallback) })
+    }
+
+    private fun sortAndDeduplicate(matches: List<ScheduledEsportsMatch>): List<ScheduledEsportsMatch> =
+        matches
             .distinctBy { it.eventId.ifBlank { it.matchId } }
             .sortedWith(
                 compareBy<ScheduledEsportsMatch> { parseInstant(it.startTimeIso) ?: Instant.MAX }
                     .thenBy { it.leagueSlug }
                     .thenBy { it.eventId }
             )
-    }
 
     private suspend fun fetchLeagueScheduleWindow(league: TrackedLeagueRef): List<ScheduledEsportsMatch> {
         val pages = mutableListOf<JSONObject>()
@@ -97,29 +122,16 @@ internal class LolEsportsApiClient {
         val center = fetchSchedulePage(null, league.id)
         pages += center
 
-        val deepPaged = league.slug.lowercase().replace('_', '-') in setOf(
-            "lpl", "lck", "lec", "lcs", "lta", "lta-north", "lta-south", "lcp",
-            "worlds", "msi", "first-stand", "firststand", "ewc", "esports-world-cup",
-            "americas-cup", "emea-masters"
-        )
-        if (!deepPaged) {
-            return pages.flatMap { parseSchedulePage(it, league) }.distinctBy { it.eventId.ifBlank { it.matchId } }
+        // This path is only a fallback for the global endpoint, so one neighbouring page in each
+        // direction is enough to recover a useful current window without exploding phone requests.
+        for (direction in listOf("older", "newer")) {
+            val token = schedulePageToken(center, direction)
+            if (token.isNotBlank() && visitedTokens.add("$direction:$token")) {
+                pages += fetchSchedulePage(token, league.id)
+            }
         }
 
-        // One neighbour page in each direction is enough for the always-on phone refresh.
-        // Historical deep collection belongs in the central mirror, not in every five-minute APK poll.
-        var older = schedulePageToken(center, "older")
-        if (older.isNotBlank() && visitedTokens.add("older:$older")) {
-            pages += fetchSchedulePage(older, league.id)
-        }
-        var newer = schedulePageToken(center, "newer")
-        if (newer.isNotBlank() && visitedTokens.add("newer:$newer")) {
-            pages += fetchSchedulePage(newer, league.id)
-        }
-
-        return pages
-            .flatMap { parseSchedulePage(it, league) }
-            .distinctBy { it.eventId.ifBlank { it.matchId } }
+        return sortAndDeduplicate(pages.flatMap { parseSchedulePage(it, league) })
     }
 
     // Compatibility alias for older call sites while the app migrates away from LPL-only naming.
@@ -136,12 +148,12 @@ internal class LolEsportsApiClient {
                     val slug = league.optString("slug").lowercase()
                     val normalized = slug.replace('_', '-')
                     val normalizedName = league.optString("name").trim().lowercase()
-                    val tracked = slug in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||
-                        normalized in LolEsportsConfig.GLOBAL_MAJOR_LEAGUE_SLUGS ||
-                        LolEsportsConfig.GLOBAL_TRACKED_LEAGUE_NAMES.any { trackedName ->
-                            normalizedName == trackedName || normalizedName.contains(trackedName)
+                    val excluded = slug in LolEsportsConfig.GLOBAL_EXCLUDED_LEAGUE_SLUGS ||
+                        normalized in LolEsportsConfig.GLOBAL_EXCLUDED_LEAGUE_SLUGS ||
+                        LolEsportsConfig.GLOBAL_EXCLUDED_LEAGUE_NAMES.any { excludedName ->
+                            normalizedName == excludedName || normalizedName.contains(excludedName)
                         }
-                    if (id.isNotBlank() && tracked) {
+                    if (id.isNotBlank() && !excluded) {
                         add(
                             TrackedLeagueRef(
                                 id = id,
