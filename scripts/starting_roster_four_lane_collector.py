@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Run bounded roster OCR and always preserve official announcement metadata.
+"""Run bounded roster OCR and preserve trustworthy official announcement metadata.
 
 Lane 1 is the normalized server feed. Even when OCR/lineup parsing fails, recent
-official posts remain visible to every client as announcement metadata instead of
-silently disappearing. Device-side OCR/system AI/local vision can then enhance it.
+real official posts remain visible to every client as announcement metadata.
+Navigation/profile shells are never evidence: raw fallback is allowed to be
+unparsed, but it still has to be an actual official post candidate.
 """
 from __future__ import annotations
 
@@ -23,6 +24,13 @@ fast = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(fast)
 
+SHELL_MARKERS = (
+    "前方有点拥堵，请登录后使用",
+    "随时随地发现新鲜事",
+    "关注推荐 1/8",
+    "帮助中心 微博客服",
+)
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -39,6 +47,23 @@ def parse_time(value):
         return datetime.fromisoformat(value.strip().replace("Z", "+00:00")).astimezone(timezone.utc)
     except Exception:
         return None
+
+
+def is_candidate_post(text: str, original_images: list[str], images: list, keywords: list[str]) -> tuple[bool, bool]:
+    lowered = text.lower()
+    keyword_hit = any(keyword in lowered for keyword in keywords)
+    has_media = bool(original_images or images)
+    shell_hits = sum(1 for marker in SHELL_MARKERS if marker in text)
+
+    # A browser/profile shell may contain many avatars and therefore superficially
+    # look like an image post. Multiple shell markers are a hard rejection.
+    if shell_hits >= 2:
+        return False, keyword_hit
+    # Text-only rows must actually look roster-related. Image-only official posts
+    # remain valid candidates because many clubs put the entire lineup in artwork.
+    if not keyword_hit and not has_media:
+        return False, keyword_hit
+    return True, keyword_hit
 
 
 def add_announcements() -> None:
@@ -66,17 +91,17 @@ def add_announcements() -> None:
             text = str(post.get("text") or "").strip()
             images = list(post.get("images") or [])
             original_images = [str(x) for x in (post.get("originalImages") or []) if str(x).startswith("http")]
-            score = 0
-            lowered = text.lower()
-            if any(k in lowered for k in keywords):
-                score += 100
+            accepted, keyword_hit = is_candidate_post(text, original_images, images, keywords)
+            if not accepted:
+                continue
+            score = 100 if keyword_hit else 0
             if images or original_images:
                 score += 20
             if published:
                 score += 5
-            ranked.append((score, -index, post, text, images, original_images, published))
+            ranked.append((score, -index, post, text, images, original_images, published, keyword_hit))
         ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
-        for _, _, post, text, images, original_images, published in ranked[:3]:
+        for _, _, post, text, images, original_images, published, keyword_hit in ranked[:3]:
             url = str(post.get("url") or "")
             if not url:
                 continue
@@ -94,6 +119,7 @@ def add_announcements() -> None:
                 "imageCount": len(original_images) or len(images),
                 "imageUrls": list(dict.fromkeys(original_images))[:4],
                 "parseStatus": "PARSED" if url in evidence_urls else "UNPARSED",
+                "candidateBasis": "KEYWORD" if keyword_hit else "IMAGE_ONLY",
             })
 
     deduped = {}
