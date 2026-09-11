@@ -17,8 +17,10 @@ import java.time.LocalDate
  * Existing providers remain authoritative. This object does not fetch a second copy of the same
  * data and does not invent missing fields; it only normalizes identity/provenance and reports gaps.
  * dev.70 also attaches qualification paths without collapsing Championship Points into Standings.
+ * dev.79 joins verified completed-Series depth and persisted timeline events into the same graph.
  */
 object ComprehensiveDataCenter {
+    // Keep graph assembly and history joins off Compose's main thread; coverage can become large.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
 
@@ -31,11 +33,20 @@ object ComprehensiveDataCenter {
         val live: LiveSnapshot
     )
 
+    private data class ArchiveCore(
+        val completed: LiveSnapshot?,
+        val completedSeries: CompletedSeriesSnapshot?,
+        val standings: StandingsCenterState,
+        val scheduleStatus: String
+    )
+
     private data class ArchiveState(
         val completed: LiveSnapshot?,
+        val completedSeries: CompletedSeriesSnapshot?,
         val standings: StandingsCenterState,
         val scheduleStatus: String,
-        val qualification: QualificationCenterState
+        val qualification: QualificationCenterState,
+        val timelines: Map<String, GameTimeline>
     )
 
     fun ensureRunning() {
@@ -51,13 +62,28 @@ object ComprehensiveDataCenter {
             CurrentState(target, prematch, live)
         }
 
-        val archive = combine(
+        val archiveCore = combine(
             MatchSessionStore.completedGame,
+            MatchSessionStore.completedSeries,
             StandingsCenterStore.state,
-            MatchSessionStore.scheduleStatus,
-            QualificationCenterStore.state
-        ) { completed, standings, scheduleStatus, qualification ->
-            ArchiveState(completed, standings, scheduleStatus, qualification)
+            MatchSessionStore.scheduleStatus
+        ) { completed, completedSeries, standings, scheduleStatus ->
+            ArchiveCore(completed, completedSeries, standings, scheduleStatus)
+        }
+
+        val archive = combine(
+            archiveCore,
+            QualificationCenterStore.state,
+            MatchTimelineStore.timelines
+        ) { core, qualification, timelines ->
+            ArchiveState(
+                completed = core.completed,
+                completedSeries = core.completedSeries,
+                standings = core.standings,
+                scheduleStatus = core.scheduleStatus,
+                qualification = qualification,
+                timelines = timelines
+            )
         }
 
         job = scope.launch {
@@ -78,14 +104,27 @@ object ComprehensiveDataCenter {
                         add(ComprehensiveDataDomain.LIVE)
                     }
                 }
+
+                val currentLive = liveState.live.takeIf {
+                    MatchSessionStore.liveSourceStatus.value.phase == LiveSourcePhase.LIVE
+                }
+                // CompletedGameArchive follows the latest finished Series globally. Never attach that
+                // archive to an unrelated current/next match just because both stores are non-empty.
+                val completedForTarget = ComprehensiveDataDepthEnricher.completedGameForMatch(
+                    archiveState.completed,
+                    liveState.target
+                )
+                val seriesForTarget = ComprehensiveDataDepthEnricher.completedSeriesForMatch(
+                    archiveState.completedSeries,
+                    liveState.target
+                )
+
                 val normalized = ComprehensiveDataAssembler.fromExisting(
                     scheduled = liveState.target,
                     tournament = tournament,
                     prematch = liveState.prematch.takeIf { liveState.target != null },
-                    live = liveState.live.takeIf {
-                        MatchSessionStore.liveSourceStatus.value.phase == LiveSourcePhase.LIVE
-                    },
-                    completed = archiveState.completed,
+                    live = currentLive,
+                    completed = completedForTarget,
                     standings = standings,
                     sourceErrors = errors
                 )
@@ -93,7 +132,7 @@ object ComprehensiveDataCenter {
                     state = archiveState.qualification,
                     tournamentId = tournament?.id.orEmpty()
                 )
-                if (qualificationPaths.isEmpty()) {
+                val withQualification = if (qualificationPaths.isEmpty()) {
                     normalized
                 } else {
                     val authority = if (qualificationPaths.all { it.verified }) {
@@ -117,6 +156,15 @@ object ComprehensiveDataCenter {
                         updatedAtEpochMs = System.currentTimeMillis()
                     )
                 }
+
+                ComprehensiveDataDepthEnricher.enrich(
+                    base = withQualification,
+                    scheduled = liveState.target,
+                    live = currentLive,
+                    completedSeries = seriesForTarget,
+                    timelines = archiveState.timelines,
+                    sourceErrors = errors
+                )
             }.collect { normalized ->
                 _snapshot.value = normalized
             }

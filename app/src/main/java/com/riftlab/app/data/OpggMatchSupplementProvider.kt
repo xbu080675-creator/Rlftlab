@@ -137,6 +137,12 @@ internal class OpggMatchSupplementProvider {
 
             val bluePicks = mutableListOf<String>()
             val redPicks = mutableListOf<String>()
+            // OP.GG exposes player/champion/role identity even when its public game payload does not
+            // expose a trustworthy numeric stat line. Keep that identity so the UI can show the
+            // actual five champions instead of ten "data missing" rows; zero numeric fields remain
+            // explicitly non-measured and are excluded from comprehensive stat coverage.
+            val bluePlayerSnapshots = mutableListOf<LivePlayerSnapshot>()
+            val redPlayerSnapshots = mutableListOf<LivePlayerSnapshot>()
             data class Rating(val name: String, val team: String, val role: String, val point: Double)
             val ratings = mutableListOf<Rating>()
             val players = game.optJSONArray("players") ?: JSONArray()
@@ -161,14 +167,32 @@ internal class OpggMatchSupplementProvider {
                 val teamCode = team.optString("acronym")
                     .ifBlank { team.optString("name") }
                     .ifBlank { teamCodeById[teamId].orEmpty() }
+                val role = normalizeLineupRole(row.optString("position").ifBlank { player.optString("position") })
                 val playerImage = normalizeAssetUrl(player.optString("imageUrl"))
                 if (playerImage.isNotBlank()) {
                     EsportsAssetCache.putPlayer(playerName, teamCode, playerImage)
                 }
+                val identitySnapshot = LivePlayerSnapshot(
+                    participantId = i + 1,
+                    role = role,
+                    summonerName = playerName,
+                    championId = champion,
+                    level = 0,
+                    kills = 0,
+                    deaths = 0,
+                    assists = 0,
+                    creepScore = 0,
+                    gold = 0,
+                    teamId = teamId,
+                    side = side.uppercase()
+                )
+                when (side) {
+                    "blue" -> bluePlayerSnapshots += identitySnapshot
+                    "red" -> redPlayerSnapshots += identitySnapshot
+                }
 
                 val point = number(row.opt("mvpPoint"))
                 if (point > 0.0) {
-                    val role = row.optString("position").ifBlank { player.optString("position") }
                     ratings += Rating(
                         name = playerName,
                         team = teamCode,
@@ -242,6 +266,8 @@ internal class OpggMatchSupplementProvider {
                     latestEvent = "OP.GG 终局快照 · G$set",
                     blueBarons = blueBarons,
                     redBarons = redBarons,
+                    bluePlayers = bluePlayerSnapshots.sortedBy { lineupRoleOrder(it.role) },
+                    redPlayers = redPlayerSnapshots.sortedBy { lineupRoleOrder(it.role) },
                     source = "OP.GG Esports · gameByMatch FINAL · third-party",
                     gameId = "opgg:${game.opt("id")?.toString().orEmpty()}"
                 )

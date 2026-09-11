@@ -663,7 +663,7 @@ private fun DataSourceStrip(
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.width(8.dp))
-        Text(status, color = RiftMuted, fontSize = 11.sp, maxLines = 2, modifier = Modifier.weight(1f))
+        Text(status, color = RiftMuted, fontSize = 11.sp, maxLines = 1, modifier = Modifier.weight(1f))
         if (canRefresh) {
             Button(
                 onClick = onRefresh,
@@ -753,8 +753,12 @@ private fun roleLabel(role: String): String = when (role) {
     else -> role
 }
 
-private fun playerStats(player: LivePlayerSnapshot?): String =
-    player?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—"
+private fun playerStats(player: LivePlayerSnapshot?): String = when {
+    player == null -> "—"
+    player.level <= 0 && player.gold <= 0 && player.creepScore <= 0 &&
+        player.kills <= 0 && player.deaths <= 0 && player.assists <= 0 -> "—"
+    else -> "${player.kills}/${player.deaths}/${player.assists} · CS ${player.creepScore} · G ${player.gold}"
+}
 
 private fun cleanPlayerName(name: String, team: String): String {
     val trimmed = name.trim()
