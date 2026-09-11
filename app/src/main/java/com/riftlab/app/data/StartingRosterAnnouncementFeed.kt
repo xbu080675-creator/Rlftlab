@@ -30,6 +30,9 @@ data class StartingRosterAnnouncement(
  * keeps recent official post metadata in `announcements`; every Android device
  * can therefore show "official announcement found / parsing pending" even when
  * neither server OCR nor any on-device AI can recover the five-player lineup.
+ *
+ * League-wide accounts need an explicit target-team hint in the post text. A
+ * blank `team` field must not make an arbitrary same-league post match every game.
  */
 internal class StartingRosterAnnouncementFeed(
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -71,10 +74,20 @@ internal class StartingRosterAnnouncementFeed(
                 val rowTeam = token(row.optString("team"))
                 val text = row.optString("textSnippet")
                 val textToken = token(text)
-                val leagueMatch = rowLeague.isBlank() || leagueTokens.any { it == rowLeague || it.contains(rowLeague) || rowLeague.contains(it) }
+                val leagueMatch = rowLeague.isBlank() || leagueTokens.any {
+                    it == rowLeague || it.contains(rowLeague) || rowLeague.contains(it)
+                }
                 if (!leagueMatch) continue
-                val teamMatch = rowTeam.isBlank() || rowTeam in aliases || aliases.any { it.length >= 2 && textToken.contains(it) }
+
+                val textMentionsTarget = aliases.any { alias ->
+                    alias.length >= 2 && textToken.contains(alias)
+                }
+                val teamMatch = when {
+                    rowTeam.isNotBlank() -> rowTeam in aliases || textMentionsTarget
+                    else -> textMentionsTarget
+                }
                 if (!teamMatch) continue
+
                 val imageUrlsJson = row.optJSONArray("imageUrls")
                 val imageUrls = buildList {
                     if (imageUrlsJson != null) {
@@ -105,7 +118,10 @@ internal class StartingRosterAnnouncementFeed(
     }
 
     private fun teamAliases(team: EsportsTeamRef): Set<String> =
-        listOf(team.code, team.name, team.slug, team.id).map(::token).filter(String::isNotBlank).toSet()
+        listOf(team.code, team.name, team.slug, team.id)
+            .map(::token)
+            .filter { it.length >= 2 }
+            .toSet()
 
     private fun token(value: String): String =
         value.uppercase().replace(Regex("[^A-Z0-9\\p{L}\\p{N}]+"), "")
