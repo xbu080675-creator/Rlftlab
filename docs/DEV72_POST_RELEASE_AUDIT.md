@@ -24,13 +24,14 @@ The audit re-checks dev.72 against its actual product contract: global LoL espor
 
 ### 1. Mobile text was still too small
 
-`RiftTheme` had no app typography and many screens contained 8–11sp hard-coded labels. The published dev.72 therefore did not include the readability fix that had been requested.
+`RiftTheme` had no app typography and many screens contained 8–11sp hard-coded labels. The published dev.72 therefore did not include the readability fix that had been requested. A second pass also found that the floating RiftScreen and Draft HUD use native `TextView`s, so Compose typography alone would never affect their 8–9sp labels.
 
 Remediation:
 - add app Typography,
 - enforce a modest minimum font scale without changing dp density,
 - keep any larger Android accessibility font scale,
-- raise the smallest 8–9sp UI labels and high-frequency subscription controls.
+- raise the smallest 8–9sp Compose labels and high-frequency subscription controls,
+- raise native overlay/Draft HUD 8–9sp text to at least 10sp as well.
 
 ### 2. Home POST recovery was still LPL-centric
 
@@ -60,6 +61,14 @@ Remediation: make the workflow fail when `compile.exit` is non-zero and broaden 
 The build artifact name was `RiftLab-dev72-global`, which becomes stale on the first follow-up release.
 
 Remediation: use a version-independent artifact name while version metadata remains in the APK/OTA manifest.
+
+## Verification performed on remediation branch
+
+- dev73 source-contract checks passed.
+- clean `:app:assembleDebug` passed after the global POST/readability remediation.
+- fixed DEV signing certificate SHA-256 verification passed.
+- a second clean Android build/signature pass succeeded after the native overlay font-floor fix.
+- the repaired permanent Compile Diagnostics workflow was triggered independently and completed successfully, including its new fail-on-nonzero assertion.
 
 ## Release rule
 
