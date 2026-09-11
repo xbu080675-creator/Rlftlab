@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-11T18:23:23Z",
+  "updatedAt": "2026-09-11T18:29:23Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
-    "英雄联盟赛事: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
-    "LCK: X_SYNDICATION HTTPError: 429 Client Error: Too Many Requests for url: https://syndication.twitter.com/srv/timeline-profile/screen-name/LCK",
-    "LEC: X_SYNDICATION HTTPError: 429 Client Error: Too Many Requests for url: https://syndication.twitter.com/srv/timeline-profile/screen-name/LEC",
-    "LCS: X_SYNDICATION HTTPError: 429 Client Error: Too Many Requests for url: https://syndication.twitter.com/srv/timeline-profile/screen-name/LCSOfficial",
-    "LCP: X_SYNDICATION HTTPError: 429 Client Error: Too Many Requests for url: https://syndication.twitter.com/srv/timeline-profile/screen-name/lolpacificen",
-    "iG电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
-    "BLG电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
-    "JDG京东电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
-    "NIP电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
-    "WE电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+    "英雄联盟赛事: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/5756404150:empty;reader:m.weibo.cn/u/5756404150:empty]",
+    "LCK: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "LEC: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "LCS: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "iG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/2099708877:empty;reader:m.weibo.cn/u/2099708877:empty]",
+    "BLG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/5926660141:HTTPError;reader:m.weibo.cn/u/5926660141:empty]",
+    "JDG京东电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6174976862:empty;reader:m.weibo.cn/u/6174976862:empty]",
+    "NIP电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6420953344:empty;reader:m.weibo.cn/u/6420953344:empty]",
+    "WE电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/1869429662:empty;reader:m.weibo.cn/u/1869429662:empty]"
   ]
 }
