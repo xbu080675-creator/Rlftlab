@@ -160,7 +160,8 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                                     lastChosenProvider = best.name
                                     chosenProvider = best
                                     chosen = candidate.copy(
-                                        source = "${candidate.source} · Router=${best.name}"
+                                        source = "${candidate.source} · Router=${best.name}",
+                                        targetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
                                     )
                                 }
                             }

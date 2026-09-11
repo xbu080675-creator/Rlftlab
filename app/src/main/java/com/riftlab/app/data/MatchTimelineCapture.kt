@@ -25,7 +25,10 @@ object MatchTimelineCapture {
                     val previous = lastLive
                     val switchedGame = previous != null && (
                         previous.game != snapshot.game ||
-                            (previous.gameId.isNotBlank() && snapshot.gameId.isNotBlank() && previous.gameId != snapshot.gameId)
+                            (
+                                previous.targetKey.isNotBlank() && snapshot.targetKey.isNotBlank() &&
+                                    previous.targetKey != snapshot.targetKey
+                                )
                         )
                     if (switchedGame) {
                         MatchTimelineStore.markCompleted(previous!!)
