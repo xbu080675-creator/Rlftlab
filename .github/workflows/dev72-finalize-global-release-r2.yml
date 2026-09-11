@@ -1,0 +1,122 @@
+name: dev72 final global release gate r2
+
+on:
+  push:
+    branches:
+      - dev72-finalize-global-release-r2
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize-build-sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply global release finalization r2
+        run: python3 tools/apply_dev72_finalize_global_release_r2.py
+
+      - name: Audit final global release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f tools/sync_international_events.py
+          grep -q 'versionCode = 72' app/build.gradle.kts
+          grep -q 'versionName = "1.0.0-dev.72"' app/build.gradle.kts
+          grep -q '^dev.72：' DEV_CURRENT_CHANGELOG.txt
+
+          grep -q 'LeagueSubscriptionOption("GLOBAL", "全球赛事")' app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt
+          grep -q 'MutableStateFlow(setOf("GLOBAL"))' app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt
+          grep -q 'subscribedLeagueKeys: Set<String> = setOf("GLOBAL")' app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt
+          grep -q 'if ("GLOBAL" in subscribedLeagueKeys) return true' app/src/main/java/com/riftlab/app/data/MatchSessionStore.kt
+          ! grep -q 'setOf("LPL")' app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt
+
+          grep -q 'fetchGlobalSchedule' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'GLOBAL_MAJOR_LEAGUE_SLUGS' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'CitoScheduleSupplementProvider' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'InternationalEventMirrorProvider.fetchMatches' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'InternationalEventMirrorProvider.fetchTournaments' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'rft-event:' app/src/main/java/com/riftlab/app/data/InternationalEventMirrorProvider.kt
+
+          RIOT_HISTORY=app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt
+          ARCHIVE=app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt
+          OPGG=app/src/main/java/com/riftlab/app/data/OpggHistoricalFrameResolver.kt
+          grep -q 'match.eventId.startsWith("provider:")' "$RIOT_HISTORY"
+          grep -q 'match.leagueId.startsWith("rft-event:")' "$RIOT_HISTORY"
+          grep -q 'parsePlayers(blueMeta, blueFrame, blueId, "BLUE")' "$RIOT_HISTORY"
+          grep -q 'targetKey = LiveMatchTargetRegistry.key(match)' "$RIOT_HISTORY"
+          grep -q '.put("leagueId", match.leagueId)' "$ARCHIVE"
+          grep -q '.put("leagueSlug", match.leagueSlug)' "$ARCHIVE"
+          grep -q '.put("targetKey", snapshot.targetKey)' "$ARCHIVE"
+          grep -q '.put("teamId", player.teamId)' "$ARCHIVE"
+          grep -q '.put("side", player.side)' "$ARCHIVE"
+          grep -q 'targetKey = LiveMatchTargetRegistry.key(match)' "$OPGG"
+
+          grep -q 'DIRECT_QUALIFICATION' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q 'CHAMPIONSHIP_POINTS' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q 'REGIONAL_QUALIFIER' app/src/main/java/com/riftlab/app/data/QualificationCenter.kt
+          grep -q 'archivedQualification' app/src/main/java/com/riftlab/app/data/TournamentEditionArchive.kt
+
+          grep -q 'branches: \[ main \]' .github/workflows/international-events-sync.yml
+          grep -q 'Verify global esports data plane' .github/workflows/android-build.yml
+          grep -q 'RiftLab-dev72-global' .github/workflows/android-build.yml
+          ! grep -q 'LPL_LEAGUE_ID' .github/workflows/android-build.yml
+          ! grep -q 'RiftLab-dev5-schedule-center' .github/workflows/android-build.yml
+
+          if compgen -G '.github/workflows/dev72-*.yml' > /dev/null; then
+            echo 'temporary dev72 workflow remains'; ls .github/workflows/dev72-*.yml; exit 1
+          fi
+          if compgen -G 'tools/*dev72*' > /dev/null; then
+            echo 'temporary dev72 tool remains'; ls tools/*dev72*; exit 1
+          fi
+          if compgen -G '.ci/dev72-*' > /dev/null; then
+            echo 'temporary dev72 CI artifact remains'; ls .ci/dev72-*; exit 1
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: yes | sdkmanager 'platforms;android-36' 'build-tools;36.0.0' >/dev/null
+
+      - name: Clean build final dev.72
+        run: gradle clean :app:assembleDebug --stacktrace
+
+      - name: Verify fixed dev signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK='app/build/outputs/apk/debug/app-debug.apk'
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$APKSIGNER" verify --print-certs "$APK"
+          DIGEST=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          EXPECTED='769d9be3aa3af3fd4bb647bed8ffe4a8f7cfe2e7a9ad4489b260395b13575a24'
+          echo "RiftLab dev signing SHA-256: $DIGEST"
+          test "$DIGEST" = "$EXPECTED"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiftLab-dev72-global-final-r2
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Commit final release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No finalization changes to commit.'
+            exit 0
+          fi
+          git commit -m 'dev72: finalize global release candidate r2'
+          git push
