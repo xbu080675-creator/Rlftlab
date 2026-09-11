@@ -1,0 +1,36 @@
+name: dev79 apply data depth
+
+on:
+  push:
+    branches: [ dev79-data-depth-visual ]
+    paths:
+      - '.github/workflows/dev79-apply.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev79-data-depth-visual
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply dev79 data and UI depth patch
+        run: python tools/dev79_data_depth_visual_patch.py
+      - name: Commit changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riftlab/app/data/OpggMatchSupplementProvider.kt \
+                  app/src/main/java/com/riftlab/app/ui/MatchDetailUi.kt \
+                  app/build.gradle.kts DEV_CURRENT_CHANGELOG.txt
+          git diff --cached --check
+          git commit -m 'dev79: deepen global postmatch identity and reduce text noise'
+          git push origin HEAD:dev79-data-depth-visual
