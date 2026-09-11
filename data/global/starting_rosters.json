@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 2,
-  "updatedAt": "2026-09-11T19:18:36Z",
+  "schemaVersion": 3,
+  "updatedAt": "2026-09-11T19:43:01Z",
   "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
   "delivery": {
     "canonical": "GitHub",
@@ -47,8 +47,250 @@
   ],
   "collector": {
     "mode": "official-social-text-plus-image-ocr",
-    "lastRunAt": "2026-09-11T19:18:36Z",
+    "lastRunAt": "2026-09-11T19:43:01Z",
     "freshEvidence": 0,
     "sourceCount": 10
-  }
+  },
+  "announcements": [
+    {
+      "id": "WEIBO:5756404150:1028039999",
+      "league": "LPL",
+      "team": "",
+      "source": "LEAGUE_SOCIAL",
+      "platform": "WEIBO",
+      "account": "英雄联盟赛事",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 英雄联盟赛事 1145.1万粉丝 627关注 5570.2万转评赞 关注 留言 黄金超话 电竞周榜No.30 热门电竞博主 数据飙升 英雄联盟赛事君 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 关注推荐 1/8 英雄联盟 《英雄联盟》官方微博 关注 iG电子竞技俱乐部 iG电子竞技俱乐部 关注 IG_TheShy iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 管泽元 LPL官方解说 锐沐文化传媒签约艺人 关注 帮助中心 微博客服 4000-960-960 自助服务中心 常见问题 合作&服务 微博营销 合作热线 4000-980-980 开",
+      "imageCount": 8,
+      "imageUrls": [
+        "https://wx4.sinaimg.cn/mw2000/006hzhGegy1igkujocpwmj31o01o0njr.jpg",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006hzhGely8igkvamgauaj30go0go0uc.jpg?KID=imgbed,tva&Expires=1789166307&ssig=Gy%2F9OtB7T%2F",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006f8wK2ly8igo5iscavmj60go0go76f02.jpg?KID=imgbed,tva&Expires=1789166308&ssig=bz53BQqQ%2FF"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": "WEIBO:5756404150:search",
+      "league": "LPL",
+      "team": "",
+      "source": "LEAGUE_SOCIAL",
+      "platform": "WEIBO",
+      "account": "英雄联盟赛事",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 英雄联盟赛事 1145.1万粉丝 627关注 5570.2万转评赞 关注 留言 黄金超话 电竞周榜No.30 热门电竞博主 数据飙升 英雄联盟赛事君 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 关注推荐 1/8 英雄联盟 《英雄联盟》官方微博 关注 iG电子竞技俱乐部 iG电子竞技俱乐部 关注 IG_TheShy iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 管泽元 LPL官方解说 锐沐文化传媒签约艺人 关注 帮助中心 微博客服 4000-960-960 自助服务中心 常见问题 合作&服务 微博营销 合作热线 4000-980-980 开",
+      "imageCount": 8,
+      "imageUrls": [
+        "https://wx4.sinaimg.cn/mw2000/006hzhGegy1igkujocpwmj31o01o0njr.jpg",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006hzhGely8igkvamgauaj30go0go0uc.jpg?KID=imgbed,tva&Expires=1789166307&ssig=Gy%2F9OtB7T%2F",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006f8wK2ly8igo5iscavmj60go0go76f02.jpg?KID=imgbed,tva&Expires=1789166308&ssig=bz53BQqQ%2FF"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":2099708877:1028039999",
+      "league": "LPL",
+      "team": "IG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "iG电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 iG电子竞技俱乐部 968.3万粉丝 989关注 关注 留言 黄金超话 电竞周榜No.35 LPL 战力值 98.38 热门电竞博主 数据飙升 iG电子竞技俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 关注推荐 1/8 英雄联盟 《英雄联盟》官方微博 关注 英雄联盟赛事 英雄联盟赛事君 关注 IG_TheShy iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 Rookie帅哥 iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 帮助中心 微博客服 4000-960-960 自助服务中心 常见问题 合作&服务 微博",
+      "imageCount": 8,
+      "imageUrls": [
+        "https://wx4.sinaimg.cn/mw2000/002i6acdly1igjgkjzocoj61o01o04qp02.jpg",
+        "https://tvax1.sinaimg.cn/crop.0.0.1080.1080.180/002i6acdly8i58lhczolpj60u00u076002.jpg?KID=imgbed,tva&Expires=1789166360&ssig=DXBH9%2FYkJk",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006f8wK2ly8igo5iscavmj60go0go76f02.jpg?KID=imgbed,tva&Expires=1789166360&ssig=gvquCwwsky"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":2099708877:search",
+      "league": "LPL",
+      "team": "IG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "iG电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 iG电子竞技俱乐部 968.3万粉丝 989关注 关注 留言 黄金超话 电竞周榜No.35 LPL 战力值 98.38 热门电竞博主 数据飙升 iG电子竞技俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 关注推荐 1/8 英雄联盟 《英雄联盟》官方微博 关注 英雄联盟赛事 英雄联盟赛事君 关注 IG_TheShy iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 Rookie帅哥 iG电子竞技俱乐部英雄联盟分部选手 2018英雄联盟全球总决赛冠军 关注 帮助中心 微博客服 4000-960-960 自助服务中心 常见问题 合作&服务 微博",
+      "imageCount": 8,
+      "imageUrls": [
+        "https://wx4.sinaimg.cn/mw2000/002i6acdly1igjgkjzocoj61o01o04qp02.jpg",
+        "https://tvax1.sinaimg.cn/crop.0.0.1080.1080.180/002i6acdly8i58lhczolpj60u00u076002.jpg?KID=imgbed,tva&Expires=1789166360&ssig=DXBH9%2FYkJk",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://tvax4.sinaimg.cn/crop.0.0.600.600.180/006f8wK2ly8igo5iscavmj60go0go76f02.jpg?KID=imgbed,tva&Expires=1789166360&ssig=gvquCwwsky"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":5926660141:1028039999",
+      "league": "LPL",
+      "team": "BLG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "BLG电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 BLG电子竞技俱乐部 345.6万粉丝 435关注 1019.1万转评赞 关注 客服 白银超话 电竞周榜No.57 LPL 战力值 76.05 BLG电子竞技俱乐部官方微博 微博 视频 相册 超话 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 微博小店 逛逛 关注推荐 1/8 WEI小威OwO iG电子竞技俱乐部英雄联盟分部选手 2021、2022英雄联盟季中冠军赛冠军 关注 森予鹿鸣 游戏博主 微博剪辑视频博主 关注 karsalol0214 第19届亚运会英雄联盟项目亚军 WBG电子竞技俱乐部英雄联盟分部选手 关注 NIP电子竞技俱乐部 NIP电子竞技俱乐部官方微博 关注 矩阵账号 ",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx1.sinaimg.cn/mw2000/006t5F2Bgy1ig71a8ep7lj318g18gqcz.jpg",
+        "https://tvax3.sinaimg.cn/crop.0.0.1080.1080.180/006t5F2Bly8i3x88j5rfij30u00u00tc.jpg?KID=imgbed,tva&Expires=1789166372&ssig=86M4i78Qvs",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_1.png",
+        "https://wx3.sinaimg.cn/large/006Uk2Fyly8gx7i6zzm41j31hc0u0jv3.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":5926660141:search",
+      "league": "LPL",
+      "team": "BLG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "BLG电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 BLG电子竞技俱乐部 345.6万粉丝 435关注 1019.1万转评赞 关注 客服 白银超话 电竞周榜No.57 LPL 战力值 76.05 BLG电子竞技俱乐部官方微博 微博 视频 相册 超话 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 微博小店 逛逛 关注推荐 1/8 WEI小威OwO iG电子竞技俱乐部英雄联盟分部选手 2021、2022英雄联盟季中冠军赛冠军 关注 森予鹿鸣 游戏博主 微博剪辑视频博主 关注 karsalol0214 第19届亚运会英雄联盟项目亚军 WBG电子竞技俱乐部英雄联盟分部选手 关注 NIP电子竞技俱乐部 NIP电子竞技俱乐部官方微博 关注 矩阵账号 ",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx1.sinaimg.cn/mw2000/006t5F2Bgy1ig71a8ep7lj318g18gqcz.jpg",
+        "https://tvax3.sinaimg.cn/crop.0.0.1080.1080.180/006t5F2Bly8i3x88j5rfij30u00u00tc.jpg?KID=imgbed,tva&Expires=1789166372&ssig=86M4i78Qvs",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_1.png",
+        "https://wx3.sinaimg.cn/large/006Uk2Fyly8gx7i6zzm41j31hc0u0jv3.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":6174976862:1028039999",
+      "league": "LPL",
+      "team": "JDG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "JDG京东电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 JDG京东电子竞技俱乐部 369.8万粉丝 428关注 关注 客服 超话 白银1级 LPL 战力值 71.76 昨日阅读数1万+，互动数69 JDG英雄联盟俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 粉丝群 JDG官方京酱群 千人群 群主：JDG京东电子竞技俱乐部 加入群 关注推荐 1/8 NIP电子竞技俱乐部 NIP电子竞技俱乐部官方微博 关注 LNGaming电子竞技俱乐部 LNG电子竞技俱乐部官方微博 关注 Neverlandre BLG电子竞技俱乐部英雄联盟选手 2021英雄联盟全球总决赛冠军 关注 RA电竞俱乐部 Rareatom电子竞技俱乐部官方",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx1.sinaimg.cn/mw2000/006JTzz0ly1iewqhq8ii0j31o01o042q.jpg",
+        "https://tvax4.sinaimg.cn/crop.0.0.1080.1080.180/006JTzz0ly8i03uszzvrqj30u00u074q.jpg?KID=imgbed,tva&Expires=1789166386&ssig=8sRhsUzmyx",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://wx4.sinaimg.cn/large/006JTzz0ly8gqse80dwgfj308c08c755.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":6174976862:search",
+      "league": "LPL",
+      "team": "JDG",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "JDG京东电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 JDG京东电子竞技俱乐部 369.8万粉丝 428关注 关注 客服 超话 白银1级 LPL 战力值 71.76 昨日阅读数1万+，互动数69 JDG英雄联盟俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 粉丝群 JDG官方京酱群 千人群 群主：JDG京东电子竞技俱乐部 加入群 关注推荐 1/8 NIP电子竞技俱乐部 NIP电子竞技俱乐部官方微博 关注 LNGaming电子竞技俱乐部 LNG电子竞技俱乐部官方微博 关注 Neverlandre BLG电子竞技俱乐部英雄联盟选手 2021英雄联盟全球总决赛冠军 关注 RA电竞俱乐部 Rareatom电子竞技俱乐部官方",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx1.sinaimg.cn/mw2000/006JTzz0ly1iewqhq8ii0j31o01o042q.jpg",
+        "https://tvax4.sinaimg.cn/crop.0.0.1080.1080.180/006JTzz0ly8i03uszzvrqj30u00u074q.jpg?KID=imgbed,tva&Expires=1789166386&ssig=8sRhsUzmyx",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://wx4.sinaimg.cn/large/006JTzz0ly8gqse80dwgfj308c08c755.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":6420953344:1028039999",
+      "league": "LPL",
+      "team": "NIP",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "NIP电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 NIP电子竞技俱乐部 290.8万粉丝 292关注 360.7万转评赞 关注 客服 LPL 战力值 58.31 昨日阅读数1万+，互动数59 NIP电子竞技俱乐部官方微博 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 优质问答博主 提问 粉丝群 NIP英雄联盟官方交流1群 925人 群主：NIP电子竞技俱乐部 加入群 NIP英雄联盟官方交流2群 696人 群主：NIP电子竞技俱乐部 加入群 NIP英雄联盟官方交流3群 256人 群主：NIP电子竞技俱乐部 加入群 关注推荐 1/8 RA电竞俱乐部 Rareatom电子竞技俱乐部官方微博 关注 LNGaming",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx3.sinaimg.cn/mw2000/0070xFhCgy1ifm5v7290qj30n00n0wiq.jpg",
+        "https://tvax3.sinaimg.cn/crop.0.0.500.500.180/0070xFhCly8i0502bhql4j30dw0dwwer.jpg?KID=imgbed,tva&Expires=1789166399&ssig=n9RxfhnLOz",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://h5.sinaimg.cn/upload/1005/891/2019/12/18/wendalogo.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":6420953344:search",
+      "league": "LPL",
+      "team": "NIP",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "NIP电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 NIP电子竞技俱乐部 290.8万粉丝 292关注 360.7万转评赞 关注 客服 LPL 战力值 58.31 昨日阅读数1万+，互动数59 NIP电子竞技俱乐部官方微博 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 优质问答博主 提问 粉丝群 NIP英雄联盟官方交流1群 925人 群主：NIP电子竞技俱乐部 加入群 NIP英雄联盟官方交流2群 696人 群主：NIP电子竞技俱乐部 加入群 NIP英雄联盟官方交流3群 256人 群主：NIP电子竞技俱乐部 加入群 关注推荐 1/8 RA电竞俱乐部 Rareatom电子竞技俱乐部官方微博 关注 LNGaming",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://wx3.sinaimg.cn/mw2000/0070xFhCgy1ifm5v7290qj30n00n0wiq.jpg",
+        "https://tvax3.sinaimg.cn/crop.0.0.500.500.180/0070xFhCly8i0502bhql4j30dw0dwwer.jpg?KID=imgbed,tva&Expires=1789166399&ssig=n9RxfhnLOz",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://h5.sinaimg.cn/upload/1005/891/2019/12/18/wendalogo.jpg"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":1869429662:1028039999",
+      "league": "LPL",
+      "team": "WE",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "WE电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/list/1028039999",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 关注 WE电子竞技俱乐部 239.4万粉丝 367关注 关注 客服 白银超话 电竞周榜No.73 LPL 战力值 70.48 西安曲江WE电子竞技俱乐部官方微博 合作机构： WE电子竞技俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 微博小店 逛逛 优质问答博主 提问 关注推荐 1/5 权Damon 关注 RNG神盾局 RNG官方粉丝后援会总部 关注 心碎竞人自留房 电竞博主 关注 玩加电竞 2023微博年度十大电竞媒体 电竞博主 关注 推荐关注 1/2 西安WE王者荣耀 WE电子竞技俱乐部王者荣耀分部官方微博 关注 TLG穿越火线双端分部 TLG电子",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/6f6d3b9ely8i03xsxpvxej20u00u0gma.jpg?KID=imgbed,tva&Expires=1789166411&ssig=x6EljQP39C",
+        "https://wx1.sinaimg.cn/mw2000/6f6d3b9ely1iced0vdovjj21o01o0e81.jpg",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://h5.sinaimg.cn/upload/1005/891/2023/01/09/shop.png"
+      ],
+      "parseStatus": "UNPARSED"
+    },
+    {
+      "id": ":1869429662:search",
+      "league": "LPL",
+      "team": "WE",
+      "source": "TEAM_SOCIAL",
+      "platform": "OFFICIAL",
+      "account": "WE电子竞技俱乐部",
+      "publishedAt": "",
+      "observedAt": "2026-09-11T19:43:01Z",
+      "sourceUrl": "https://weibo.com/hot/search",
+      "textSnippet": "推荐 热门推荐 热门榜单 微博热搜 我的 热搜 文娱 社会 科技 生活 体育 ACG 返回 关注 WE电子竞技俱乐部 239.4万粉丝 367关注 关注 客服 白银超话 电竞周榜No.73 LPL 战力值 70.48 西安曲江WE电子竞技俱乐部官方微博 合作机构： WE电子竞技俱乐部 微博 视频 超话 相册 文章 全部微博 前方有点拥堵，请登录后使用 随时随地发现新鲜事 登录/注册 常用功能 微博小店 逛逛 优质问答博主 提问 关注推荐 1/5 权Damon 关注 RNG神盾局 RNG官方粉丝后援会总部 关注 心碎竞人自留房 电竞博主 关注 玩加电竞 2023微博年度十大电竞媒体 电竞博主 关注 推荐关注 1/2 西安WE王者荣耀 WE电子竞技俱乐部王者荣耀分部官方微博 关注 TLG穿越火线双端分部 TLG电子",
+      "imageCount": 12,
+      "imageUrls": [
+        "https://tvax2.sinaimg.cn/crop.0.0.1080.1080.180/6f6d3b9ely8i03xsxpvxej20u00u0gma.jpg?KID=imgbed,tva&Expires=1789166411&ssig=x6EljQP39C",
+        "https://wx1.sinaimg.cn/mw2000/6f6d3b9ely1iced0vdovjj21o01o0e81.jpg",
+        "https://h5.sinaimg.cn/upload/108/1866/2022/11/02/vvip_2.png",
+        "https://h5.sinaimg.cn/upload/1005/891/2023/01/09/shop.png"
+      ],
+      "parseStatus": "UNPARSED"
+    }
+  ]
 }
