@@ -572,6 +572,7 @@ object MatchTimelineStore {
         .put("source", snapshot.source)
         .put("gameId", snapshot.gameId)
         .put("targetKey", snapshot.targetKey)
+        .put("supplementUpdatedAtEpochMs", snapshot.supplementUpdatedAtEpochMs)
         .put("bluePlayers", playersToJson(snapshot.bluePlayers))
         .put("redPlayers", playersToJson(snapshot.redPlayers))
 
@@ -595,7 +596,8 @@ object MatchTimelineStore {
         redPlayers = playersFromJson(root.optJSONArray("redPlayers") ?: JSONArray()),
         source = root.optString("source"),
         gameId = root.optString("gameId"),
-        targetKey = root.optString("targetKey")
+        targetKey = root.optString("targetKey"),
+        supplementUpdatedAtEpochMs = root.optLong("supplementUpdatedAtEpochMs", 0L)
     )
 
     private fun playersToJson(players: List<LivePlayerSnapshot>): JSONArray = JSONArray().apply {
@@ -614,6 +616,18 @@ object MatchTimelineStore {
                     .put("gold", player.gold)
                     .put("teamId", player.teamId)
                     .put("side", player.side)
+                    .apply {
+                        player.alive?.let { put("alive", it) }
+                        player.currentHealth?.let { put("currentHealth", it) }
+                        player.maxHealth?.let { put("maxHealth", it) }
+                        if (player.items.isNotEmpty()) {
+                            put("items", JSONArray().apply { player.items.forEach { item -> put(item) } })
+                        }
+                        player.killParticipation?.let { put("killParticipation", it) }
+                        player.damageShare?.let { put("damageShare", it) }
+                        player.wardsPlaced?.let { put("wardsPlaced", it) }
+                        player.wardsKilled?.let { put("wardsKilled", it) }
+                    }
             )
         }
     }
@@ -634,7 +648,18 @@ object MatchTimelineStore {
                     creepScore = player.optInt("creepScore"),
                     gold = player.optInt("gold"),
                     teamId = player.optString("teamId"),
-                    side = player.optString("side")
+                    side = player.optString("side"),
+                    alive = if (player.has("alive") && !player.isNull("alive")) player.optBoolean("alive") else null,
+                    currentHealth = if (player.has("currentHealth") && !player.isNull("currentHealth")) player.optInt("currentHealth") else null,
+                    maxHealth = if (player.has("maxHealth") && !player.isNull("maxHealth")) player.optInt("maxHealth") else null,
+                    items = buildList {
+                        val itemArray = player.optJSONArray("items") ?: JSONArray()
+                        for (j in 0 until itemArray.length()) itemArray.optString(j).takeIf { it.isNotBlank() }?.let(::add)
+                    },
+                    killParticipation = if (player.has("killParticipation") && !player.isNull("killParticipation")) player.optDouble("killParticipation") else null,
+                    damageShare = if (player.has("damageShare") && !player.isNull("damageShare")) player.optDouble("damageShare") else null,
+                    wardsPlaced = if (player.has("wardsPlaced") && !player.isNull("wardsPlaced")) player.optInt("wardsPlaced") else null,
+                    wardsKilled = if (player.has("wardsKilled") && !player.isNull("wardsKilled")) player.optInt("wardsKilled") else null
                 )
             )
         }

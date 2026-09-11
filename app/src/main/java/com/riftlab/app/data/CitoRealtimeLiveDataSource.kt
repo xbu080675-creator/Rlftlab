@@ -192,12 +192,12 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                     snapshot = CitoLiveFusion.enrichSnapshot(
                         snapshot = snapshot,
                         payloads = bundle.supplementsFor(gameId),
-                        capturedAtEpochMs = bundle.lastDomainDataAtEpochMs
+                        capturedAtEpochMs = bundle.latestDomainDataAt(gameId)
                     )
                 }
 
-                val wsFresh = bundle.lastSocketMessageAtEpochMs > 0L &&
-                    now - bundle.lastSocketMessageAtEpochMs <= WS_FRESH_MS
+                val gameSocketAt = bundle.latestSocketMessageAt(gameId)
+                val wsFresh = gameSocketAt > 0L && now - gameSocketAt <= WS_FRESH_MS
                 val needsRest = gameId.isNotBlank() && (
                     snapshot == null || !CitoJson.meaningful(snapshot) || !wsFresh || now >= nextRestReconcileAt
                 )
@@ -213,7 +213,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                             snapshot = CitoLiveFusion.enrichSnapshot(
                                 snapshot = snapshot,
                                 payloads = bundle.supplementsFor(gameId),
-                                capturedAtEpochMs = bundle.lastDomainDataAtEpochMs
+                                capturedAtEpochMs = bundle.latestDomainDataAt(gameId)
                             )
                         }
                     }
@@ -424,34 +424,58 @@ internal data class CitoRealtimeBundle(
         lastDomainDataAtEpochMs = maxOf(lastDomainDataAtEpochMs, other.lastDomainDataAtEpochMs)
     )
 
-    fun bestBoardFor(gameId: String): JSONObject? = payloads
-        .asSequence()
-        .filter { it.kind == CitoRealtimeKind.BOARD || it.kind == CitoRealtimeKind.UNKNOWN }
-        .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .maxWithOrNull(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
-        ?.let { payload -> CitoRealtimeClassifier.extractBoard(payload.payload, payload.gameId.ifBlank { gameId }) }
+    fun bestBoardFor(gameId: String): JSONObject? {
+        if (gameId.isBlank()) return null
+        return payloads
+            .asSequence()
+            .filter { it.kind == CitoRealtimeKind.BOARD || it.kind == CitoRealtimeKind.UNKNOWN }
+            .filter { it.gameId == gameId }
+            .maxWithOrNull(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
+            ?.let { payload -> CitoRealtimeClassifier.extractBoard(payload.payload, gameId) }
+    }
 
-    fun supplementsFor(gameId: String): List<JSONObject> = payloads
-        .asSequence()
-        .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .filter {
-            it.kind in setOf(
-                CitoRealtimeKind.BOARD,
-                CitoRealtimeKind.MAP,
-                CitoRealtimeKind.DETAILS,
-                CitoRealtimeKind.EVENTS
-            )
-        }
-        .sortedWith(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
-        .map { it.payload }
-        .toList()
+    fun supplementsFor(gameId: String): List<JSONObject> {
+        if (gameId.isBlank()) return emptyList()
+        return payloads
+            .asSequence()
+            .filter { it.gameId == gameId }
+            .filter {
+                it.kind in setOf(
+                    CitoRealtimeKind.BOARD,
+                    CitoRealtimeKind.MAP,
+                    CitoRealtimeKind.DETAILS,
+                    CitoRealtimeKind.EVENTS
+                )
+            }
+            .sortedWith(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
+            .map { it.payload }
+            .toList()
+    }
 
-    fun socketPayloadsAfter(sequence: Long, gameId: String): List<CitoRealtimePayload> = payloads
-        .asSequence()
-        .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET && it.sequence > sequence }
-        .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .sortedBy { it.sequence }
-        .toList()
+    fun socketPayloadsAfter(sequence: Long, gameId: String): List<CitoRealtimePayload> {
+        if (gameId.isBlank()) return emptyList()
+        return payloads
+            .asSequence()
+            .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET && it.sequence > sequence }
+            .filter { it.gameId == gameId }
+            .sortedBy { it.sequence }
+            .toList()
+    }
+
+    fun latestSocketMessageAt(gameId: String): Long {
+        if (gameId.isBlank()) return 0L
+        return payloads.asSequence()
+            .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET && it.gameId == gameId }
+            .maxOfOrNull { it.receivedAtEpochMs } ?: 0L
+    }
+
+    fun latestDomainDataAt(gameId: String): Long {
+        if (gameId.isBlank()) return 0L
+        return payloads.asSequence()
+            .filter { it.gameId == gameId }
+            .filter { it.kind !in setOf(CitoRealtimeKind.READY, CitoRealtimeKind.HEARTBEAT) }
+            .maxOfOrNull { it.receivedAtEpochMs } ?: 0L
+    }
 
     private fun mergePayloads(rows: List<CitoRealtimePayload>): List<CitoRealtimePayload> {
         val eventKinds = setOf(CitoRealtimeKind.EVENTS, CitoRealtimeKind.DRAFT)
@@ -730,21 +754,23 @@ internal object CitoLiveFusion {
     ): List<LivePlayerSnapshot> {
         if (basePlayers.isEmpty()) return basePlayers
         return basePlayers.map { base ->
-            val extra = supplements
-                .asSequence()
+            var merged = base
+            supplements.asSequence()
                 .filter { it.side.isBlank() || it.side == side }
-                .firstOrNull { supplementMatches(base, it) }
-                ?: return@map base
-            base.copy(
-                alive = extra.alive ?: base.alive,
-                currentHealth = extra.currentHealth ?: base.currentHealth,
-                maxHealth = extra.maxHealth ?: base.maxHealth,
-                items = extra.items.ifEmpty { base.items },
-                killParticipation = extra.killParticipation ?: base.killParticipation,
-                damageShare = extra.damageShare ?: base.damageShare,
-                wardsPlaced = extra.wardsPlaced ?: base.wardsPlaced,
-                wardsKilled = extra.wardsKilled ?: base.wardsKilled
-            )
+                .filter { supplementMatches(base, it) }
+                .forEach { extra ->
+                    merged = merged.copy(
+                        alive = extra.alive ?: merged.alive,
+                        currentHealth = extra.currentHealth ?: merged.currentHealth,
+                        maxHealth = extra.maxHealth ?: merged.maxHealth,
+                        items = extra.items.ifEmpty { merged.items },
+                        killParticipation = extra.killParticipation ?: merged.killParticipation,
+                        damageShare = extra.damageShare ?: merged.damageShare,
+                        wardsPlaced = extra.wardsPlaced ?: merged.wardsPlaced,
+                        wardsKilled = extra.wardsKilled ?: merged.wardsKilled
+                    )
+                }
+            merged
         }
     }
 
