@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Run bounded roster OCR and preserve trustworthy official announcement metadata.
 
-Lane 1 is the normalized server feed. Even when OCR/lineup parsing fails, recent
-real official posts remain visible to every client as announcement metadata.
-Navigation/profile shells are never evidence: raw fallback is allowed to be
-unparsed, but it still has to be an actual official post candidate.
+Candidate selection is matchup-first: prefer posts that name both sides of the
+scheduled matchup and also contain lineup intent. Official source validation is
+still mandatory; search semantics only rank candidates and never create facts.
 """
 from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -49,17 +49,77 @@ def parse_time(value):
         return None
 
 
-def is_candidate_post(text: str, original_images: list[str], images: list, keywords: list[str]) -> tuple[bool, bool]:
-    lowered = text.lower()
-    keyword_hit = any(keyword in lowered for keyword in keywords)
-    has_media = bool(original_images or images)
-    shell_hits = sum(1 for marker in SHELL_MARKERS if marker in text)
+def alias_hit(text: str, alias: str) -> bool:
+    alias = str(alias or "").strip()
+    if not alias:
+        return False
+    if re.fullmatch(r"[A-Za-z0-9]+", alias) and len(alias) <= 3:
+        return re.search(rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])", text, re.I) is not None
+    return alias.lower() in text.lower()
 
+
+def detect_team_codes(text: str, aliases: dict) -> list[str]:
+    hits = []
+    for code, names in aliases.items():
+        candidates = [code, *(names or [])]
+        if any(alias_hit(text, candidate) for candidate in candidates):
+            hits.append(str(code).upper())
+    return hits
+
+
+def candidate_score(source: dict, text: str, has_media: bool, published, cfg: dict):
+    lowered = text.lower()
+    keywords = [str(x).lower() for x in (cfg.get("keywords") or []) if str(x).strip()]
+    keyword_hit = any(keyword in lowered for keyword in keywords)
+    team_hits = detect_team_codes(text, cfg.get("teamAliases") or {})
+    own_team = str(source.get("team") or "").upper()
+    opponents = [team for team in team_hits if team != own_team]
+    is_team_source = str(source.get("source") or "").upper() == "TEAM_SOCIAL" or bool(own_team)
+
+    if is_team_source:
+        matchup_hit = bool(opponents)
+        matchup_teams = [own_team, *opponents[:2]] if own_team else opponents[:2]
+    else:
+        matchup_hit = len(set(team_hits)) >= 2
+        matchup_teams = list(dict.fromkeys(team_hits))[:3]
+
+    score = 0
+    if keyword_hit and matchup_hit:
+        score += 500
+    elif matchup_hit:
+        score += 260
+    elif keyword_hit:
+        score += 140
+    if has_media:
+        score += 30
+    if published:
+        score += 10
+
+    shell_hits = sum(1 for marker in SHELL_MARKERS if marker in text)
     if shell_hits >= 2:
-        return False, keyword_hit
-    if not keyword_hit and not has_media:
-        return False, keyword_hit
-    return True, keyword_hit
+        return None
+
+    # Primary path mirrors the human search query: Team A + Team B + lineup.
+    # Fallbacks stay available for image-only club posts, but rank far below it.
+    if keyword_hit and matchup_hit:
+        basis = "MATCHUP_PLUS_LINEUP"
+    elif matchup_hit and has_media:
+        basis = "MATCHUP_MEDIA"
+    elif keyword_hit and has_media:
+        basis = "LINEUP_MEDIA_FALLBACK"
+    elif is_team_source and has_media:
+        basis = "TEAM_IMAGE_ONLY_FALLBACK"
+        score = min(score, 35)
+    else:
+        return None
+
+    return {
+        "score": score,
+        "keywordHit": keyword_hit,
+        "matchupHit": matchup_hit,
+        "teams": matchup_teams,
+        "basis": basis,
+    }
 
 
 def add_announcements() -> None:
@@ -69,7 +129,6 @@ def add_announcements() -> None:
     spool = json.loads(SPOOL.read_text(encoding="utf-8"))
     payload = json.loads(OUTPUT.read_text(encoding="utf-8"))
     browser_sources = spool.get("sources") or {}
-    keywords = [str(x).lower() for x in (cfg.get("keywords") or []) if str(x).strip()]
     lookback = timedelta(hours=int(cfg.get("lookbackHours", 36)))
     cutoff = datetime.now(timezone.utc) - lookback
     evidence_urls = {str(row.get("sourceUrl") or "") for row in (payload.get("evidence") or [])}
@@ -87,17 +146,15 @@ def add_announcements() -> None:
             text = str(post.get("text") or "").strip()
             images = list(post.get("images") or [])
             original_images = [str(x) for x in (post.get("originalImages") or []) if str(x).startswith("http")]
-            accepted, keyword_hit = is_candidate_post(text, original_images, images, keywords)
-            if not accepted:
+            meta = candidate_score(source, text, bool(images or original_images), published, cfg)
+            if meta is None:
                 continue
-            score = 100 if keyword_hit else 0
-            if images or original_images:
-                score += 20
-            if published:
-                score += 5
-            ranked.append((score, -index, post, text, images, original_images, published, keyword_hit))
+            ranked.append((meta["score"], -index, post, text, images, original_images, published, meta))
+
         ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
-        for _, _, post, text, images, original_images, published, keyword_hit in ranked[:3]:
+        primary = [item for item in ranked if item[-1]["basis"] == "MATCHUP_PLUS_LINEUP"]
+        chosen = (primary or ranked)[:3]
+        for _, _, post, text, images, original_images, published, meta in chosen:
             url = str(post.get("url") or "")
             if not url:
                 continue
@@ -115,7 +172,9 @@ def add_announcements() -> None:
                 "imageCount": len(original_images) or len(images),
                 "imageUrls": list(dict.fromkeys(original_images))[:4],
                 "parseStatus": "PARSED" if url in evidence_urls else "UNPARSED",
-                "candidateBasis": "KEYWORD" if keyword_hit else "IMAGE_ONLY",
+                "candidateBasis": meta["basis"],
+                "candidateTeams": meta["teams"],
+                "candidateScore": meta["score"],
             })
 
     deduped = {}
