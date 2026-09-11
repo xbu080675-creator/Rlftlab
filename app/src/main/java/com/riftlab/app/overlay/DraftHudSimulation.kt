@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,9 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Local-only BP fixture used to validate RiftScreen layout before a live draft WebSocket is wired.
- * Every percentage/edge in this fixture is synthetic test data and must never be written into
- * tournament archives or presented as real match statistics.
+ * Local-only BP fixture used to validate RiftScreen layout before provider draft events are mapped
+ * into the shared Cito realtime bus. Synthetic percentages/edges must never enter match archives.
+ * The fixture now follows production HUD lifecycle: the BP surface deactivates on the final lock so
+ * the small global live HUD can immediately reclaim the screen.
  */
 enum class DraftSide { BLUE, RED }
 enum class DraftRole { TOP, JUG, MID, BOT, SUP }
@@ -95,7 +95,7 @@ object DraftHudSimulation {
 
     @Synchronized
     fun next() {
-        if (!_state.value.active) resetInternal(active = true, autoPlay = false)
+        if (!_state.value.active && !_state.value.finished) resetInternal(active = true, autoPlay = false)
         if (_state.value.autoPlay) {
             playbackJob?.cancel()
             _state.value = _state.value.copy(autoPlay = false, message = "BP 模拟已暂停 · 手动步进")
@@ -144,7 +144,12 @@ object DraftHudSimulation {
         val current = _state.value
         if (!current.active || current.finished) return
         val nextPick = script.getOrNull(current.step) ?: run {
-            _state.value = current.copy(autoPlay = false, finished = true, message = "BP 已锁定 · 模拟完成")
+            _state.value = current.copy(
+                active = false,
+                autoPlay = false,
+                finished = true,
+                message = "BP 已锁定 · HUD 已撤出"
+            )
             return
         }
 
@@ -154,6 +159,7 @@ object DraftHudSimulation {
         val nextStep = current.step + 1
         val finished = nextStep >= script.size
         _state.value = current.copy(
+            active = !finished,
             step = nextStep,
             bluePicks = blue,
             redPicks = red,
@@ -161,7 +167,7 @@ object DraftHudSimulation {
             matchup = matchup,
             autoPlay = current.autoPlay && !finished,
             finished = finished,
-            message = if (finished) "BP 已锁定 · 模拟完成" else "${nextPick.side.name} ${nextPick.player} 锁定 ${nextPick.champion}"
+            message = if (finished) "BP 已锁定 · HUD 已撤出" else "${nextPick.side.name} ${nextPick.player} 锁定 ${nextPick.champion}"
         )
     }
 
