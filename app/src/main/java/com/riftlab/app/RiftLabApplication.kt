@@ -6,6 +6,7 @@ import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import com.riftlab.app.ai.LocalAiCore
 import com.riftlab.app.data.ComprehensiveDataCenter
 import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleCapture
@@ -38,6 +39,10 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         TournamentEditionArchiveStore.initialize(this)
         MatchTimelineCapture.start()
         MatchLifecycleCapture.start()
+
+        // Local AI is optional and process-wide. Initialization only profiles the device and prepares
+        // recommendations; it never downloads or enables a model without the user's explicit choice.
+        LocalAiCore.initialize(this)
 
         // Existing providers remain the source of truth. dev.68 normalizes the active graph,
         // dev.69 retains Tournament Editions, and dev.70 keeps qualification paths/annual points
