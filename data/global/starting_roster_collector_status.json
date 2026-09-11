@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-11T18:10:40Z",
+  "sourceCount": 6,
+  "freshEvidence": 0,
+  "diagnostics": [
+    "英雄联盟赛事: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "iG电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "BLG电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "JDG京东电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "NIP电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+    "WE电子竞技俱乐部: fetch JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
+  ]
+}

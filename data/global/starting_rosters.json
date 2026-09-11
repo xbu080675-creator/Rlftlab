@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-09-11T15:04:00Z",
+  "updatedAt": "2026-09-11T18:10:40Z",
   "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
   "delivery": {
     "canonical": "GitHub",
@@ -22,12 +22,33 @@
       "evidenceType": "TEXT",
       "confidence": 1.0,
       "starters": [
-        {"role": "TOP", "id": "TheShy"},
-        {"role": "JUG", "id": "Wei"},
-        {"role": "MID", "id": "Rookie"},
-        {"role": "BOT", "id": "JiaQi"},
-        {"role": "SUP", "id": "Meiko"}
+        {
+          "role": "TOP",
+          "id": "TheShy"
+        },
+        {
+          "role": "JUG",
+          "id": "Wei"
+        },
+        {
+          "role": "MID",
+          "id": "Rookie"
+        },
+        {
+          "role": "BOT",
+          "id": "JiaQi"
+        },
+        {
+          "role": "SUP",
+          "id": "Meiko"
+        }
       ]
     }
-  ]
+  ],
+  "collector": {
+    "mode": "official-social-text-plus-image-ocr",
+    "lastRunAt": "2026-09-11T18:10:40Z",
+    "freshEvidence": 0,
+    "sourceCount": 6
+  }
 }
