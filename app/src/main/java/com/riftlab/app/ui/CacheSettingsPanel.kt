@@ -43,6 +43,9 @@ internal fun CacheSettingsPanel() {
     LaunchedEffect(Unit) { refresh() }
 
     Column(Modifier.fillMaxWidth()) {
+        LocalAiSettingsPanel()
+
+        Spacer(Modifier.height(22.dp))
         Text(
             "STORAGE · CACHE",
             color = RiftCyan,
