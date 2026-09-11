@@ -17,6 +17,7 @@ data class StartingRosterState(
     val left: StartingRosterEvidence? = null,
     val right: StartingRosterEvidence? = null,
     val announcements: List<StartingRosterAnnouncement> = emptyList(),
+    val deviceOcrTraces: List<RosterDeviceOcrTrace> = emptyList(),
     val lastCheckedEpochMs: Long = 0L,
     val endpointLabel: String = "NONE",
     val usedLastGood: Boolean = false,
@@ -29,8 +30,10 @@ data class StartingRosterState(
  * Global minute-level official roster watcher.
  *
  * Normalized evidence is preferred, but official announcement metadata is kept
- * independently. A failed OCR/parser must therefore degrade to "官宣已发现，解析中"
- * instead of making the information disappear from the client.
+ * independently. If server parsing is incomplete the device may inspect a small
+ * bounded set of official images with bundled ML Kit OCR. Device OCR stays a
+ * candidate/diagnostic lane until five-role validation is strict enough to
+ * promote it into confirmed evidence.
  */
 object StartingRosterCenter {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -38,11 +41,13 @@ object StartingRosterCenter {
     val state: StateFlow<StartingRosterState> = mutableState.asStateFlow()
     private var feed: StartingRosterFeed? = null
     private var announcementFeed: StartingRosterAnnouncementFeed? = null
+    private var deviceOcrResolver: RosterDeviceOcrResolver? = null
     private var job: Job? = null
 
     fun initialize(context: Context) {
         if (feed == null) feed = StartingRosterFeed(context.applicationContext)
         if (announcementFeed == null) announcementFeed = StartingRosterAnnouncementFeed()
+        if (deviceOcrResolver == null) deviceOcrResolver = RosterDeviceOcrResolver()
         ensureRunning()
     }
 
@@ -73,13 +78,24 @@ object StartingRosterCenter {
                         val count = rows.size
                         val conflictCount = rows.count { it.conflict }
                         val crossCount = rows.count { it.crossConfirmed }
-                        val unparsedCount = announcements.count { !it.parsed }
+                        val unparsed = announcements.filter { !it.parsed }
+                        val deviceTraces = if (count < 2 && unparsed.any { it.imageUrls.isNotEmpty() }) {
+                            runCatching {
+                                deviceOcrResolver?.inspect(target, unparsed).orEmpty()
+                            }.getOrDefault(emptyList())
+                        } else {
+                            emptyList()
+                        }
+                        val ocrUseful = deviceTraces.count { trace ->
+                            trace.error.isBlank() && trace.roleCandidates.values.count { it.isNotEmpty() } >= 3
+                        }
                         val transport = if (result.usedLastGood) "LAST-GOOD CACHE" else result.endpointLabel
                         mutableState.value = StartingRosterState(
                             matchKey = matchKey,
                             left = left,
                             right = right,
                             announcements = announcements,
+                            deviceOcrTraces = deviceTraces,
                             lastCheckedEpochMs = System.currentTimeMillis(),
                             endpointLabel = result.endpointLabel,
                             usedLastGood = result.usedLastGood,
@@ -88,7 +104,29 @@ object StartingRosterCenter {
                                 append(result.diagnostics)
                                 if (announcements.isNotEmpty()) {
                                     if (isNotEmpty()) append(" · ")
-                                    append("RAW_OFFICIAL:${announcements.size};UNPARSED:$unparsedCount")
+                                    append("RAW_OFFICIAL:${announcements.size};UNPARSED:${unparsed.size}")
+                                }
+                                if (deviceTraces.isNotEmpty()) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append("DEVICE_OCR:${deviceTraces.size};USEFUL:$ocrUseful")
+                                    deviceTraces.take(2).forEach { trace ->
+                                        append(" · OCR[")
+                                        append(trace.account.take(18))
+                                        append("]:")
+                                        if (trace.error.isNotBlank()) {
+                                            append(trace.error.take(90))
+                                        } else {
+                                            append(trace.engines.joinToString("+"))
+                                            append(":")
+                                            append(trace.lineCount)
+                                            append("L:")
+                                            append(trace.roleCandidates.filterValues { it.isNotEmpty() }.keys.joinToString(","))
+                                            if (trace.textPreview.isNotBlank()) {
+                                                append(":")
+                                                append(trace.textPreview.take(180))
+                                            }
+                                        }
+                                    }
                                 }
                             },
                             message = when {
@@ -96,6 +134,7 @@ object StartingRosterCenter {
                                 count == 2 && crossCount == 2 -> "OFFICIAL ROSTER · 两队首发已交叉确认 · $transport"
                                 count == 2 -> "OFFICIAL ROSTER · 两队首发已确认 · $transport"
                                 count == 1 -> "OFFICIAL ROSTER · 1/2 队首发已确认 · $transport"
+                                ocrUseful > 0 -> "OFFICIAL ROSTER · 官宣已发现 · 本机 OCR 已识别部分位置，继续校验"
                                 announcements.isNotEmpty() -> "OFFICIAL ROSTER · 已发现官方发布 · 自动解析中 · ${announcements.first().account}"
                                 result.endpointLabel == "VALID_NO_MATCH" -> "OFFICIAL ROSTER · 数据源正常，当前比赛暂无匹配官宣"
                                 result.endpointLabel == "NO_VALID_SOURCE" -> "OFFICIAL ROSTER · 分发链异常，正在等待可用源"
