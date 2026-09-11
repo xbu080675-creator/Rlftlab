@@ -27,6 +27,17 @@ _TRACE_RECORDS = []
 _ACTIVE_SOURCE = {}
 _ACTIVE_OCR_INDEX = 0
 
+# Recent LPL official roster posts are highly regular, for example:
+#   #2026LPL季后赛# 9月12日 首发名单
+#   约17:00 #AL对战IG#（BO5）
+# Some days contain two matches and two poster images in the same post. Treat
+# each matchup/image pair as an independent OCR unit so the parser never mixes
+# four teams and two lineups together.
+LPL_MATCH_LINE_RE = re.compile(
+    r"(?:约\s*)?(?P<time>\d{1,2}:\d{2})\s*#?\s*(?P<a>[A-Za-z0-9]{2,8})\s*对战\s*(?P<b>[A-Za-z0-9]{2,8})\s*#?",
+    re.I,
+)
+
 
 def _clean_preview(value: str) -> str:
     value = re.sub(r"\s+", " ", str(value or "")).strip()
@@ -40,73 +51,74 @@ def _trace(message: str):
         _TRACE.append(message)
 
 
-def _alias_hit(text: str, alias: str) -> bool:
-    alias = str(alias or "").strip()
-    if not alias:
-        return False
-    if re.fullmatch(r"[A-Za-z0-9]+", alias) and len(alias) <= 3:
-        return re.search(rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])", text, re.I) is not None
-    return alias.lower() in text.lower()
+def _split_lpl_daily_roster_posts(posts, source):
+    """Explode one LPL daily roster roundup into one virtual post per matchup.
 
+    The official account frequently publishes one post containing one or two
+    lines such as `14:00 #IG对战WE#` plus the same number of roster posters. Image
+    order follows matchup-line order in the current official template. We only
+    apply this rule when the post explicitly says `首发名单`, so ordinary social
+    posts are left untouched.
+    """
+    if str((source or {}).get("league") or "").upper() != "LPL":
+        return list(posts or [])
 
-def _team_hits(text: str, cfg: dict) -> list[str]:
-    hits = []
-    for code, aliases in ((cfg or {}).get("teamAliases") or {}).items():
-        candidates = [code, *(aliases or [])]
-        if any(_alias_hit(text, alias) for alias in candidates):
-            hits.append(str(code).upper())
-    return hits
+    out = []
+    for post in posts or []:
+        text = str(post.get("text") or "")
+        matches = list(LPL_MATCH_LINE_RE.finditer(text))
+        if "首发名单" not in text or not matches:
+            out.append(post)
+            continue
 
+        images = list(post.get("images") or [])
+        prefix_match = re.search(r"(?:20\d{2}[^\n]{0,32})?\d{1,2}月\d{1,2}日\s*首发名单", text)
+        prefix = prefix_match.group(0).strip() if prefix_match else "首发名单"
 
-def _post_relevance(source: dict, row: dict, cfg: dict) -> tuple[int, str, list[str]]:
-    text = str(row.get("text") or "")
-    lowered = text.lower()
-    keywords = [str(x).lower() for x in ((cfg or {}).get("keywords") or []) if str(x).strip()]
-    keyword_hit = any(keyword in lowered for keyword in keywords)
-    hits = _team_hits(text, cfg)
-    own_team = str((source or {}).get("team") or "").upper()
-    is_team_source = str((source or {}).get("source") or "").upper() == "TEAM_SOCIAL" or bool(own_team)
-    opponents = [team for team in hits if team != own_team]
-    matchup_hit = bool(opponents) if is_team_source else len(set(hits)) >= 2
-
-    score = 0
-    basis = "LOW_CONFIDENCE"
-    if keyword_hit and matchup_hit:
-        score += 500
-        basis = "MATCHUP_PLUS_LINEUP"
-    elif matchup_hit:
-        score += 260
-        basis = "MATCHUP"
-    elif keyword_hit:
-        score += 140
-        basis = "LINEUP_KEYWORD"
-
-    if row.get("images"):
-        score += 30
-    if row.get("published"):
-        score += 10
-
-    teams = ([own_team] if own_team else []) + opponents if is_team_source else hits
-    return score, basis, list(dict.fromkeys([team for team in teams if team]))[:3]
+        for index, match in enumerate(matches):
+            row = dict(post)
+            team_a = match.group("a").upper()
+            team_b = match.group("b").upper()
+            row["id"] = f"{post.get('id') or 'post'}-match-{index + 1}-{team_a}-{team_b}"
+            row["text"] = f"{prefix}\n{match.group(0).strip()}"
+            if index < len(images):
+                row["images"] = [images[index]]
+            else:
+                # Keep a bounded fallback if media count and matchup count ever
+                # drift, but never feed all posters into every virtual matchup.
+                row["images"] = images[:1]
+            row["matchupHint"] = [team_a, team_b]
+            row["template"] = "LPL_DAILY_STARTING_ROSTER"
+            out.append(row)
+        _trace(f"lpl_daily_split post={post.get('id')} matchups={len(matches)} images={len(images)}")
+    return out
 
 
 def _budget_posts(posts, cfg=None, source=None):
+    posts = _split_lpl_daily_roster_posts(posts, source or {})
+    keywords = [str(x).lower() for x in ((cfg or {}).get("keywords") or [])]
     ranked = []
     for index, post in enumerate(posts or []):
         row = dict(post)
-        row["images"] = list(row.get("images") or [])[:MAX_IMAGES_PER_POST]
-        score, basis, teams = _post_relevance(source or {}, row, cfg or {})
-        row["candidateBasis"] = basis
-        row["candidateTeams"] = teams
-        row["candidateScore"] = score
+        text = str(row.get("text") or "")
+        images = list(row.get("images") or [])[:MAX_IMAGES_PER_POST]
+        row["images"] = images
+        score = 0
+        lowered = text.lower()
+        if row.get("template") == "LPL_DAILY_STARTING_ROSTER":
+            score += 1000
+        if "首发名单" in text:
+            score += 300
+        if LPL_MATCH_LINE_RE.search(text):
+            score += 250
+        if any(keyword and keyword in lowered for keyword in keywords):
+            score += 100
+        if images:
+            score += 20
+        if row.get("published"):
+            score += 5
         ranked.append((score, -index, row))
     ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
-
-    # If we found proper Team A + Team B + lineup candidates, OCR those first
-    # and do not let sponsor/image-only posts consume the bounded OCR budget.
-    primary = [row for score, _, row in ranked if row.get("candidateBasis") == "MATCHUP_PLUS_LINEUP"]
-    if primary:
-        return primary[:MAX_POSTS_PER_SOURCE]
     return [row for _, _, row in ranked[:MAX_POSTS_PER_SOURCE]]
 
 
@@ -149,8 +161,8 @@ _original_process_posts = global_collector._process_posts
 
 def _bounded_process_posts(source, cfg, posts, transport_label):
     global _TRACE, _ACTIVE_SOURCE, _ACTIVE_OCR_INDEX
-    bounded = _budget_posts(posts, cfg, source)
     _TRACE = []
+    bounded = _budget_posts(posts, cfg, source)
     previous_source = _ACTIVE_SOURCE
     previous_index = _ACTIVE_OCR_INDEX
     _ACTIVE_SOURCE = dict(source or {})
@@ -161,10 +173,9 @@ def _bounded_process_posts(source, cfg, posts, transport_label):
         _ACTIVE_SOURCE = previous_source
         _ACTIVE_OCR_INDEX = previous_index
     account = source.get("account")
-    basis_summary = ",".join(str(row.get("candidateBasis") or "?") for row in bounded[:3])
     trace_lines = [f"{account}: trace {line}" for line in _TRACE]
     diagnostics = [
-        f"{account}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s basis={basis_summary}",
+        f"{account}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s",
         *trace_lines,
     ] + diagnostics
     return evidence, diagnostics
@@ -176,8 +187,8 @@ _original_weibo_fetch = global_collector.base.fetch_weibo_posts
 
 
 def _bounded_weibo_fetch(uid, limit=20):
-    posts = _original_weibo_fetch(uid, min(limit, MAX_POSTS_PER_SOURCE))
-    return _budget_posts(posts, None, None)
+    posts = _original_weibo_fetch(uid, min(limit, MAX_POSTS_PER_SOURCE * 2))
+    return _budget_posts(posts, None, _ACTIVE_SOURCE)
 
 
 global_collector.base.fetch_weibo_posts = _bounded_weibo_fetch
