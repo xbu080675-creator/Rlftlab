@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      RIFTLAB_OCR_LANGS: chi_sim+eng+kor+jpn
       RIFTLAB_ROSTER_MAX_POSTS_PER_SOURCE: '6'
       RIFTLAB_ROSTER_MAX_IMAGES_PER_POST: '2'
       RIFTLAB_ROSTER_OCR_TIMEOUT_SECONDS: '10'
@@ -57,6 +56,18 @@ jobs:
         timeout-minutes: 5
         run: |
           python3 scripts/starting_roster_four_lane_collector.py
+
+      - name: Upload OCR inspection trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: starting-roster-ocr-trace
+          path: |
+            data/global/starting_roster_ocr_trace.json
+            data/global/starting_roster_browser_posts.json
+            data/global/starting_roster_collector_status.json
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Commit normalized evidence safely
         run: |
