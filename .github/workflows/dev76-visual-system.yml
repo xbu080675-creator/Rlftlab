@@ -33,12 +33,27 @@ jobs:
           python3 tools/dev76_visual_system_v2.py
           code=$?
           set -e
-          # The temporary patcher originally had an intentionally broad NO-MOCK assertion. Other
-          # diagnostic screens still contain that developer label, while the primary PRE feed no
-          # longer does. Accept the patch only when the scoped V2 outputs all exist.
+          # Capture composable theme colors before entering Canvas DrawScope.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace(
+              '    val zero = RiftText.copy(alpha = 0.45f)\n',
+              '    val zero = RiftText.copy(alpha = 0.45f)\n    val cursor = RiftText.copy(alpha = 0.55f)\n',
+              1
+          )
+          s = s.replace(
+              '            drawLine(RiftText.copy(alpha = 0.55f), Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.4f)\n',
+              '            drawLine(cursor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.4f)\n',
+              1
+          )
+          p.write_text(s, encoding='utf-8')
+          PY
           grep -q 'MATCH FEED / 赛程状态' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           grep -q '数据来源 · Riot / Cito / International · 缺失字段保持未知' app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt
           grep -q 'ECONOMY SWING' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
+          grep -q 'val cursor = RiftText.copy' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
           grep -q 'versionCode = 76' app/build.gradle.kts
           if [ "$code" -ne 0 ]; then
             echo "Patcher exited non-zero only after scoped outputs were verified; continuing."
@@ -55,6 +70,7 @@ jobs:
           grep -q 'detectDragGestures' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
           grep -q 'distinctBy { it.elapsedSeconds }' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
           grep -q '拖动曲线选择时间' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
+          ! grep -q 'drawLine(RiftText.copy' app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
