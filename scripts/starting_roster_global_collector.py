@@ -8,6 +8,7 @@ against anonymous-platform throttling without changing source provenance.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import re
 import time
@@ -28,9 +29,14 @@ spec.loader.exec_module(base)
 
 SESSION = requests.Session()
 SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36 RiftLabRosterBot/2.1",
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36 RiftLabRosterBot/2.2",
     "Accept-Language": "en-US,en;q=0.9,ko;q=0.8,zh-CN;q=0.8,ja;q=0.7",
 })
+
+BROWSER_SPOOL = Path(os.environ.get(
+    "RIFTLAB_ROSTER_BROWSER_SPOOL",
+    "data/global/starting_roster_browser_posts.json",
+))
 
 
 def parse_time(raw: str | None):
@@ -53,7 +59,30 @@ def _post(pid, url, text, images=None, published=None):
     }
 
 
-# ---- Global parser hardening -------------------------------------------------
+def _source_key(source):
+    return f"{source.get('platform','')}:{source.get('uid') or source.get('handle') or source.get('account','')}"
+
+
+def _browser_posts(source, limit=20):
+    if not BROWSER_SPOOL.exists():
+        return []
+    try:
+        payload = json.loads(BROWSER_SPOOL.read_text(encoding="utf-8"))
+        rows = ((payload.get("sources") or {}).get(_source_key(source)) or [])[:limit]
+    except Exception:
+        return []
+    posts = []
+    for row in rows:
+        published = row.get("published")
+        posts.append(_post(
+            row.get("id"),
+            row.get("url"),
+            row.get("text"),
+            row.get("images") or [],
+            parse_time(published) if isinstance(published, str) else published,
+        ))
+    return [p for p in posts if p.get("url") and (p.get("text") or p.get("images"))]
+
 
 base.ROLE_ALIASES["TOP"].extend(["탑", "トップ"])
 base.ROLE_ALIASES["JUG"].extend(["정글", "ジャングル"])
@@ -121,8 +150,6 @@ def global_infer_date(text, published, timezone_name):
 base.infer_date = global_infer_date
 
 
-# ---- Weibo transport ---------------------------------------------------------
-
 def _weibo_post(uid, mblog):
     images = []
     for item in mblog.get("pics") or []:
@@ -182,7 +209,6 @@ def fetch_weibo_robust(uid, limit=20):
         )
     except Exception:
         pass
-
     routes = [
         (
             "mobile",
@@ -219,7 +245,6 @@ def fetch_weibo_robust(uid, limit=20):
             errors.append(f"{label}:empty")
         except Exception as exc:
             errors.append(f"{label}:{type(exc).__name__}:{exc}")
-
     try:
         return _reader_weibo(uid, limit)
     except Exception as exc:
@@ -229,8 +254,6 @@ def fetch_weibo_robust(uid, limit=20):
 
 base.fetch_weibo_posts = fetch_weibo_robust
 
-
-# ---- X transport -------------------------------------------------------------
 
 def _reader_x(handle: str, limit: int = 20):
     handle = handle.lstrip("@")
@@ -309,7 +332,6 @@ def fetch_x_syndication(handle: str, limit: int = 20):
         except Exception as exc:
             errors.append(f"syndication:{type(exc).__name__}:{exc}")
             break
-
     try:
         return _reader_x(handle, limit)
     except Exception as exc:
@@ -376,7 +398,24 @@ _original_process = base.process_source
 _robust_weibo_fetch = base.fetch_weibo_posts
 
 
+def _process_posts(source, cfg, posts, transport_label):
+    try:
+        base.fetch_weibo_posts = lambda _uid, limit=20: posts[:limit]
+        shim = dict(source)
+        shim["kind"] = "WEIBO_MOBILE"
+        shim["uid"] = "adapter"
+        evidence, diagnostics = _original_process(shim, cfg)
+        diagnostics = [f"{source.get('account')}: transport={transport_label}:posts={len(posts)}"] + diagnostics
+        return evidence, diagnostics
+    finally:
+        base.fetch_weibo_posts = _robust_weibo_fetch
+
+
 def process_source(source, cfg):
+    browser_posts = _browser_posts(source)
+    if browser_posts:
+        return _process_posts(source, cfg, browser_posts, "browser")
+
     kind = source.get("kind")
     if kind == "WEIBO_MOBILE":
         return _original_process(source, cfg)
@@ -393,14 +432,7 @@ def process_source(source, cfg):
     except Exception as exc:
         return [], [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]
 
-    try:
-        base.fetch_weibo_posts = lambda _uid, limit=20: posts[:limit]
-        shim = dict(source)
-        shim["kind"] = "WEIBO_MOBILE"
-        shim["uid"] = "adapter"
-        return _original_process(shim, cfg)
-    finally:
-        base.fetch_weibo_posts = _robust_weibo_fetch
+    return _process_posts(source, cfg, posts, kind.lower())
 
 
 base.process_source = process_source
