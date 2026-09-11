@@ -9,6 +9,7 @@ import coil.memory.MemoryCache
 import com.riftlab.app.ai.LocalAiCore
 import com.riftlab.app.ai.LocalModelManager
 import com.riftlab.app.data.ComprehensiveDataCenter
+import com.riftlab.app.data.LplStartingRosterCenter
 import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleCapture
 import com.riftlab.app.data.MatchSessionStore
@@ -53,15 +54,16 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         LocalAiCore.initialize(this)
         LocalModelManager.initialize(this)
 
+        // Official social starter announcements are intentionally watched independently from the
+        // website/schedule poll. Club/LPL Weibo may be the first official source on match eve.
+        LplStartingRosterCenter.ensureRunning()
+
         // Cache pressure guard. Only cacheDir/externalCacheDir are eligible. Persistent archives,
         // encrypted provider keys, user settings and downloaded local-AI models are never touched.
         maintenanceScope.launch {
             StorageCacheManager.trimIfNeeded(this@RiftLabApplication)
         }
 
-        // Existing providers remain the source of truth. dev.68 normalizes the active graph,
-        // dev.69 retains Tournament Editions, and dev.70 keeps qualification paths/annual points
-        // separate from ordinary standings while preserving evidence on each route.
         MatchSessionStore.ensureDataRunning()
         TournamentEditionArchiveStore.ensureRunning()
         QualificationCenterStore.ensureRunning()
