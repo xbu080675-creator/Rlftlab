@@ -7,6 +7,7 @@ import coil.decode.SvgDecoder
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.riftlab.app.ai.LocalAiCore
+import com.riftlab.app.ai.LocalModelManager
 import com.riftlab.app.data.ComprehensiveDataCenter
 import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleCapture
@@ -47,9 +48,10 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         MatchTimelineCapture.start()
         MatchLifecycleCapture.start()
 
-        // Local AI is optional and process-wide. Initialization only profiles the device and prepares
-        // recommendations; it never downloads or enables a model without the user's explicit choice.
+        // Local AI remains optional. Profile the device and restore only verified model-file state;
+        // no model is downloaded or enabled automatically at startup.
         LocalAiCore.initialize(this)
+        LocalModelManager.initialize(this)
 
         // Cache pressure guard. Only cacheDir/externalCacheDir are eligible. Persistent archives,
         // encrypted provider keys, user settings and downloaded local-AI models are never touched.
