@@ -1,0 +1,60 @@
+name: Apply dev92 global roster media fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev92-global-media-transport-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch global collector protected-media transport
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/starting_roster_global_collector.py')
+          text = path.read_text(encoding='utf-8')
+
+          needle = '''base.ocr_image = multilingual_ocr\n\n\ndef global_infer_date'''
+          replacement = '''base.ocr_image = multilingual_ocr\n\n\ndef robust_download_image(url):\n    """Read browser-cached media first; otherwise retry protected CDN URLs with provenance-safe headers."""\n    value = str(url or "")\n    local = Path(value)\n    if value and local.exists() and local.is_file():\n        return base.Image.open(local).convert("RGB")\n\n    candidates = [value]\n    if "sinaimg" in value:\n        # Weibo frequently emits thumbnail variants that reject anonymous hotlinks.\n        candidates.extend([\n            re.sub(r"/(?:thumb\d+|mw\d+|orj\d+|bmiddle|small|square)/", "/large/", value),\n            value.replace("http://", "https://", 1),\n        ])\n    if "pbs.twimg.com/media/" in value and "name=" not in value:\n        sep = "&" if "?" in value else "?"\n        candidates.append(value + sep + "name=orig")\n\n    errors = []\n    for candidate in dict.fromkeys(c for c in candidates if c.startswith("http")):\n        host = candidate.lower()\n        if "sinaimg" in host:\n            referer = "https://weibo.com/"\n        elif "twimg.com" in host:\n            referer = "https://x.com/"\n        elif "cdninstagram.com" in host or "fbcdn.net" in host:\n            referer = "https://www.instagram.com/"\n        else:\n            referer = candidate\n        try:\n            response = SESSION.get(\n                candidate,\n                timeout=25,\n                headers={\n                    "Referer": referer,\n                    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",\n                },\n            )\n            response.raise_for_status()\n            return base.Image.open(base.io.BytesIO(response.content)).convert("RGB")\n        except Exception as exc:\n            errors.append(f"{type(exc).__name__}:{getattr(getattr(exc, 'response', None), 'status_code', '')}")\n    raise RuntimeError("media_download_failed[" + "|".join(errors[-4:]) + "]")\n\n\nbase.download_image = robust_download_image\n\n\ndef global_infer_date'''
+          if needle not in text:
+              raise SystemExit('ocr insertion anchor not found')
+          text = text.replace(needle, replacement, 1)
+
+          # Preserve browser diagnostics even when a source has zero browser posts and falls back.
+          needle2 = '''def process_source(source, cfg):\n    browser_posts = _browser_posts(source)\n    if browser_posts:\n        return _process_posts(source, cfg, browser_posts, "browser")\n\n    kind = source.get("kind")'''
+          replacement2 = '''def _browser_source_diagnostics(source):\n    if not BROWSER_SPOOL.exists():\n        return []\n    try:\n        payload = json.loads(BROWSER_SPOOL.read_text(encoding="utf-8"))\n    except Exception:\n        return []\n    account = str(source.get("account") or "")\n    return [\n        f"{account}: browser_stage={row}"\n        for row in (payload.get("diagnostics") or [])\n        if account and str(row).startswith(account + ":")\n    ]\n\n\ndef process_source(source, cfg):\n    browser_diag = _browser_source_diagnostics(source)\n    browser_posts = _browser_posts(source)\n    if browser_posts:\n        evidence, diagnostics = _process_posts(source, cfg, browser_posts, "browser")\n        return evidence, browser_diag + diagnostics\n\n    kind = source.get("kind")'''
+          if needle2 not in text:
+              raise SystemExit('process_source insertion anchor not found')
+          text = text.replace(needle2, replacement2, 1)
+
+          # Prefix fallback diagnostics so global transport failures stay visible alongside browser failures.
+          text = text.replace(
+              '''    except Exception as exc:\n        return [], [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]\n\n    return _process_posts(source, cfg, posts, kind.lower())''',
+              '''    except Exception as exc:\n        return [], browser_diag + [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]\n\n    evidence, diagnostics = _process_posts(source, cfg, posts, kind.lower())\n    return evidence, browser_diag + diagnostics''',
+              1,
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Publish patch
+        run: |
+          set -euo pipefail
+          git config user.name 'PocketSpace'
+          git config user.email 'xbu080675@gmail.com'
+          git add scripts/starting_roster_global_collector.py
+          if git diff --cached --quiet; then
+            echo 'No change.'
+            exit 0
+          fi
+          git commit -m 'dev.92: support browser-cached media across global roster sources'
+          git pull --rebase origin main
+          git push origin HEAD:main
