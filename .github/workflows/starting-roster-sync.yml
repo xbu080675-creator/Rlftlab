@@ -12,6 +12,7 @@ on:
       - 'scripts/starting_roster_fast_global_collector.py'
       - 'scripts/starting_roster_four_lane_collector.py'
       - 'scripts/starting_roster_browser_collector.py'
+      - 'scripts/starting_roster_browser_four_lane.py'
       - 'data/global/starting_roster_sources.json'
 
 permissions:
@@ -50,7 +51,7 @@ jobs:
         run: |
           rm -rf data/global/starting_roster_browser_media
           mkdir -p data/global/starting_roster_browser_media
-          python3 scripts/starting_roster_browser_collector.py
+          python3 scripts/starting_roster_browser_four_lane.py
 
       - name: Collect official starting rosters globally
         timeout-minutes: 5
