@@ -202,7 +202,16 @@ data class LivePlayerSnapshot(
     val creepScore: Int,
     val gold: Int,
     val teamId: String = "",
-    val side: String = ""
+    val side: String = "",
+    // Cito WSS / full-board combat context. Null means unavailable, never "0 = unknown".
+    val alive: Boolean? = null,
+    val currentHealth: Int? = null,
+    val maxHealth: Int? = null,
+    val items: List<String> = emptyList(),
+    val killParticipation: Double? = null,
+    val damageShare: Double? = null,
+    val wardsPlaced: Int? = null,
+    val wardsKilled: Int? = null
 )
 
 data class LiveSnapshot(
@@ -228,7 +237,9 @@ data class LiveSnapshot(
     val source: String = "unknown",
     val gameId: String = "",
     // Stable schedule-series identity. Provider-local gameId values must never define a real game.
-    val targetKey: String = ""
+    val targetKey: String = "",
+    // Freshness marker for Cito-only combat supplement fields; core scoreboard truth stays provider-owned.
+    val supplementUpdatedAtEpochMs: Long = 0L
 ) {
     val goldDiff: Int get() = blueGold - redGold
 }
