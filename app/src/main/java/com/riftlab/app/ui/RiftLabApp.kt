@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.riftlab.app.BuildConfig
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSourcePhase
+import com.riftlab.app.data.LplStartingRosterCenter
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.TimelineEventEvidence
@@ -198,6 +199,11 @@ private fun PreScreen() {
     val data by MatchSessionStore.preMatchFlow.collectAsState()
     val scheduleStatus by MatchSessionStore.scheduleStatus.collectAsState()
     val target by MatchSessionStore.targetMatch.collectAsState()
+    val officialRosterState by LplStartingRosterCenter.state.collectAsState()
+    val leftOfficial = target?.teams?.getOrNull(0)?.let(LplStartingRosterCenter::evidenceFor)
+    val rightOfficial = target?.teams?.getOrNull(1)?.let(LplStartingRosterCenter::evidenceFor)
+    val displayBlueRoster = leftOfficial?.starters ?: data.blueRoster
+    val displayRedRoster = rightOfficial?.starters ?: data.redRoster
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 18.dp),
@@ -250,10 +256,10 @@ private fun PreScreen() {
         item { ComprehensiveDataCoveragePanel() }
 
         item { SectionTitle("STARTING ROSTER / 首发") }
-        val starterRows = maxOf(data.blueRoster.size, data.redRoster.size)
+        val starterRows = maxOf(displayBlueRoster.size, displayRedRoster.size)
         if (starterRows > 0) {
             items((0 until starterRows).toList()) { index ->
-                RosterRow(data.blueRoster.getOrNull(index), data.redRoster.getOrNull(index))
+                RosterRow(displayBlueRoster.getOrNull(index), displayRedRoster.getOrNull(index))
             }
         } else {
             item {
@@ -267,7 +273,30 @@ private fun PreScreen() {
             Panel {
                 Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
-                Text(data.rosterNote, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+                val socialCount = listOf(leftOfficial, rightOfficial).count { it != null }
+                if (socialCount > 0) {
+                    Text(
+                        "OFFICIAL SOCIAL $socialCount/2 · 官网不再作为首发显示门槛",
+                        color = RiftCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        listOfNotNull(leftOfficial, rightOfficial).joinToString(" · ") { evidence ->
+                            "${evidence.account} ${evidence.source.name}"
+                        },
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+                Text(
+                    if (socialCount > 0) officialRosterState.message else data.rosterNote,
+                    color = RiftMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
+                )
             }
         }
 

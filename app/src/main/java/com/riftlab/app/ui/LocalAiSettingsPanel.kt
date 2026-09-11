@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.ai.LocalAiCore
 import com.riftlab.app.ai.LocalAiTier
+import com.riftlab.app.ai.LiteRtLocalAiRuntime
 import com.riftlab.app.ai.LocalModelInstallStatus
 import com.riftlab.app.ai.LocalModelManager
 import com.riftlab.app.ai.LocalModelRecommendation
@@ -34,11 +35,11 @@ internal fun LocalAiSettingsPanel() {
     val context = LocalContext.current
     val state by LocalAiCore.state.collectAsState()
     val installState by LocalModelManager.state.collectAsState()
+    val runtimeState by LiteRtLocalAiRuntime.state.collectAsState()
     val profile = state.profile
     val selectedRecommendation = state.recommendations.firstOrNull { it.model.id == state.selectedModelId }
     val selectedModel = selectedRecommendation?.model
-    val downloadMetadataReady = selectedModel?.downloadUrl?.isNotBlank() == true &&
-        selectedModel.sha256?.length == 64
+    val downloadMetadataReady = selectedModel?.let { LocalModelManager.resolvedDownloadMetadata(it) != null } == true
 
     Column {
         Text(
@@ -172,7 +173,7 @@ internal fun LocalAiSettingsPanel() {
                             installState.status == LocalModelInstallStatus.VERIFYING
                         )
                     Button(
-                        enabled = downloadMetadataReady && !busy && !(statusForSelected && installState.status == LocalModelInstallStatus.READY),
+                        enabled = downloadMetadataReady && !busy && !(statusForSelected && installState.status in setOf(LocalModelInstallStatus.VERIFIED, LocalModelInstallStatus.READY)),
                         onClick = { LocalModelManager.installSelected(context, selectedModel) }
                     ) {
                         Text(if (busy) "处理中" else if (statusForSelected && installState.status == LocalModelInstallStatus.VERIFIED) "重新校验下载" else "下载并校验")
@@ -180,6 +181,32 @@ internal fun LocalAiSettingsPanel() {
                     if (statusForSelected && installState.localPath != null) {
                         TextButton(onClick = { LocalModelManager.removeInstalled(context) }) { Text("删除模型") }
                     }
+                }
+                if (statusForSelected && installState.status == LocalModelInstallStatus.VERIFIED) {
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        enabled = !runtimeState.busy,
+                        onClick = { LiteRtLocalAiRuntime.benchmarkVerifiedModel(context, selectedModel) }
+                    ) { Text(if (runtimeState.busy) "基准测试中" else "运行真机基准") }
+                    Text(
+                        "会真实加载模型并完成一次短推理；延迟和热状态不过门槛就继续规则模式。",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+                if (statusForSelected && installState.status == LocalModelInstallStatus.READY) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "READY · 真机推理 ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"} · 请手动打开总开关",
+                        color = RiftCyan,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
                 }
                 if (!downloadMetadataReady) {
                     Text(
