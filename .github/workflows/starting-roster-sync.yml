@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: starting-roster-sync
+  group: starting-roster-sync-browser-v2
   cancel-in-progress: true
 
 jobs:
