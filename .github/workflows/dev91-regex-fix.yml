@@ -1,0 +1,47 @@
+name: Apply dev91 regex fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev91-regex-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix Kotlin regex escapes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt')
+          s = p.read_text()
+          replacements = {
+              'Regex("[\'’]s\\b", RegexOption.IGNORE_CASE)': 'Regex("""[\'’]s\\b""", RegexOption.IGNORE_CASE)',
+              'Regex("[^\\p{L}\\p{N}]+")': 'Regex("""[^\\p{L}\\p{N}]+""")',
+              'Regex("[^A-Z0-9\\p{L}\\p{N}]+")': 'Regex("""[^A-Z0-9\\p{L}\\p{N}]+""")',
+          }
+          changed = 0
+          for old, new in replacements.items():
+              if old in s:
+                  s = s.replace(old, new)
+                  changed += 1
+          if changed != 3:
+              raise SystemExit(f'expected 3 regex fixes, got {changed}')
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt
+          git commit -m 'dev.91: fix roster regex escapes'
+          git pull --rebase origin main
+          git push origin HEAD:main
