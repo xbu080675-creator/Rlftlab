@@ -168,12 +168,24 @@ object LocalAiCore {
 
     fun initialize(context: Context) {
         if (mutableState.value.initialized) return
+        refreshProfile(context)
+    }
+
+    fun refreshProfile(context: Context) {
         scope.launch {
             val profile = DeviceAiProfiler.inspect(context.applicationContext)
+            val recommendations = LocalModelCatalog.recommend(profile)
+            val selectedStillRunnable = mutableState.value.selectedModelId?.let { selected ->
+                recommendations.any { it.model.id == selected && it.runnable }
+            } ?: true
+            if (!selectedStillRunnable) backend = RuleTrendFallback
             mutableState.value = mutableState.value.copy(
                 initialized = true,
                 profile = profile,
-                recommendations = LocalModelCatalog.recommend(profile)
+                recommendations = recommendations,
+                selectedModelId = if (selectedStillRunnable) mutableState.value.selectedModelId else null,
+                modelReady = if (selectedStillRunnable) mutableState.value.modelReady else false,
+                enabled = if (selectedStillRunnable) mutableState.value.enabled else false
             )
         }
     }
@@ -197,9 +209,15 @@ object LocalAiCore {
         mutableState.value = mutableState.value.copy(modelReady = true, enabled = true)
     }
 
+    fun setEnabled(enabled: Boolean): Boolean {
+        if (enabled && !mutableState.value.modelReady) return false
+        if (!enabled) backend = RuleTrendFallback
+        mutableState.value = mutableState.value.copy(enabled = enabled && mutableState.value.modelReady)
+        return mutableState.value.enabled == enabled
+    }
+
     fun disableModel() {
-        backend = RuleTrendFallback
-        mutableState.value = mutableState.value.copy(enabled = false)
+        setEnabled(false)
     }
 
     /**
@@ -209,7 +227,7 @@ object LocalAiCore {
      */
     suspend fun analyze(scope: LocalAiScope, frame: TrendFrame, latencyBudgetMs: Long = 500L): TrendDecision {
         val started = System.currentTimeMillis()
-        val selected = backend
+        val selected = if (mutableState.value.enabled) backend else RuleTrendFallback
         val result = runCatching { selected.infer(frame) }
             .getOrElse { RuleTrendFallback.infer(frame) }
         val elapsed = System.currentTimeMillis() - started
