@@ -135,4 +135,16 @@ replace_once(
                 )'''
 )
 
-print("dev72 global Riot history and lifecycle archive consistency applied")
+opgg = "app/src/main/java/com/riftlab/app/data/OpggHistoricalFrameResolver.kt"
+replace_once(
+    opgg,
+    '''                        source = "OP.GG Esports · gameByMatch.team.frames · third-party",
+                        gameId = if (opggGameId.isBlank()) "opgg:$matchId:g$gameNumber" else "opgg:$opggGameId"
+                    )''',
+    '''                        source = "OP.GG Esports · gameByMatch.team.frames · third-party",
+                        gameId = if (opggGameId.isBlank()) "opgg:$matchId:g$gameNumber" else "opgg:$opggGameId",
+                        targetKey = LiveMatchTargetRegistry.key(match)
+                    )'''
+)
+
+print("dev72 global Riot/OP.GG history and lifecycle archive consistency applied")
