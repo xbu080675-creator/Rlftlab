@@ -189,7 +189,7 @@ internal fun LocalAiSettingsPanel() {
                         onClick = { LiteRtLocalAiRuntime.benchmarkVerifiedModel(context, selectedModel) }
                     ) { Text(if (runtimeState.busy) "基准测试中" else "运行真机基准") }
                     Text(
-                        "会真实加载模型并完成一次短推理；延迟和热状态不过门槛就继续规则模式。",
+                        "会分开记录冷启动加载、warm-up 与 3 次稳态短推理；READY 只看稳态 median / P90 与热状态，首轮慢不会直接判死刑。",
                         color = RiftMuted,
                         fontSize = 11.sp,
                         lineHeight = 16.sp
@@ -198,7 +198,7 @@ internal fun LocalAiSettingsPanel() {
                 if (statusForSelected && installState.status == LocalModelInstallStatus.READY) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "READY · 真机推理 ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"} · 请手动打开总开关",
+                        "READY · 稳态 median ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"} · 请手动打开总开关",
                         color = RiftCyan,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
@@ -207,6 +207,26 @@ internal fun LocalAiSettingsPanel() {
                 if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                    if (runtimeState.loadMs != null || runtimeState.warmupMs != null || runtimeState.sampleMs.isNotEmpty()) {
+                        Text(
+                            listOfNotNull(
+                                runtimeState.loadMs?.let { "COLD ${it}ms" },
+                                runtimeState.warmupMs?.let { "WARM-UP ${it}ms" },
+                                runtimeState.medianMs?.let { "MEDIAN ${it}ms" },
+                                runtimeState.p90Ms?.let { "P90 ${it}ms" },
+                                runtimeState.sampleMs.takeIf { it.isNotEmpty() }
+                                    ?.joinToString(prefix = "SAMPLES ", separator = "/") { "${it}ms" }
+                            ).joinToString(" · "),
+                            color = RiftMuted,
+                            fontSize = 10.sp,
+                            lineHeight = 15.sp
+                        )
+                        Text(
+                            "THERMAL ${runtimeState.thermalBefore ?: "?"} → ${runtimeState.thermalAfter ?: "?"}",
+                            color = RiftMuted,
+                            fontSize = 10.sp
+                        )
+                    }
                 }
                 if (!downloadMetadataReady) {
                     Text(
@@ -221,7 +241,7 @@ internal fun LocalAiSettingsPanel() {
         }
 
         Text(
-            "下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，完成 SHA-256 校验后仍不会直接启用，必须再通过真实运行时加载、短延迟基准和热状态检查。失败或不达标立即回到规则模式。模型资产与普通缓存分离，清理缓存不会删除模型。",
+            "下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，SHA-256 通过后仍不会直接启用。基准把冷启动、warm-up、稳态 median/P90 和热状态分开；失败时模型文件会保留，可降温、切换性能模式或降低系统负载后重新测试。模型资产与普通缓存分离，清理缓存不会删除模型。",
             color = RiftMuted,
             fontSize = 11.sp,
             lineHeight = 17.sp
