@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-09-11T19:09:33Z",
+  "updatedAt": "2026-09-11T19:18:36Z",
   "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
   "delivery": {
     "canonical": "GitHub",
@@ -47,7 +47,7 @@
   ],
   "collector": {
     "mode": "official-social-text-plus-image-ocr",
-    "lastRunAt": "2026-09-11T19:09:33Z",
+    "lastRunAt": "2026-09-11T19:18:36Z",
     "freshEvidence": 0,
     "sourceCount": 10
   }
