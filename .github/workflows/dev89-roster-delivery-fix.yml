@@ -20,44 +20,45 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt')
           s = p.read_text()
-          old = '''                Text(
-                    if (socialCount > 0) officialRosterState.message else data.rosterNote,
-                    color = RiftMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 17.sp
-                )'''
-          new = '''                Text(
-                    officialRosterState.message,
-                    color = if (socialCount > 0) RiftCyan else RiftMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 17.sp
-                )
-                if (officialRosterState.diagnostics.isNotBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "DELIVERY ${officialRosterState.endpointLabel} · checked ${officialRosterState.checkedEndpoints} · " +
-                            (if (officialRosterState.usedLastGood) "LAST-GOOD CACHE" else "LIVE FETCH"),
-                        color = RiftMuted,
-                        fontSize = 10.sp,
-                        lineHeight = 15.sp
-                    )
-                    Text(
-                        officialRosterState.diagnostics,
-                        color = RiftMuted,
-                        fontSize = 9.sp,
-                        lineHeight = 14.sp
-                    )
-                }
-                if (socialCount == 0 && data.rosterNote.isNotBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(data.rosterNote, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
-                }'''
-          if old not in s:
+          pattern = re.compile(
+              r'''(?P<indent>[ \t]*)Text\(\s*if \(socialCount > 0\) officialRosterState\.message else data\.rosterNote,\s*color = RiftMuted,\s*fontSize = 11\.sp,\s*lineHeight = 17\.sp\s*\)''',
+              re.MULTILINE,
+          )
+          m = pattern.search(s)
+          if not m:
               raise SystemExit('roster status block not found')
-          s = s.replace(old, new, 1)
+          i = m.group('indent')
+          new = f'''{i}Text(
+          {{i}}    officialRosterState.message,
+          {{i}}    color = if (socialCount > 0) RiftCyan else RiftMuted,
+          {{i}}    fontSize = 11.sp,
+          {{i}}    lineHeight = 17.sp
+          {{i}})
+          {{i}}if (officialRosterState.diagnostics.isNotBlank()) {{
+          {{i}}    Spacer(Modifier.height(4.dp))
+          {{i}}    Text(
+          {{i}}        "DELIVERY ${{officialRosterState.endpointLabel}} · checked ${{officialRosterState.checkedEndpoints}} · " +
+          {{i}}            (if (officialRosterState.usedLastGood) "LAST-GOOD CACHE" else "LIVE FETCH"),
+          {{i}}        color = RiftMuted,
+          {{i}}        fontSize = 10.sp,
+          {{i}}        lineHeight = 15.sp
+          {{i}}    )
+          {{i}}    Text(
+          {{i}}        officialRosterState.diagnostics,
+          {{i}}        color = RiftMuted,
+          {{i}}        fontSize = 9.sp,
+          {{i}}        lineHeight = 14.sp
+          {{i}}    )
+          {{i}}}}
+          {{i}}if (socialCount == 0 && data.rosterNote.isNotBlank()) {{
+          {{i}}    Spacer(Modifier.height(4.dp))
+          {{i}}    Text(data.rosterNote, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+          {{i}}}}'''.replace('{i}', i)
+          s = s[:m.start()] + new + s[m.end():]
           p.write_text(s)
           PY
 
