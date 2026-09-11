@@ -51,8 +51,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 88
-        versionName = "1.0.0-dev.88"
+        versionCode = 89
+        versionName = "1.0.0-dev.89"
         buildConfigField("String", "GITHUB_ACCELERATOR_BASE_URLS", "\"$githubAcceleratorBaseUrlsLiteral\"")
     }
 
@@ -104,12 +104,11 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
 
-    // dev.87: real optional on-device runtime. The 347 MB model remains a user-downloaded asset,
+    // dev.87+: real optional on-device runtime. The model remains a user-downloaded asset,
     // never bundled into the APK. Pin the runtime so model verification/benchmark behavior is stable.
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.87: LiteRT-LM real inference + verified Qwen3 no-think model path; starting-roster official
-// social evidence is being normalized separately so website publication never gates first visibility.
+// dev.89: warmed steady-state LiteRT-LM benchmark with cold/warm-up/median/P90/thermal metrics.
