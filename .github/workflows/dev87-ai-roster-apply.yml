@@ -1,0 +1,84 @@
+name: Apply RiftLab dev87 AI roster wiring
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev87-ai-roster-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire dev87 UI consumers
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # Prematch: official club/LPL social evidence can replace an ambiguous roster pool before website publication.
+          p = Path('app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt')
+          s = p.read_text()
+          marker = 'import com.riftlab.app.data.LiveSourcePhase\n'
+          if 'import com.riftlab.app.data.LplStartingRosterCenter\n' not in s:
+              s = s.replace(marker, marker + 'import com.riftlab.app.data.LplStartingRosterCenter\n', 1)
+
+          old = '''    val scheduleStatus by MatchSessionStore.scheduleStatus.collectAsState()\n    val target by MatchSessionStore.targetMatch.collectAsState()\n\n    LazyColumn('''
+          new = '''    val scheduleStatus by MatchSessionStore.scheduleStatus.collectAsState()\n    val target by MatchSessionStore.targetMatch.collectAsState()\n    val officialRosterState by LplStartingRosterCenter.state.collectAsState()\n    val leftOfficial = target?.teams?.getOrNull(0)?.let(LplStartingRosterCenter::evidenceFor)\n    val rightOfficial = target?.teams?.getOrNull(1)?.let(LplStartingRosterCenter::evidenceFor)\n    val displayBlueRoster = leftOfficial?.starters ?: data.blueRoster\n    val displayRedRoster = rightOfficial?.starters ?: data.redRoster\n\n    LazyColumn('''
+          if old not in s:
+              raise SystemExit('PreScreen state anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''        item { SectionTitle("STARTING ROSTER / 首发") }\n        val starterRows = maxOf(data.blueRoster.size, data.redRoster.size)\n        if (starterRows > 0) {\n            items((0 until starterRows).toList()) { index ->\n                RosterRow(data.blueRoster.getOrNull(index), data.redRoster.getOrNull(index))\n            }\n        } else {'''
+          new = '''        item { SectionTitle("STARTING ROSTER / 首发") }\n        val starterRows = maxOf(displayBlueRoster.size, displayRedRoster.size)\n        if (starterRows > 0) {\n            items((0 until starterRows).toList()) { index ->\n                RosterRow(displayBlueRoster.getOrNull(index), displayRedRoster.getOrNull(index))\n            }\n        } else {'''
+          if old not in s:
+              raise SystemExit('starter rows anchor not found')
+          s = s.replace(old, new, 1)
+
+          old = '''        item {\n            Panel {\n                Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)\n                Spacer(Modifier.height(6.dp))\n                Text(data.rosterNote, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)\n            }\n        }'''
+          new = '''        item {\n            Panel {\n                Text("ROSTER / RANK STATUS", color = RiftCyan, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)\n                Spacer(Modifier.height(6.dp))\n                val socialCount = listOf(leftOfficial, rightOfficial).count { it != null }\n                if (socialCount > 0) {\n                    Text(\n                        "OFFICIAL SOCIAL $socialCount/2 · 官网不再作为首发显示门槛",\n                        color = RiftCyan,\n                        fontSize = 11.sp,\n                        fontWeight = FontWeight.SemiBold\n                    )\n                    Text(\n                        listOfNotNull(leftOfficial, rightOfficial).joinToString(" · ") { evidence ->\n                            "${evidence.account} ${evidence.source.name}"\n                        },\n                        color = RiftMuted,\n                        fontSize = 11.sp,\n                        lineHeight = 16.sp\n                    )\n                    Spacer(Modifier.height(4.dp))\n                }\n                Text(\n                    if (socialCount > 0) officialRosterState.message else data.rosterNote,\n                    color = RiftMuted,\n                    fontSize = 11.sp,\n                    lineHeight = 17.sp\n                )\n            }\n        }'''
+          if old not in s:
+              raise SystemExit('roster status anchor not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          # Local AI: after SHA verification, the user can run a real LiteRT-LM load/generation benchmark.
+          p = Path('app/src/main/java/com/riftlab/app/ui/LocalAiSettingsPanel.kt')
+          s = p.read_text()
+          marker = 'import com.riftlab.app.ai.LocalAiTier\n'
+          if 'import com.riftlab.app.ai.LiteRtLocalAiRuntime\n' not in s:
+              s = s.replace(marker, marker + 'import com.riftlab.app.ai.LiteRtLocalAiRuntime\n', 1)
+          s = s.replace(
+              '    val installState by LocalModelManager.state.collectAsState()\n',
+              '    val installState by LocalModelManager.state.collectAsState()\n    val runtimeState by LiteRtLocalAiRuntime.state.collectAsState()\n',
+              1
+          )
+          s = s.replace(
+              '''    val downloadMetadataReady = selectedModel?.downloadUrl?.isNotBlank() == true &&\n        selectedModel.sha256?.length == 64''',
+              '''    val downloadMetadataReady = selectedModel?.let { LocalModelManager.resolvedDownloadMetadata(it) != null } == true''',
+              1
+          )
+          s = s.replace(
+              '''                        enabled = downloadMetadataReady && !busy && !(statusForSelected && installState.status == LocalModelInstallStatus.READY),''',
+              '''                        enabled = downloadMetadataReady && !busy && !(statusForSelected && installState.status in setOf(LocalModelInstallStatus.VERIFIED, LocalModelInstallStatus.READY)),''',
+              1
+          )
+          old = '''                    if (statusForSelected && installState.localPath != null) {\n                        TextButton(onClick = { LocalModelManager.removeInstalled(context) }) { Text("删除模型") }\n                    }\n                }\n                if (!downloadMetadataReady) {'''
+          new = '''                    if (statusForSelected && installState.localPath != null) {\n                        TextButton(onClick = { LocalModelManager.removeInstalled(context) }) { Text("删除模型") }\n                    }\n                }\n                if (statusForSelected && installState.status == LocalModelInstallStatus.VERIFIED) {\n                    Spacer(Modifier.height(8.dp))\n                    Button(\n                        enabled = !runtimeState.busy,\n                        onClick = { LiteRtLocalAiRuntime.benchmarkVerifiedModel(context, selectedModel) }\n                    ) { Text(if (runtimeState.busy) "基准测试中" else "运行真机基准") }\n                    Text(\n                        "会真实加载模型并完成一次短推理；延迟和热状态不过门槛就继续规则模式。",\n                        color = RiftMuted,\n                        fontSize = 11.sp,\n                        lineHeight = 16.sp\n                    )\n                }\n                if (statusForSelected && installState.status == LocalModelInstallStatus.READY) {\n                    Spacer(Modifier.height(6.dp))\n                    Text(\n                        "READY · 真机推理 ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"} · 请手动打开总开关",\n                        color = RiftCyan,\n                        fontSize = 11.sp,\n                        fontWeight = FontWeight.SemiBold\n                    )\n                }\n                if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {\n                    Spacer(Modifier.height(4.dp))\n                    Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)\n                }\n                if (!downloadMetadataReady) {'''
+          if old not in s:
+              raise SystemExit('model manager UI anchor not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt app/src/main/java/com/riftlab/app/ui/LocalAiSettingsPanel.kt
+          git commit -m "dev.87: wire social starters and real local AI benchmark UI"
+          git pull --rebase origin main
+          git push origin HEAD:main
