@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-11T19:04:06Z",
+  "updatedAt": "2026-09-11T19:09:33Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
     "英雄联盟赛事: browser_stage=英雄联盟赛事: browser_posts=11 cached_media=55",
-    "英雄联盟赛事: transport=browser:posts=11",
+    "英雄联盟赛事: ocr_budget posts=6/11 images_per_post<=2 timeout=10s",
+    "英雄联盟赛事: transport=browser:posts=6",
     "LCK: browser_stage=LCK: browser_posts=0 cached_media=0",
     "LCK: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:HTTPError]",
     "LEC: browser_stage=LEC: browser_posts=0 cached_media=0",
@@ -15,14 +16,19 @@
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
     "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:HTTPError]",
     "iG电子竞技俱乐部: browser_stage=iG电子竞技俱乐部: browser_posts=11 cached_media=55",
-    "iG电子竞技俱乐部: transport=browser:posts=11",
+    "iG电子竞技俱乐部: ocr_budget posts=6/11 images_per_post<=2 timeout=10s",
+    "iG电子竞技俱乐部: transport=browser:posts=6",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: browser_posts=16 cached_media=88",
-    "BLG电子竞技俱乐部: transport=browser:posts=16",
+    "BLG电子竞技俱乐部: ocr_budget posts=6/16 images_per_post<=2 timeout=10s",
+    "BLG电子竞技俱乐部: transport=browser:posts=6",
     "JDG京东电子竞技俱乐部: browser_stage=JDG京东电子竞技俱乐部: browser_posts=17 cached_media=85",
-    "JDG京东电子竞技俱乐部: transport=browser:posts=17",
+    "JDG京东电子竞技俱乐部: ocr_budget posts=6/17 images_per_post<=2 timeout=10s",
+    "JDG京东电子竞技俱乐部: transport=browser:posts=6",
     "NIP电子竞技俱乐部: browser_stage=NIP电子竞技俱乐部: browser_posts=15 cached_media=83",
-    "NIP电子竞技俱乐部: transport=browser:posts=15",
+    "NIP电子竞技俱乐部: ocr_budget posts=6/15 images_per_post<=2 timeout=10s",
+    "NIP电子竞技俱乐部: transport=browser:posts=6",
     "WE电子竞技俱乐部: browser_stage=WE电子竞技俱乐部: browser_posts=22 cached_media=90",
-    "WE电子竞技俱乐部: transport=browser:posts=20"
+    "WE电子竞技俱乐部: ocr_budget posts=6/20 images_per_post<=2 timeout=10s",
+    "WE电子竞技俱乐部: transport=browser:posts=6"
   ]
 }
