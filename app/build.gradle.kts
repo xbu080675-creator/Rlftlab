@@ -51,8 +51,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 89
-        versionName = "1.0.0-dev.89"
+        versionCode = 90
+        versionName = "1.0.0-dev.90"
         buildConfigField("String", "GITHUB_ACCELERATOR_BASE_URLS", "\"$githubAcceleratorBaseUrlsLiteral\"")
     }
 
@@ -111,4 +111,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.89: warmed steady-state LiteRT-LM benchmark with cold/warm-up/median/P90/thermal metrics.
+// dev.90: prefer LiteRT-LM GPU/OpenCL with CPU fallback and graded steady-state readiness.
