@@ -205,7 +205,7 @@ internal fun MatchOperationsContent() {
                         Text(
                             "当前上游没有返回这一局的状态帧。RiftLab 保留数据缺口，不用终局数值伪造过程。",
                             color = RiftMuted,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -229,7 +229,7 @@ private fun OperatorHeader(
     OperatorPanel(accent = phase == ScheduleMatchPhase.LIVE) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("EVENT OPERATOR DATA PLANE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("EVENT OPERATOR DATA PLANE", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("赛事运营数据", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             Text(
@@ -239,7 +239,7 @@ private fun OperatorHeader(
                     ScheduleMatchPhase.COMPLETED -> "FINAL ARCHIVE"
                 },
                 color = if (phase == ScheduleMatchPhase.LIVE) RiftCyan else RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -247,12 +247,12 @@ private fun OperatorHeader(
         Text(
             "${match.league} · ${match.blockName} · BO${match.bestOf} · event=${match.eventId.ifBlank { "—" }}",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
         Text(
             "schedule=${match.state} · lifecycle revisions=${record?.scheduleRevisions?.size ?: 0} · $status",
             color = RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             modifier = Modifier.padding(top = 3.dp)
         )
     }
@@ -271,7 +271,7 @@ private fun OperatorGameTabs(games: List<Int>, selected: Int, onSelect: (Int) ->
             Text(
                 "G$game",
                 color = if (active) RiftCyan else RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -286,7 +286,7 @@ private fun OperatorGameTabs(games: List<Int>, selected: Int, onSelect: (Int) ->
 @Composable
 private fun UpcomingOperatorPanel(match: ScheduledEsportsMatch, record: MatchLifecycleRecord?) {
     OperatorPanel {
-        Text("PRE-MATCH / 动态赛前状态", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("PRE-MATCH / 动态赛前状态", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(7.dp))
         val a = match.teams.getOrNull(0)
         val b = match.teams.getOrNull(1)
@@ -299,7 +299,7 @@ private fun UpcomingOperatorPanel(match: ScheduledEsportsMatch, record: MatchLif
         Text(
             "赛前字段不是静态文案：Riot Schedule 每次改变开赛时间、状态、比分/结果字段都会追加一个 revision；开局后自动进入实时帧采集。",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
     }
 }
@@ -313,7 +313,7 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
             Text(
                 if (phase == ScheduleMatchPhase.COMPLETED && frameCount == 0) "FINAL ONLY" else "$frameCount FRAMES",
                 color = RiftMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
         }
         Spacer(Modifier.height(9.dp))
@@ -328,11 +328,11 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
                 alignEnd = false
             )
             Column(Modifier.width(86.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("GOLD DIFF", color = RiftMuted, fontSize = 10.sp)
+                Text("GOLD DIFF", color = RiftMuted, fontSize = 11.sp)
                 Text(signedGold(snapshot.goldDiff), color = if (snapshot.goldDiff >= 0) RiftCyan else RiftRed, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text("K ${snapshot.blueKills}:${snapshot.redKills}", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("K ${snapshot.blueKills}:${snapshot.redKills}", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 if (snapshot.blueXp > 0 || snapshot.redXp > 0) {
-                    Text("XP Δ ${signedGold(snapshot.blueXp - snapshot.redXp)}", color = RiftMuted, fontSize = 10.sp)
+                    Text("XP Δ ${signedGold(snapshot.blueXp - snapshot.redXp)}", color = RiftMuted, fontSize = 11.sp)
                 }
             }
             TeamMetricColumn(
@@ -351,9 +351,9 @@ private fun LiveStatePanel(snapshot: LiveSnapshot, phase: ScheduleMatchPhase, fr
                 if (phase == ScheduleMatchPhase.COMPLETED) "终局快照" else "等待下一帧"
             },
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
-        Text(snapshot.source, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
+        Text(snapshot.source, color = RiftMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 3.dp))
     }
 }
 
@@ -373,7 +373,7 @@ private fun androidx.compose.foundation.layout.RowScope.TeamMetricColumn(
     ) {
         Text(team, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text(formatGold(gold), color = if (alignEnd) RiftRed else RiftCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        Text("K $kills · T $towers · D $dragons · B $barons", color = RiftMuted, fontSize = 10.sp)
+        Text("K $kills · T $towers · D $dragons · B $barons", color = RiftMuted, fontSize = 11.sp)
     }
 }
 
@@ -401,7 +401,7 @@ private fun GoldHistoryPanel(
     }
     OperatorPanel(accent = snapshots.size >= 2) {
         if (snapshots.size < 2) {
-            Text("ECONOMY REPLAY", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text("ECONOMY REPLAY", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Text("经济差回放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
             Box(Modifier.fillMaxWidth().height(108.dp), contentAlignment = Alignment.Center) {
@@ -452,7 +452,7 @@ private fun GoldHistoryPanel(
 
         Row(verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
-                Text("ECONOMY SWING", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+                Text("ECONOMY SWING", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
                 Text(
                     if (phase == ScheduleMatchPhase.COMPLETED) "历史经济差 · 直接拖动图表回看" else "实时经济差",
                     color = RiftText,
@@ -475,28 +475,28 @@ private fun GoldHistoryPanel(
             onSelectSecond = { selectedElapsedSecond = it }
         )
         Row(Modifier.fillMaxWidth().padding(top = 5.dp)) {
-            Text(formatOperatorClock(snapshots.first().elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
+            Text(formatOperatorClock(snapshots.first().elapsedSeconds), color = RiftMuted, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text("拖动曲线选择时间", color = RiftMuted, fontSize = 10.sp)
+            Text("拖动曲线选择时间", color = RiftMuted, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
-            Text(formatOperatorClock(snapshots.last().elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
+            Text(formatOperatorClock(snapshots.last().elapsedSeconds), color = RiftMuted, fontSize = 11.sp)
         }
 
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(selected.blue, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(selected.blue, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(formatGold(selected.blueGold), color = blueColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
             Column(Modifier.width(112.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("GOLD DIFF", color = RiftMuted, fontSize = 10.sp)
+                Text("GOLD DIFF", color = RiftMuted, fontSize = 11.sp)
                 Text(leaderText, color = leaderColor, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 if (selected.blueXp > 0 || selected.redXp > 0) {
-                    Text("XP ${signedGold(selected.blueXp - selected.redXp)}", color = RiftMuted, fontSize = 10.sp)
+                    Text("XP ${signedGold(selected.blueXp - selected.redXp)}", color = RiftMuted, fontSize = 11.sp)
                 }
             }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(selected.red, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(selected.red, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(formatGold(selected.redGold), color = redColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -525,15 +525,15 @@ private fun GoldHistoryPanel(
                 nearestEvent?.detail?.ifBlank { "来自连续状态帧的可核实事件。" }
                     ?: "没有离散事件时只展示真实状态变化，不补写不存在的击杀或资源事件。",
                 color = RiftMuted,
-                fontSize = 10.sp,
-                lineHeight = 14.sp,
+                fontSize = 11.sp,
+                lineHeight = 17.sp,
                 modifier = Modifier.padding(top = 3.dp)
             )
         }
         Text(
             "${snapshots.size} 个已验证状态帧 · ${selected.source}",
             color = RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             modifier = Modifier.padding(top = 9.dp)
         )
     }
@@ -650,10 +650,10 @@ private fun nodeEventSummary(previous: LiveSnapshot?, current: LiveSnapshot): St
 @Composable
 private fun OperatorScrubMetricRow(left: String, centerLeft: String, centerRight: String, right: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(left, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        Text(centerLeft, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        Text(centerRight, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        Text(right, color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        Text(left, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(centerLeft, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(centerRight, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text(right, color = RiftRed, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -667,7 +667,7 @@ private fun PlayerOperatorTable(snapshot: LiveSnapshot, phase: ScheduleMatchPhas
         Text(
             if (phase == ScheduleMatchPhase.COMPLETED) "PLAYER STATE / 选手终局状态" else "PLAYER STATE / 选手实时状态",
             color = RiftCyan,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(6.dp))
@@ -684,19 +684,19 @@ private fun PlayerOperatorTable(snapshot: LiveSnapshot, phase: ScheduleMatchPhas
 private fun OperatorPlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?) {
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(left?.summonerName ?: "—", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(playerOperatorStats(left), color = RiftMuted, fontSize = 10.sp)
+            Text(left?.summonerName ?: "—", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(playerOperatorStats(left), color = RiftMuted, fontSize = 11.sp)
         }
         Text(
             left?.role?.ifBlank { right?.role.orEmpty() }.orEmpty(),
             color = RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.width(34.dp)
         )
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(right?.summonerName ?: "—", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-            Text(playerOperatorStats(right), color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.End)
+            Text(right?.summonerName ?: "—", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+            Text(playerOperatorStats(right), color = RiftMuted, fontSize = 11.sp, textAlign = TextAlign.End)
         }
     }
 }
@@ -704,7 +704,7 @@ private fun OperatorPlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapsh
 @Composable
 private fun LifecycleCoveragePanel(record: MatchLifecycleRecord, selectedGame: Int) {
     OperatorPanel {
-        Text("LIFECYCLE ARCHIVE / 生命周期档案", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("LIFECYCLE ARCHIVE / 生命周期档案", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         OperatorValueRow("当前阶段", record.phase.name)
         OperatorValueRow("赛程 revision", record.scheduleRevisions.size.toString())
@@ -715,7 +715,7 @@ private fun LifecycleCoveragePanel(record: MatchLifecycleRecord, selectedGame: I
         Text(
             "生命周期档案不会因页面切换而重置。赛前变更、赛中连续状态、赛后终局共用同一个 Match key，为后续沙盘恢复历史状态保留真实输入。",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
     }
 }
@@ -723,8 +723,8 @@ private fun LifecycleCoveragePanel(record: MatchLifecycleRecord, selectedGame: I
 @Composable
 private fun OperatorValueRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(label, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.width(92.dp))
-        Text(value, color = RiftText, fontSize = 10.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+        Text(label, color = RiftMuted, fontSize = 11.sp, modifier = Modifier.width(92.dp))
+        Text(value, color = RiftText, fontSize = 11.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
     }
 }
 

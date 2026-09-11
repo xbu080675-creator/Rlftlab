@@ -132,7 +132,7 @@ private fun Header(onVersionClick: () -> Unit, onSourceSettingsClick: () -> Unit
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("RIFTLAB", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = 1.4.sp)
-            Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 10.sp, letterSpacing = 1.1.sp)
+            Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 12.sp, letterSpacing = 1.1.sp)
         }
         Box(
             Modifier.size(34.dp).clickable(onClick = onSourceSettingsClick),
@@ -149,7 +149,7 @@ private fun Header(onVersionClick: () -> Unit, onSourceSettingsClick: () -> Unit
         Text(
             BuildConfig.VERSION_NAME.replace("1.0.0-", "1.0 ").uppercase(),
             color = RiftCyan,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.clickable(onClick = onVersionClick).padding(horizontal = 6.dp, vertical = 8.dp)
         )
@@ -216,7 +216,7 @@ private fun PreScreen() {
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(scheduleStatus, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                        Text(scheduleStatus, color = RiftMuted, fontSize = 12.sp, lineHeight = 18.sp)
                     }
                     RiftStatusBadge(if (target != null) "READY" else "SYNC")
                 }
@@ -231,7 +231,7 @@ private fun PreScreen() {
                     Text(
                         "${match.league} · ${match.blockName.ifBlank { "赛程" }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateTimeLabel(match)}",
                         color = RiftMuted,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
@@ -239,7 +239,7 @@ private fun PreScreen() {
                 Text(
                     "数据来源 · Riot / Cito / International · 缺失字段保持未知",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 12.sp
                 )
             }
         }
@@ -259,7 +259,7 @@ private fun PreScreen() {
             item {
                 Panel {
                     Text("STARTERS NOT CONFIRMED", color = RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-                    Text("Roster pool 可以已连接，但存在同位置多人时不会把名单顺序当作官方首发。", color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                    Text("Roster pool 可以已连接，但存在同位置多人时不会把名单顺序当作官方首发。", color = RiftMuted, fontSize = 12.sp, lineHeight = 18.sp)
                 }
             }
         }
@@ -276,8 +276,8 @@ private fun PreScreen() {
             item {
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(rosterPoolLabel(data.blue, data.blueRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
-                        Text(rosterPoolLabel(data.red, data.redRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                        Text(rosterPoolLabel(data.blue, data.blueRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
+                        Text(rosterPoolLabel(data.red, data.redRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                 }
             }
@@ -288,8 +288,8 @@ private fun PreScreen() {
             item {
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(staffLabel(data.blue, data.blueStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
-                        Text(staffLabel(data.red, data.redStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                        Text(staffLabel(data.blue, data.blueStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
+                        Text(staffLabel(data.red, data.redStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                 }
             }
@@ -299,11 +299,11 @@ private fun PreScreen() {
         item {
             Panel {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(recentSeriesLabel(data.blue, data.blueRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
-                    Text(recentSeriesLabel(data.red, data.redRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                    Text(recentSeriesLabel(data.blue, data.blueRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
+                    Text(recentSeriesLabel(data.red, data.redRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 12.sp, lineHeight = 17.sp)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("仅统计当前 Unified Schedule 历史窗口中已验证结束的 Series；不是全历史数据库。", color = RiftMuted, fontSize = 10.sp)
+                Text("仅统计当前 Unified Schedule 历史窗口中已验证结束的 Series；不是全历史数据库。", color = RiftMuted, fontSize = 12.sp)
             }
         }
 
@@ -320,7 +320,7 @@ private fun PreScreen() {
                     fontSize = 11.sp,
                     lineHeight = 17.sp
                 )
-                Text("SOURCE  Unified Schedule · Riot/Cito/International Mirror · 结果视角已标明", color = RiftMuted, fontSize = 10.sp)
+                Text("SOURCE  Unified Schedule · Riot/Cito/International Mirror · 结果视角已标明", color = RiftMuted, fontSize = 12.sp)
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -436,15 +436,15 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.weight(1f))
-                    Text("POLL 3s", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Text("POLL 3s", color = RiftMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(Modifier.height(7.dp))
                 Text(status.message, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 18.sp)
                 Spacer(Modifier.height(7.dp))
-                Text("SOURCE  ${snapshot.source}", color = RiftMuted, fontSize = 10.sp)
-                Text("EVENT   ${status.eventId.ifBlank { "—" }}", color = RiftMuted, fontSize = 10.sp)
-                Text("GAME    ${status.gameId.ifBlank { snapshot.gameId.ifBlank { "—" } }}", color = RiftMuted, fontSize = 10.sp)
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text("SOURCE  ${snapshot.source}", color = RiftMuted, fontSize = 12.sp)
+                Text("EVENT   ${status.eventId.ifBlank { "—" }}", color = RiftMuted, fontSize = 12.sp)
+                Text("GAME    ${status.gameId.ifBlank { snapshot.gameId.ifBlank { "—" } }}", color = RiftMuted, fontSize = 12.sp)
+                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -466,24 +466,24 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                         fontWeight = FontWeight.SemiBold
                     )
                     if (unifiedEvent.detail.isNotBlank()) {
-                        Text(unifiedEvent.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
+                        Text(unifiedEvent.detail, color = RiftMuted, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                     Text(
                         "EVIDENCE  ${liveEventEvidenceLabel(unifiedEvent.evidence)}",
                         color = if (unifiedEvent.evidence == TimelineEventEvidence.DERIVED_WINDOW) RiftMuted else RiftCyan,
-                        fontSize = 10.sp
+                        fontSize = 12.sp
                     )
                     Text(
                         "SOURCE  ${unifiedEvent.source.ifBlank { "统一事件模型" }}",
                         color = RiftMuted,
-                        fontSize = 10.sp
+                        fontSize = 12.sp
                     )
                 } else {
                     Text(
                         "统一事件流等待下一条可核实事件；Provider 自由文本只保留作诊断，不作为赛事事件事实展示。",
                         color = RiftMuted,
-                        fontSize = 10.sp,
-                        lineHeight = 15.sp
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp
                     )
                 }
             }
@@ -658,7 +658,7 @@ private fun MatchHero(blue: String, red: String, time: String, label: String, ma
     val left = match?.teams?.getOrNull(0)
     val right = match?.teams?.getOrNull(1)
     Panel(accent = true) {
-        Text(label, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = RiftMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(10.dp))
         TeamMatchupVisual(
             leftCode = left?.code?.ifBlank { left.name } ?: blue,
@@ -678,20 +678,20 @@ private fun RosterRow(left: PlayerCard?, right: PlayerCard?) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left?.role ?: right?.role ?: "—", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.role ?: right?.role ?: "—", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(left?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 if (left != null) {
-                    Text(left.rank, color = RiftMuted, fontSize = 10.sp)
-                    Text(left.recent, color = RiftMuted, fontSize = 10.sp)
+                    Text(left.rank, color = RiftMuted, fontSize = 12.sp)
+                    Text(left.recent, color = RiftMuted, fontSize = 12.sp)
                 }
             }
             Text("↔", color = RiftLine, fontSize = 18.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right?.role ?: left?.role ?: "—", color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.role ?: left?.role ?: "—", color = RiftRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(right?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 if (right != null) {
-                    Text(right.rank, color = RiftMuted, fontSize = 10.sp)
-                    Text(right.recent, color = RiftMuted, fontSize = 10.sp)
+                    Text(right.rank, color = RiftMuted, fontSize = 12.sp)
+                    Text(right.recent, color = RiftMuted, fontSize = 12.sp)
                 }
             }
         }
@@ -734,22 +734,22 @@ private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?)
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(left?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     left?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 12.sp
                 )
             }
             Text("↔", color = RiftLine, fontSize = 16.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(right?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     right?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 12.sp
                 )
             }
         }
@@ -805,7 +805,7 @@ private fun ActionButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = RiftCyan, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(3.dp))
-            Text(label, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

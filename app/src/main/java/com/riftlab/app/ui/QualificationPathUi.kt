@@ -45,13 +45,13 @@ fun QualificationPathCenterPanel() {
         Text(
             "QUALIFICATION / 资格体系与晋级路径",
             color = RiftCyan,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
         Text(
             "积分、名次直通、资格赛与国际赛参赛来源分开建模；未知机制不会伪装成“积分缺失”",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
         Spacer(Modifier.height(8.dp))
 
@@ -60,25 +60,25 @@ fun QualificationPathCenterPanel() {
                 archive.selected?.edition?.displayName?.let { "$it · 资格来源尚未接入可信映射，不根据排名猜晋级" }
                     ?: "当前届次尚无可信资格路径源",
                 color = RiftMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
             return@Column
         }
 
-        Text(snapshot.title, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        Text("TARGET  ${snapshot.targetEvent}", color = RiftMuted, fontSize = 10.sp)
+        Text(snapshot.title, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Text("TARGET  ${snapshot.targetEvent}", color = RiftMuted, fontSize = 11.sp)
         Text(
             "MODE  ${snapshot.mechanism.label} · ${snapshot.mechanismEvidence.label}",
             color = evidenceColor(snapshot.mechanismEvidence),
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold
         )
         if (snapshot.mechanismDetail.isNotBlank()) {
-            Text(snapshot.mechanismDetail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
+            Text(snapshot.mechanismDetail, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
         }
         if (snapshot.segments.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Text("MECHANISM SEGMENTS / 资格机制拆分", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text("MECHANISM SEGMENTS / 资格机制拆分", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             snapshot.segments.forEach { segment ->
                 Spacer(Modifier.height(4.dp))
                 Column(
@@ -88,19 +88,19 @@ fun QualificationPathCenterPanel() {
                         .padding(6.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(segment.type.label, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                        Text(segment.evidence.label, color = evidenceColor(segment.evidence), fontSize = 10.sp)
+                        Text(segment.type.label, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(segment.evidence.label, color = evidenceColor(segment.evidence), fontSize = 11.sp)
                     }
-                    Text(segment.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
-                    Text("SOURCE  ${segment.source}", color = RiftMuted, fontSize = 10.sp)
+                    Text(segment.detail, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+                    Text("SOURCE  ${segment.source}", color = RiftMuted, fontSize = 11.sp)
                 }
             }
         }
         Spacer(Modifier.height(7.dp))
 
         if (snapshot.routes.isEmpty()) {
-            Text(snapshot.note.ifBlank { "资格规则/路径等待可信来源" }, color = RiftMuted, fontSize = 10.sp)
-            Text("SOURCE  ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 10.sp)
+            Text(snapshot.note.ifBlank { "资格规则/路径等待可信来源" }, color = RiftMuted, fontSize = 11.sp)
+            Text("SOURCE  ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 11.sp)
             return@Column
         }
 
@@ -126,10 +126,10 @@ fun QualificationPathCenterPanel() {
                         Text(
                             route.teamCode,
                             color = if (active) statusColor(route.status) else RiftText,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(route.status.label, color = statusColor(route.status), fontSize = 10.sp)
+                        Text(route.status.label, color = statusColor(route.status), fontSize = 11.sp)
                     }
                 }
                 repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -146,7 +146,7 @@ fun QualificationPathCenterPanel() {
         val visibleRules = snapshot.rules.take(5)
         if (visibleRules.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text("QUALIFICATION RULES / 资格规则", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text("QUALIFICATION RULES / 资格规则", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             visibleRules.forEach { rule ->
                 Spacer(Modifier.height(4.dp))
                 Column(
@@ -156,18 +156,18 @@ fun QualificationPathCenterPanel() {
                         .padding(6.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(rule.title, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                        Text(rule.evidence.label, color = evidenceColor(rule.evidence), fontSize = 10.sp)
+                        Text(rule.title, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(rule.evidence.label, color = evidenceColor(rule.evidence), fontSize = 11.sp)
                     }
-                    Text(rule.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
-                    Text("SOURCE  ${rule.source}", color = RiftMuted, fontSize = 10.sp)
+                    Text(rule.detail, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+                    Text("SOURCE  ${rule.source}", color = RiftMuted, fontSize = 11.sp)
                 }
             }
         }
 
         Spacer(Modifier.height(7.dp))
-        Text(snapshot.note, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
-        Text("SOURCE  ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 10.sp)
+        Text(snapshot.note, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
+        Text("SOURCE  ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 11.sp)
     }
 }
 
@@ -183,10 +183,10 @@ private fun RouteDetail(route: TeamQualificationRoute, mechanism: QualificationM
             Text(
                 "${route.teamCode} → ${route.targetEvent}",
                 color = RiftText,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(route.evidence.label, color = evidenceColor(route.evidence), fontSize = 10.sp)
+            Text(route.evidence.label, color = evidenceColor(route.evidence), fontSize = 11.sp)
         }
 
         Spacer(Modifier.height(5.dp))
@@ -220,13 +220,13 @@ private fun RouteDetail(route: TeamQualificationRoute, mechanism: QualificationM
                     QualificationMechanism.MIXED -> "该队当前路径没有可核实积分值；混合体系的其他资格节点仍按来源展示。"
                 },
                 color = RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 lineHeight = 10.sp
             )
         }
 
         if (route.updatedThrough.isNotBlank()) {
-            Text("SNAPSHOT  ${route.updatedThrough}", color = RiftMuted, fontSize = 10.sp)
+            Text("SNAPSHOT  ${route.updatedThrough}", color = RiftMuted, fontSize = 11.sp)
         }
         Spacer(Modifier.height(6.dp))
 
@@ -238,19 +238,19 @@ private fun RouteDetail(route: TeamQualificationRoute, mechanism: QualificationM
                 QualificationNodeState.PENDING -> "…"
             }
             Row(Modifier.fillMaxWidth()) {
-                Text(prefix, color = nodeColor(node.state), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(prefix, color = nodeColor(node.state), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Column(Modifier.padding(start = 6.dp)) {
                     Text(
                         "${index + 1}. ${node.label} · ${node.state.label}",
                         color = RiftText,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Text(node.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
+                    Text(node.detail, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
                     Text(
                         "${node.evidence.label} · ${node.source}",
                         color = evidenceColor(node.evidence),
-                        fontSize = 10.sp
+                        fontSize = 11.sp
                     )
                 }
             }
@@ -266,9 +266,9 @@ private fun PointCell(title: String, value: String, detail: String, modifier: Mo
             .background(RiftPanelAlt, CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp))
             .padding(6.dp)
     ) {
-        Text(title, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        Text(title, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         Text(value, color = RiftCyan, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
+        Text(detail, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp)
     }
 }
 

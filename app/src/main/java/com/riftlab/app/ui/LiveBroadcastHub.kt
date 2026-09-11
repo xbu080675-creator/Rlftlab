@@ -147,7 +147,7 @@ private fun BroadcastHubLauncher(
         }
         if (gameLive && matchup.isNotBlank()) {
             Spacer(Modifier.height(2.dp))
-            Text(matchup, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(matchup, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -175,7 +175,7 @@ private fun BroadcastSourceDialog(onClose: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text("LIVE / 观赛入口", color = RiftText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(3.dp))
-                        Text("国内 + 海外官方/主流直播入口", color = RiftMuted, fontSize = 10.sp)
+                        Text("国内 + 海外官方/主流直播入口", color = RiftMuted, fontSize = 11.sp)
                     }
                     Text(
                         "关闭",
@@ -210,8 +210,8 @@ private fun BroadcastSourceDialog(onClose: () -> Unit) {
                 Text(
                     "直播入口只负责跳转到对应平台；RiftScreen 与赛事实时数据仍由 RiftLab 独立运行。海外入口包括 LoL Esports 官方站、YouTube、Twitch 与 X。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
                 )
             }
         }
@@ -235,7 +235,7 @@ private fun BroadcastRegionSection(
                         Text(
                             if (platform.packages.isEmpty()) "网页入口" else "优先打开已安装 APP · 否则网页",
                             color = RiftMuted,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
                     RiftStatusBadge("OPEN")

@@ -37,7 +37,7 @@ internal fun SideSelectionPrePanel() {
         Text(
             "SIDE SELECTION / 选边与一抢",
             color = RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 1.sp
         )
@@ -58,17 +58,17 @@ internal fun SideSelectionPrePanel() {
                 Text(
                     "RiftLab 不会根据对阵顺序猜蓝红方；Riot EventDetails 公布后才显示。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
                 )
             } else {
                 state.records.forEachIndexed { index, row ->
                     if (index > 0) Spacer(Modifier.height(9.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("G${row.game}", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp))
+                        Text("G${row.game}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(32.dp))
                         Column(Modifier.weight(1f)) {
                             Text("蓝色方 · ${row.blueTeam}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                            Text("FIRST PICK / 一抢 · ${row.firstPickTeam}", color = RiftCyan, fontSize = 10.sp)
+                            Text("FIRST PICK / 一抢 · ${row.firstPickTeam}", color = RiftCyan, fontSize = 11.sp)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("红色方 · ${row.redTeam}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -76,11 +76,11 @@ internal fun SideSelectionPrePanel() {
                     }
                 }
                 Spacer(Modifier.height(9.dp))
-                Text("来源 · ${state.records.first().source}", color = RiftMuted, fontSize = 10.sp)
+                Text("来源 · ${state.records.first().source}", color = RiftMuted, fontSize = 11.sp)
                 Text(
                     "注：蓝色方拥有标准 BP 的 First Pick；当前源若未单独给出“选边权归属”，RiftLab 不把蓝色方直接写成“拥有选边权的队伍”。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     lineHeight = 13.sp
                 )
             }

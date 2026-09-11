@@ -201,7 +201,7 @@ private fun MatchPaneTabs(
             Text(
                 label,
                 color = if (active) RiftCyan else RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -233,7 +233,7 @@ private fun EntityDetailHeader(
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             Text(title, color = RiftText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = RiftMuted, fontSize = 10.sp)
+            Text(subtitle, color = RiftMuted, fontSize = 11.sp)
         }
         Box(Modifier.clickable(onClick = onClose).padding(10.dp), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Close, null, tint = RiftMuted)

@@ -137,7 +137,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
             Text(
                 if (preferDomestic) "INTERNATIONAL OFFICIAL REPLAY / 国际赛事官方回放" else "GLOBAL OFFICIAL REPLAY / 海外官方回放",
                 color = RiftCyan,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(4.dp))
@@ -147,8 +147,8 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                 else
                     "海外赛区使用 Riot / YouTube 官方 VOD；不把无国内版权的地区联赛误接到 Bilibili。",
                 color = RiftMuted,
-                fontSize = 10.sp,
-                lineHeight = 14.sp
+                fontSize = 11.sp,
+                lineHeight = 17.sp
             )
             Spacer(Modifier.height(5.dp))
             Text(
@@ -158,7 +158,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                     "$domestic\n$global"
                 } else if (riotState.matchKey == riotKey) riotState.status else "正在切换 Riot VOD…",
                 color = RiftText,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 lineHeight = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -211,7 +211,7 @@ internal fun GlobalOfficialReplayContent(match: ScheduledEsportsMatch) {
                             }
                         },
                         color = RiftMuted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         modifier = Modifier.padding(top = 3.dp)
                     )
                 }
@@ -248,7 +248,7 @@ private fun ReplaySourceChip(label: String, selected: Boolean, modifier: Modifie
             .padding(horizontal = 9.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = if (selected) RiftCyan else RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(label, color = if (selected) RiftCyan else RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
     }
 }
 
@@ -262,7 +262,7 @@ private fun OfficialReplayPlaceholder(message: String) {
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(message, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
+        Text(message, color = RiftMuted, fontSize = 11.sp, lineHeight = 17.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -275,14 +275,14 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
             Text(
                 "G$game · ${if (youtubeEmbed) "YOUTUBE OFFICIAL EMBED" else "OFFICIAL VOD PENDING"}",
                 color = RiftText,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 if (youtubeEmbed) "APP 内播放 · 全屏可旋转" else "等待可嵌入官方源",
                 color = RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 textAlign = TextAlign.End
             )
         }
@@ -290,12 +290,12 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
         if (youtubeEmbed) {
             val startSeconds = link?.offsetSeconds?.coerceAtLeast(0) ?: 0
             Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Riot VOD 对齐", color = RiftMuted, fontSize = 10.sp)
+                Text("Riot VOD 对齐", color = RiftMuted, fontSize = 11.sp)
                 Spacer(Modifier.weight(1f))
                 Text(
                     if (startSeconds > 0) "同步起点 ${formatReplayTimestamp(startSeconds)}" else "官方源未提供额外偏移",
                     color = if (startSeconds > 0) RiftCyan else RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -314,7 +314,7 @@ private fun OfficialReplayPlayer(game: Int, link: RiotVodLink?) {
                 Text(
                     "Riot EventDetails 当前没有返回可直接嵌入的 YouTube 参数。RiftLab 不再把整个 LoL Esports 网页伪装成播放器，也不会改用 Bilibili。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     lineHeight = 13.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 6.dp)
@@ -380,8 +380,8 @@ private fun OfficialWebVideoPlayer(videoId: String, startSeconds: Int) {
         Text(
             "遇到 YouTube“请登录确认不是机器人”？在 RiftLab 内打开官方 YouTube 会话完成正常验证 / 登录 ›",
             color = RiftCyan,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
+            fontSize = 11.sp,
+            lineHeight = 15.sp,
             modifier = Modifier.clickable {
                 openYoutubeSessionDialog(context, activity) {
                     sessionNonce += 1

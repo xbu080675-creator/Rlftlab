@@ -42,23 +42,23 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("RIFTLAB UPDATE", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("当前版本", color = RiftMuted, fontSize = 10.sp)
+            Text("当前版本", color = RiftMuted, fontSize = 12.sp)
             Text("${BuildConfig.VERSION_NAME} · code ${BuildConfig.VERSION_CODE}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
             if (state.latestVersionName.isNotBlank()) {
                 Spacer(Modifier.height(3.dp))
-                Text("最新 DEV", color = RiftMuted, fontSize = 10.sp)
+                Text("最新 DEV", color = RiftMuted, fontSize = 12.sp)
                 Text("${state.latestVersionName} · code ${state.latestVersionCode}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
 
             if (state.sourceLabel.isNotBlank()) {
-                Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 10.sp)
+                Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 12.sp)
                 if (state.sourceLabel.startsWith("GitHub 更新加速")) {
                     Text(
                         "仅作用于本次 RiftLab GitHub 更新请求 · 非 VPN / 非系统代理 · 节点失败会自动切换",
                         color = RiftMuted,
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp
                     )
                 }
             }
@@ -70,9 +70,9 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                         .heightIn(max = 180.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text("更新内容", color = RiftMuted, fontSize = 10.sp)
+                    Text("更新内容", color = RiftMuted, fontSize = 12.sp)
                     Spacer(Modifier.height(5.dp))
-                    Text(state.changelog, fontSize = 10.sp, lineHeight = 15.sp)
+                    Text(state.changelog, fontSize = 12.sp, lineHeight = 18.sp)
                 }
             }
 
@@ -85,7 +85,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                 Text("${state.progressPercent}% · $sizeText", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            state.error?.let { Text(it, color = RiftRed, fontSize = 10.sp) }
+            state.error?.let { Text(it, color = RiftRed, fontSize = 12.sp) }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -95,7 +95,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftText),
                     shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
                 ) {
-                    Text(if (state.checking) "检查中" else "检查更新", fontSize = 10.sp)
+                    Text(if (state.checking) "检查中" else "检查更新", fontSize = 12.sp)
                 }
                 Button(
                     onClick = AppUpdateManager::downloadAndInstall,
@@ -104,7 +104,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(containerColor = RiftCyan, contentColor = RiftBg),
                     shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
                 ) {
-                    Text(if (state.downloading) "下载中" else "下载并安装", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (state.downloading) "下载中" else "下载并安装", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
@@ -114,7 +114,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                 colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftMuted),
                 shape = CutCornerShape(topEnd = 8.dp, bottomStart = 8.dp)
             ) {
-                Text("关闭", fontSize = 10.sp)
+                Text("关闭", fontSize = 12.sp)
             }
         }
     }

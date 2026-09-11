@@ -40,7 +40,7 @@ fun TournamentEditionArchiveInlinePanel() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text("TOURNAMENT ARCHIVE / 年度赛事档案", color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 10.sp)
+                Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 11.sp)
             }
             Column {
                 RiftStatusBadge("${state.editions.size} EDITIONS")
@@ -48,7 +48,7 @@ fun TournamentEditionArchiveInlinePanel() {
                     Text(
                         "跟随当前赛事",
                         color = RiftCyan,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
                             .clickable { TournamentEditionArchiveStore.followCurrentTournament() }
@@ -60,7 +60,7 @@ fun TournamentEditionArchiveInlinePanel() {
 
         Spacer(Modifier.height(8.dp))
         if (state.editions.isEmpty()) {
-            Text(state.statusMessage, color = RiftMuted, fontSize = 10.sp)
+            Text(state.statusMessage, color = RiftMuted, fontSize = 11.sp)
             return@RiftHudPanel
         }
 
@@ -95,7 +95,7 @@ fun TournamentEditionArchiveInlinePanel() {
                 Text(
                     edition.startDate.take(10).ifBlank { edition.seasonYear?.toString() ?: "DATE ?" },
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -106,13 +106,13 @@ fun TournamentEditionArchiveInlinePanel() {
             Text(
                 "${detail.edition.displayName} · ${detail.edition.startDate.take(10)} → ${detail.edition.endDate.take(10)}",
                 color = RiftText,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 "SERIES ${detail.edition.scheduleSeriesCount} · TEAMS ${detail.edition.participantTeamCodes.size} · ${detail.research?.version?.versionLabel ?: detail.edition.archivedSlots.firstOrNull { it.key == "patch" }?.detail ?: "PATCH 待同步"}",
                 color = RiftMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
             Spacer(Modifier.height(7.dp))
 
@@ -130,7 +130,7 @@ fun TournamentEditionArchiveInlinePanel() {
                                 .background(RiftPanel, CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp))
                                 .padding(horizontal = 6.dp, vertical = 5.dp)
                         ) {
-                            Text(slot.label, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                            Text(slot.label, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                             Text(
                                 displayState.label,
                                 color = when (displayState) {
@@ -139,9 +139,9 @@ fun TournamentEditionArchiveInlinePanel() {
                                     TournamentEditionSlotState.PENDING -> RiftMuted
                                     TournamentEditionSlotState.SOURCE_ERROR -> RiftRed
                                 },
-                                fontSize = 10.sp
+                                fontSize = 11.sp
                             )
-                            Text(displayDetail, color = RiftMuted, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 3)
+                            Text(displayDetail, color = RiftMuted, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 3)
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -150,7 +150,7 @@ fun TournamentEditionArchiveInlinePanel() {
             }
         }
 
-        Text(state.statusMessage, color = RiftMuted, fontSize = 10.sp)
+        Text(state.statusMessage, color = RiftMuted, fontSize = 11.sp)
     }
 }
 
