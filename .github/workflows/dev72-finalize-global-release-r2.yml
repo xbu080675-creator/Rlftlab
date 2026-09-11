@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   finalize-build-sign:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,16 +108,19 @@ jobs:
           name: RiftLab-dev72-global-final-r2
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Commit final release candidate
+      - name: Commit non-workflow final release candidate
         shell: bash
         run: |
           set -euo pipefail
+          # The Actions token can write source files but cannot update workflow files.
+          # Restore workflows before staging; workflow cleanup is committed separately via the GitHub connector.
+          git restore --source=HEAD -- .github/workflows
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           if git diff --cached --quiet; then
-            echo 'No finalization changes to commit.'
+            echo 'No non-workflow finalization changes to commit.'
             exit 0
           fi
-          git commit -m 'dev72: finalize global release candidate r2'
+          git commit -m 'dev72: finalize global release source candidate r2'
           git push
