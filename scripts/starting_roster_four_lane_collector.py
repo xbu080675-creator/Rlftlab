@@ -55,12 +55,8 @@ def is_candidate_post(text: str, original_images: list[str], images: list, keywo
     has_media = bool(original_images or images)
     shell_hits = sum(1 for marker in SHELL_MARKERS if marker in text)
 
-    # A browser/profile shell may contain many avatars and therefore superficially
-    # look like an image post. Multiple shell markers are a hard rejection.
     if shell_hits >= 2:
         return False, keyword_hit
-    # Text-only rows must actually look roster-related. Image-only official posts
-    # remain valid candidates because many clubs put the entire lineup in artwork.
     if not keyword_hit and not has_media:
         return False, keyword_hit
     return True, keyword_hit
@@ -132,4 +128,5 @@ def add_announcements() -> None:
 
 if __name__ == "__main__":
     fast.global_collector.base.main()
+    fast.write_trace_report()
     add_announcements()
