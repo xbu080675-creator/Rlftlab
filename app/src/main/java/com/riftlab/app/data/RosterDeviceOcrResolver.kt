@@ -2,12 +2,12 @@ package com.riftlab.app.data
 
 import android.graphics.BitmapFactory
 import com.riftlab.app.ai.RosterOcrResult
-import com.riftlab.app.ai.RosterOcrToken
 import com.riftlab.app.ai.RosterVisionPipeline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
 
 data class RosterDeviceOcrTrace(
@@ -21,7 +21,8 @@ data class RosterDeviceOcrTrace(
     val rightRoleCandidates: Map<String, List<String>> = emptyMap(),
     val layoutMode: String = "TEXT_ONLY",
     val textPreview: String,
-    val error: String = ""
+    val error: String = "",
+    val cached: Boolean = false
 )
 
 /**
@@ -29,6 +30,11 @@ data class RosterDeviceOcrTrace(
  * the server could not normalize. Results are diagnostic/candidate data first;
  * they are never promoted to confirmed starters unless a later validator can
  * prove all five roles against an official source.
+ *
+ * StartingRosterCenter polls every minute, so the expensive image download/OCR
+ * path is memory-cached by image URL + league hint. Successful OCR is reused for
+ * six hours; failures are retried after ten minutes instead of hammering the
+ * same protected CDN or running ML Kit every minute.
  */
 internal class RosterDeviceOcrResolver(
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -36,6 +42,13 @@ internal class RosterDeviceOcrResolver(
         .readTimeout(12, TimeUnit.SECONDS)
         .build()
 ) {
+    private data class CachedTrace(val storedAtMs: Long, val trace: RosterDeviceOcrTrace)
+
+    private val traceCache = object : LinkedHashMap<String, CachedTrace>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, CachedTrace>?): Boolean =
+            size > MAX_CACHE_ENTRIES
+    }
+
     suspend fun inspect(
         target: ScheduledEsportsMatch,
         announcements: List<StartingRosterAnnouncement>,
@@ -51,6 +64,17 @@ internal class RosterDeviceOcrResolver(
             .take(maxAnnouncements)
             .forEach { announcement ->
                 announcement.imageUrls.take(maxImagesPerAnnouncement).forEach { imageUrl ->
+                    val cacheKey = "${leagueHint.uppercase()}|$imageUrl"
+                    val cached = cachedTrace(cacheKey)
+                    if (cached != null) {
+                        traces += cached.copy(
+                            announcementId = announcement.id,
+                            account = announcement.account,
+                            cached = true
+                        )
+                        return@forEach
+                    }
+
                     val trace = runCatching {
                         val request = Request.Builder()
                             .url(imageUrl)
@@ -99,10 +123,27 @@ internal class RosterDeviceOcrResolver(
                             error = "${error::class.java.simpleName}:${error.message.orEmpty().take(100)}"
                         )
                     }
+                    storeTrace(cacheKey, trace)
                     traces += trace
                 }
             }
         traces
+    }
+
+    @Synchronized
+    private fun cachedTrace(key: String): RosterDeviceOcrTrace? {
+        val cached = traceCache[key] ?: return null
+        val ttl = if (cached.trace.error.isBlank()) SUCCESS_CACHE_MS else FAILURE_CACHE_MS
+        if (System.currentTimeMillis() - cached.storedAtMs > ttl) {
+            traceCache.remove(key)
+            return null
+        }
+        return cached.trace
+    }
+
+    @Synchronized
+    private fun storeTrace(key: String, trace: RosterDeviceOcrTrace) {
+        traceCache[key] = CachedTrace(System.currentTimeMillis(), trace.copy(cached = false))
     }
 
     private data class SpatialCandidates(
@@ -216,6 +257,9 @@ internal class RosterDeviceOcrResolver(
     }
 
     companion object {
+        private const val MAX_CACHE_ENTRIES = 64
+        private const val SUCCESS_CACHE_MS = 6 * 60 * 60_000L
+        private const val FAILURE_CACHE_MS = 10 * 60_000L
         private val ROLES = listOf("TOP", "JUG", "MID", "BOT", "SUP")
         private val ROLE_ALIASES = mapOf(
             "TOP" to listOf("TOP", "上单", "탑", "トップ"),
