@@ -4,6 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,10 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Device capability tiers are about sustained real-time inference, not whether a model can merely
- * be opened once. RiftLab keeps Tier 0 usable with the deterministic rules engine only.
- */
 enum class LocalAiTier { TIER_0_RULES, TIER_1_LITE, TIER_2_SLM, TIER_3_HIGH, TIER_4_EXPERIMENTAL }
 
 enum class LocalAiScope {
@@ -69,20 +67,18 @@ data class LocalAiState(
     val lastDecision: TrendDecision? = null
 )
 
-/**
- * Catalog is deliberately replaceable. The APK only ships a safe seed entry; a later remote catalog
- * can add/revoke model builds and download mirrors without requiring an app update.
- */
 object LocalModelCatalog {
     private val seed = listOf(
         LocalModelDescriptor(
             id = "qwen3-0.6b-int4-nothink",
             displayName = "Qwen3 0.6B · INT4 · No-think",
             minTier = LocalAiTier.TIER_2_SLM,
-            approximateBytes = 330L * 1024L * 1024L,
-            runtime = "litert-lm",
-            quantization = "INT4",
-            noThink = true
+            approximateBytes = 347_251_840L,
+            runtime = "litert-lm-0.17.0",
+            quantization = "INT4 block32",
+            noThink = true,
+            downloadUrl = "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/main/qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm?download=true",
+            sha256 = "2df6821ec12702dafd33915e7a1a1adc7c4b053f3672fd9555dfaf3a114c4139"
         )
     )
 
@@ -100,8 +96,8 @@ object LocalModelCatalog {
                 reason = when {
                     !runnable && profile.tier.ordinal < model.minTier.ordinal -> "设备持续推理档位不足"
                     !runnable -> "可用存储不足，需预留模型文件至少 2 倍空间"
-                    recommended -> "适合本机实时场景识别"
-                    else -> "可以运行，但建议先执行本机基准测试"
+                    recommended -> "适合本机实时场景识别；仍需下载后跑真机基准"
+                    else -> "可以运行，但必须先执行本机基准测试"
                 }
             )
         }
@@ -151,20 +147,13 @@ object DeviceAiProfiler {
     private const val GIB = 1024L * 1024L * 1024L
 }
 
-/**
- * Process-wide local intelligence service. Every RiftLab surface may consume the same engine and
- * current match context. Models are optional; rules remain available at all times.
- *
- * A real model backend is installed only after the user explicitly downloads/enables a compatible
- * model. Until then the deterministic backend is used and the rest of the app behaves normally.
- */
 object LocalAiCore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val mutableState = MutableStateFlow(LocalAiState())
     val state: StateFlow<LocalAiState> = mutableState.asStateFlow()
+    private val revisions = ConcurrentHashMap<String, AtomicLong>()
 
-    @Volatile
-    private var backend: TrendInferenceBackend = RuleTrendFallback
+    @Volatile private var backend: TrendInferenceBackend = RuleTrendFallback
 
     fun initialize(context: Context) {
         if (mutableState.value.initialized) return
@@ -190,10 +179,8 @@ object LocalAiCore {
         }
     }
 
-    /** User choice only. Merely being recommended never turns the model on automatically. */
     fun selectModel(modelId: String?) {
-        val allowed = mutableState.value.recommendations
-            .firstOrNull { it.model.id == modelId && it.runnable }
+        val allowed = mutableState.value.recommendations.firstOrNull { it.model.id == modelId && it.runnable }
         mutableState.value = mutableState.value.copy(
             selectedModelId = allowed?.model?.id,
             modelReady = false,
@@ -202,41 +189,60 @@ object LocalAiCore {
         backend = RuleTrendFallback
     }
 
-    /** Called by the model manager after checksum + local benchmark both pass. */
+    /** Called only after checksum + real model load + real short inference + thermal check pass. */
     fun installBackend(modelId: String, modelBackend: TrendInferenceBackend) {
         if (mutableState.value.selectedModelId != modelId) return
         backend = modelBackend
-        mutableState.value = mutableState.value.copy(modelReady = true, enabled = true)
+        mutableState.value = mutableState.value.copy(modelReady = true, enabled = false)
     }
 
     fun setEnabled(enabled: Boolean): Boolean {
         if (enabled && !mutableState.value.modelReady) return false
-        if (!enabled) backend = RuleTrendFallback
         mutableState.value = mutableState.value.copy(enabled = enabled && mutableState.value.modelReady)
         return mutableState.value.enabled == enabled
     }
 
     fun disableModel() {
-        setEnabled(false)
+        mutableState.value = mutableState.value.copy(enabled = false)
     }
 
-    /**
-     * Global entry point. scope identifies the consumer, while facts remain immutable verified data.
-     * AI never blocks the caller from using immediate rule facts; consumers should treat the returned
-     * decision as an asynchronous enhancement.
-     */
+    /** Compatibility/one-shot API. Consumers that affect HUD should prefer analyzeRuleFirst(). */
     suspend fun analyze(scope: LocalAiScope, frame: TrendFrame, latencyBudgetMs: Long = 500L): TrendDecision {
         val started = System.currentTimeMillis()
         val selected = if (mutableState.value.enabled) backend else RuleTrendFallback
-        val result = runCatching { selected.infer(frame) }
-            .getOrElse { RuleTrendFallback.infer(frame) }
+        val result = runCatching { selected.infer(frame) }.getOrElse { RuleTrendFallback.infer(frame) }
         val elapsed = System.currentTimeMillis() - started
-        val finalResult = if (elapsed <= latencyBudgetMs || selected === RuleTrendFallback) {
-            result
-        } else {
-            RuleTrendFallback.infer(frame)
-        }
+        val finalResult = if (elapsed <= latencyBudgetMs || selected === RuleTrendFallback) result else RuleTrendFallback.infer(frame)
         mutableState.value = mutableState.value.copy(lastDecision = finalResult)
         return finalResult
+    }
+
+    /**
+     * Production path: rules return immediately; local AI is an asynchronous enhancement only.
+     * Each game gets a monotonic revision. If a newer frame arrives before inference returns, the old
+     * result is discarded and can never overwrite the newer HUD state.
+     */
+    suspend fun analyzeRuleFirst(
+        consumer: LocalAiScope,
+        frame: TrendFrame,
+        latencyBudgetMs: Long = 2500L,
+        onEnhancement: (TrendDecision) -> Unit
+    ): TrendDecision {
+        val rule = RuleTrendFallback.infer(frame)
+        mutableState.value = mutableState.value.copy(lastDecision = rule)
+        if (!mutableState.value.enabled || backend === RuleTrendFallback) return rule
+
+        val counter = revisions.getOrPut(frame.gameId) { AtomicLong(0L) }
+        val revision = counter.incrementAndGet()
+        val selected = backend
+        scope.launch {
+            val started = System.currentTimeMillis()
+            val result = runCatching { selected.infer(frame) }.getOrNull() ?: return@launch
+            val elapsed = System.currentTimeMillis() - started
+            if (elapsed > latencyBudgetMs || counter.get() != revision) return@launch
+            mutableState.value = mutableState.value.copy(lastDecision = result)
+            onEnhancement(result)
+        }
+        return rule
     }
 }
