@@ -1,7 +1,6 @@
 package com.riftlab.app.data
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,12 +24,62 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * dev.80 realtime fabric for Cito.
+ * One process-wide Cito realtime bus.
+ *
+ * Every consumer (live router now; draft/fight HUD and explicit-event adapters next) must subscribe
+ * to this bus instead of opening another WebSocket. The bus owns reconnect/freshness only; match
+ * identity and REST reconciliation remain in domain adapters so a provider packet can never select
+ * the wrong schedule target by itself.
+ */
+internal object CitoRealtimeBus {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var job: Job? = null
+
+    private val _bundle = MutableStateFlow(CitoRealtimeBundle())
+    val bundle: StateFlow<CitoRealtimeBundle> = _bundle.asStateFlow()
+
+    private val _transport = MutableStateFlow("Cito WebSocket · 待机")
+    val transport: StateFlow<String> = _transport.asStateFlow()
+
+    @Synchronized
+    fun ensureRunning() {
+        if (job?.isActive == true) return
+        job = scope.launch {
+            var backoffMs = 1_500L
+            while (isActive) {
+                if (CitoApiConfig.apiKey() == null) {
+                    _transport.value = "Cito WebSocket · API Key 未配置"
+                    delay(5_000L)
+                    continue
+                }
+
+                _transport.value = "Cito WebSocket · 正在连接"
+                val ended = runCatching {
+                    CitoRealtimeSocket().messages().collect { message ->
+                        _bundle.value = _bundle.value.acceptSocket(message)
+                        _transport.value = "Cito WebSocket · 已连接"
+                        backoffMs = 1_500L
+                    }
+                }
+                if (ended.isFailure) {
+                    _transport.value = "Cito WebSocket · 断开，${backoffMs / 1000.0}s 后重连"
+                } else {
+                    _transport.value = "Cito WebSocket · 已关闭，等待重连"
+                }
+                delay(backoffMs)
+                backoffMs = (backoffMs * 2).coerceAtMost(15_000L)
+            }
+        }
+    }
+}
+
+/**
+ * Cito live-domain adapter.
  *
  * WebSocket is the live clock. REST is used only to discover the current Cito match/game and to
- * periodically reconcile state after reconnects or when the account does not have the WSS add-on.
- * No undocumented room/subscription message is invented here: RiftLab consumes provider push
- * frames exactly as sent and keeps REST as the authoritative reconnect/catch-up path.
+ * periodically reconcile state after reconnects or when the account does not have WSS entitlement.
+ * No undocumented room/subscription message is invented: RiftLab consumes provider push frames as
+ * delivered and keeps REST as the authoritative reconnect/catch-up path.
  */
 internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
     private val _status = MutableStateFlow(
@@ -39,9 +88,8 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
     val status: StateFlow<LiveSourceStatus> = _status.asStateFlow()
 
     override fun observe(matchId: String): Flow<LiveSnapshot> = flow {
-        val inbox = AtomicReference(CitoRealtimeBundle())
-        val wsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        var wsJob: Job? = null
+        CitoRealtimeBus.ensureRunning()
+
         var observedTargetKey = ""
         var citoMatchId = ""
         var gameId = ""
@@ -50,25 +98,14 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         var lastArchivedSocketAt = 0L
         var nextSeriesRefreshAt = 0L
         var nextRestReconcileAt = 0L
+        var restOverlay = CitoRealtimeBundle()
 
         while (currentCoroutineContext().isActive) {
             if (CitoApiConfig.apiKey() == null) {
-                wsJob?.cancel()
-                wsJob = null
-                inbox.set(CitoRealtimeBundle())
+                restOverlay = CitoRealtimeBundle()
                 _status.value = LiveSourceStatus(LiveSourcePhase.IDLE, "Cito Realtime · API Key 未配置")
                 delay(5_000L)
                 continue
-            }
-
-            if (wsJob?.isActive != true) {
-                wsJob = wsScope.launch {
-                    runCatching {
-                        CitoRealtimeSocket().messages().collect { message ->
-                            inbox.updateAndGet { current -> current.acceptSocket(message) }
-                        }
-                    }
-                }
             }
 
             val target = LiveMatchTargetRegistry.snapshot()
@@ -92,7 +129,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 lastArchivedSocketAt = 0L
                 nextSeriesRefreshAt = 0L
                 nextRestReconcileAt = 0L
-                inbox.set(CitoRealtimeBundle())
+                restOverlay = CitoRealtimeBundle()
             }
 
             val matchKey = MatchLifecycleArchive.keyFor(target)
@@ -121,7 +158,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                         val context = CitoJson.parseSeriesContext(series, target)
                         if (context.gameId.isNotBlank() && context.gameId != gameId) {
                             gameId = context.gameId
-                            inbox.set(CitoRealtimeBundle())
+                            restOverlay = CitoRealtimeBundle()
                             nextRestReconcileAt = 0L
                             lastEmission = ""
                             lastArchivedSocketAt = 0L
@@ -131,7 +168,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                     nextSeriesRefreshAt = now + SERIES_REFRESH_MS
                 }
 
-                var bundle = inbox.get()
+                var bundle = CitoRealtimeBus.bundle.value.merge(restOverlay)
                 bundle.latestSocketPayloadFor(gameId)?.takeIf { it.receivedAtEpochMs > lastArchivedSocketAt }?.let { pushed ->
                     lastArchivedSocketAt = pushed.receivedAtEpochMs
                     CitoRawArchive.append(
@@ -162,8 +199,8 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 if (needsRest) {
                     val reconciled = reconcileRest(matchKey, gameId)
                     if (reconciled.payloads.isNotEmpty()) {
-                        bundle = bundle.merge(reconciled)
-                        inbox.set(bundle)
+                        restOverlay = restOverlay.merge(reconciled)
+                        bundle = CitoRealtimeBus.bundle.value.merge(restOverlay)
                         val board = bundle.bestBoardFor(gameId)
                         snapshot = board?.let { CitoJson.parseLiveBoard(it, target, gameNumber) }
                         if (snapshot != null) {
@@ -203,7 +240,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                         message = if (wsFresh) {
                             "Cito Realtime · WSS 已连接，等待可归一化比赛帧"
                         } else {
-                            "Cito Realtime · 等待 WSS / REST 有效比赛帧"
+                            "Cito Realtime · ${CitoRealtimeBus.transport.value} · REST 同步兜底"
                         },
                         eventId = target.eventId,
                         gameId = gameId,
@@ -225,11 +262,10 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 gameNumber = 1
                 nextSeriesRefreshAt = 0L
                 nextRestReconcileAt = 0L
+                restOverlay = CitoRealtimeBundle()
                 delay(5_000L)
             }
         }
-
-        wsJob?.cancel()
     }
 
     private suspend fun reconcileRest(matchKey: String, gameId: String): CitoRealtimeBundle {
