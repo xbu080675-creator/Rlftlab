@@ -1,0 +1,121 @@
+name: Fix roster collector Weibo fetch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev92-roster-fetch-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch collector with multi-endpoint Weibo fetch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('scripts/starting_roster_collector.py')
+          s = p.read_text(encoding='utf-8')
+          pattern = re.compile(r"def fetch_weibo_posts\(uid, limit=20\):.*?\n\ndef download_image", re.S)
+          replacement = r'''def _json_or_none(response):
+    ctype = (response.headers.get("content-type") or "").lower()
+    text = response.text or ""
+    if "json" not in ctype and not text.lstrip().startswith(("{", "[")):
+        return None
+    try:
+        return response.json()
+    except Exception:
+        return None
+
+
+def _normalize_mblog(mblog, uid):
+    pics = []
+    for p in mblog.get("pics") or []:
+        large = (p.get("large") or {}).get("url") or p.get("url")
+        if large:
+            pics.append(large)
+    bid = mblog.get("bid") or mblog.get("mblogid") or mblog.get("id")
+    return {
+        "id": str(mblog.get("id") or bid or ""),
+        "url": f"https://weibo.com/{uid}/{bid}" if bid else f"https://weibo.com/u/{uid}",
+        "published": parse_weibo_time(mblog.get("created_at")),
+        "text": clean_html(mblog.get("text_raw") or mblog.get("text") or ""),
+        "images": pics,
+    }
+
+
+def fetch_weibo_posts(uid, limit=20):
+    # Weibo changes public anti-bot behavior frequently. Try both current public JSON surfaces.
+    # A 200 HTML challenge page is NOT success; only accept parseable JSON with actual posts.
+    endpoints = [
+        (
+            "mobile",
+            f"https://m.weibo.cn/api/container/getIndex?type=uid&value={uid}&containerid=107603{uid}",
+            {"Referer": f"https://m.weibo.cn/u/{uid}", "X-Requested-With": "XMLHttpRequest"},
+        ),
+        (
+            "ajax",
+            f"https://weibo.com/ajax/statuses/mymblog?uid={uid}&page=1&feature=0",
+            {"Referer": f"https://weibo.com/u/{uid}", "Accept": "application/json, text/plain, */*"},
+        ),
+    ]
+    errors = []
+    for label, url, headers in endpoints:
+        try:
+            r = SESSION.get(url, headers=headers, timeout=15)
+            if not r.ok:
+                errors.append(f"{label}:http_{r.status_code}")
+                continue
+            data = _json_or_none(r)
+            if data is None:
+                ctype = (r.headers.get("content-type") or "unknown").split(";")[0]
+                errors.append(f"{label}:non_json:{ctype}:{len(r.content)}b")
+                continue
+
+            mblogs = []
+            if label == "mobile":
+                cards = ((data.get("data") or {}).get("cards") or []) if isinstance(data, dict) else []
+                for card in cards:
+                    mblog = card.get("mblog") or {}
+                    if mblog:
+                        mblogs.append(mblog)
+            else:
+                payload = data.get("data") or {} if isinstance(data, dict) else {}
+                raw_list = payload.get("list") or payload.get("statuses") or []
+                for item in raw_list:
+                    mblog = item.get("mblog") if isinstance(item, dict) and item.get("mblog") else item
+                    if isinstance(mblog, dict):
+                        mblogs.append(mblog)
+
+            out = [_normalize_mblog(m, uid) for m in mblogs[:limit]]
+            out = [x for x in out if x["id"] or x["text"] or x["images"]]
+            if out:
+                return out
+            errors.append(f"{label}:json_but_no_posts")
+        except Exception as e:
+            errors.append(f"{label}:{type(e).__name__}:{e}")
+
+    raise RuntimeError("; ".join(errors) or "no usable Weibo endpoint")
+
+
+def download_image'''
+          ns, n = pattern.subn(replacement, s, count=1)
+          if n != 1:
+              raise SystemExit(f'fetch_weibo_posts patch count={n}')
+          p.write_text(ns, encoding='utf-8')
+          PY
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/starting_roster_collector.py
+          git commit -m 'dev.92: add Weibo multi-endpoint fetch fallback'
+          git pull --rebase origin main
+          git push origin HEAD:main
