@@ -65,8 +65,8 @@ internal class LolEsportsApiClient {
     suspend fun fetchGlobalSchedule(): List<ScheduledEsportsMatch> {
         // Prefer Riot's unfiltered schedule. It is both more complete and much cheaper than polling
         // a hand-maintained subset league-by-league, and it automatically includes newly added LoL
-        // competitions. Six pages in each direction covers the useful current/recent schedule window;
-        // the long-term historical archive remains the responsibility of the central mirror.
+        // competitions. Ten pages in each direction matches the audited current/recent global
+        // horizon; the long-term historical archive remains the responsibility of the central mirror.
         val global = runCatching { fetchGlobalScheduleWindow() }.getOrDefault(emptyList())
         if (global.isNotEmpty()) return global
 
@@ -95,7 +95,7 @@ internal class LolEsportsApiClient {
 
         for (direction in listOf("older", "newer")) {
             var token = schedulePageToken(center, direction)
-            repeat(6) {
+            repeat(10) {
                 if (token.isBlank() || !visitedTokens.add("$direction:$token")) return@repeat
                 val page = fetchSchedulePage(token, "")
                 pages += page

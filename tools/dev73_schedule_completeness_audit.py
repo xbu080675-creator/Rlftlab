@@ -162,9 +162,9 @@ def main() -> int:
                 "sample": [summary_row(x) for x in rows[:3]],
             })
 
-    # Reproduce the new Android primary path: Riot global schedule, six pages each direction.
+    # Reproduce the new Android primary path: Riot global schedule, ten pages each direction.
     # The per-league catalogue is now only a resilient fallback, so it is audited separately above.
-    runtime_rows = collect_window(None, 6)
+    runtime_rows = collect_window(None, 10)
     current_events = {event_key(x): x for x in runtime_rows if event_key(x)}
     full_tracked_events = dict(current_events)
     pagination_losses = []
