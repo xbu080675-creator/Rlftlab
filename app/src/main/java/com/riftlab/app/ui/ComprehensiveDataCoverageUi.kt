@@ -307,7 +307,6 @@ private fun humanGap(raw: String?): String = when (raw.orEmpty()) {
     else -> raw?.takeIf { it.isNotBlank() } ?: "待同步"
 }
 
-@Composable
 private fun coverageColor(state: DataCoverageState): Color = when (state) {
     DataCoverageState.COMPLETE -> RiftCyan
     DataCoverageState.PARTIAL -> RiftText
