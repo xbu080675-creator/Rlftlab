@@ -230,6 +230,7 @@ object ComprehensiveDataDepthEnricher {
     private fun teamToken(value: String): String =
         value.trim().uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
+    // Do not ASCII-strip names here: CJK and other non-Latin player IDs must stay distinct.
     private fun playerToken(value: String): String =
-        value.trim().lowercase().replace(Regex("[^a-z0-9]+"), "")
+        value.trim().lowercase().replace(Regex("\\s+"), " ")
 }
