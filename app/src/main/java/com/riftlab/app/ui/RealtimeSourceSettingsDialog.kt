@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.CitoApiConfig
 import com.riftlab.app.data.ProviderCredentialStore
 import com.riftlab.app.overlay.DraftHudSimulation
+import com.riftlab.app.overlay.TacticalHudSimulation
 import com.riftlab.app.stream.StreamLauncher
 
 @Composable
@@ -37,6 +38,7 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
     val citoConfigured by ProviderCredentialStore.citoConfigured.collectAsState()
     val tachioConfigured by ProviderCredentialStore.tachioConfigured.collectAsState()
     val draftSim by DraftHudSimulation.state.collectAsState()
+    val tacticalSim by TacticalHudSimulation.state.collectAsState()
 
     var citoDraft by remember { mutableStateOf("") }
     var tachioDraft by remember { mutableStateOf("") }
@@ -227,6 +229,48 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                             onClick = {
                                 DraftHudSimulation.stop()
                                 statusText = "BP 模拟已停止"
+                            }
+                        ) { Text("停止") }
+                    }
+                }
+
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    "RIFTSCREEN · LIVE HUD SIMULATOR",
+                    color = RiftCyan,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "手机实测用假数据脚本：GLOBAL → FIGHT → GLOBAL。只看覆盖位置、信息密度和切换节奏，不写入真实比赛数据。",
+                    color = RiftMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (tacticalSim.active) "SIM ${tacticalSim.step}/${tacticalSim.totalSteps} · ${tacticalSim.phase.name}" else "SIM 待机",
+                    color = if (tacticalSim.active) RiftCyan else RiftMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(
+                        onClick = {
+                            if (StreamLauncher.startHudSimulation(context)) {
+                                statusText = "赛中 HUD 模拟已启动 · 切到直播/视频 APP 看 GLOBAL/FIGHT 自动切换"
+                            } else {
+                                statusText = "请先授予悬浮窗权限；返回后 HUD 模拟会直接启动"
+                            }
+                        }
+                    ) { Text("赛中 HUD 模拟") }
+                    if (tacticalSim.active) {
+                        TextButton(
+                            onClick = {
+                                TacticalHudSimulation.stop()
+                                statusText = "赛中 HUD 模拟已停止"
                             }
                         ) { Text("停止") }
                     }

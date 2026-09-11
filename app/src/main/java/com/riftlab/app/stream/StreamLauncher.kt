@@ -39,10 +39,7 @@ enum class StreamPlatform(
         displayName = "虎牙 LPL",
         region = StreamRegion.MAINLAND,
         webUrl = "https://www.huya.com/lpl",
-        // Mainland package first; Google Play / overseas package second.
         packages = listOf("com.duowan.kiwi", "com.huya.kiwi"),
-        // Huya's Android share links use hyaction=live. The LPL official room is 660000
-        // and its current live uid/pid is 1346609715.
         deepLinks = listOf(
             "https://www.huya.com/660000?source=android&pid=1346609715&hyaction=live&uid=1346609715&platform=7"
         )
@@ -81,6 +78,7 @@ object StreamLauncher {
     private const val PREFS = "riftlab_stream_launcher"
     private const val KEY_PENDING = "pending_action"
     private const val PENDING_OVERLAY_ONLY = "overlay_only"
+    private const val PENDING_HUD_SIMULATION = "hud_simulation"
 
     fun startOverlay(context: Context): Boolean {
         if (!Settings.canDrawOverlays(context)) {
@@ -90,6 +88,17 @@ object StreamLauncher {
         }
         clearPending(context)
         RiftOverlayService.start(context)
+        return true
+    }
+
+    fun startHudSimulation(context: Context): Boolean {
+        if (!Settings.canDrawOverlays(context)) {
+            savePending(context, PENDING_HUD_SIMULATION)
+            requestOverlayPermission(context)
+            return false
+        }
+        clearPending(context)
+        RiftOverlayService.startSimulation(context)
         return true
     }
 
@@ -109,6 +118,10 @@ object StreamLauncher {
         if (!Settings.canDrawOverlays(context)) return
         val pending = prefs(context).getString(KEY_PENDING, null) ?: return
         clearPending(context)
+        if (pending == PENDING_HUD_SIMULATION) {
+            RiftOverlayService.startSimulation(context)
+            return
+        }
         RiftOverlayService.start(context)
         if (pending == PENDING_OVERLAY_ONLY) return
         StreamPlatform.entries.firstOrNull { it.id == pending }?.let { platform ->
@@ -124,20 +137,16 @@ object StreamLauncher {
     private fun openPlatform(context: Context, platform: StreamPlatform) {
         val installedPackages = platform.packages.filter { isPackageInstalled(context, it) }
 
-        // Prefer a platform-specific deep/share link while explicitly targeting the installed app.
         for (pkg in installedPackages) {
             for (uri in platform.deepLinks) {
                 if (tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(pkg))) return
             }
         }
 
-        // Then try the canonical HTTPS room while explicitly targeting the installed app.
         for (pkg in installedPackages) {
             if (tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)).setPackage(pkg))) return
         }
 
-        // Final fallback: browser/web association. Global entries are deliberately just URLs;
-        // RiftLab does not proxy, capture or re-route the user's general network traffic.
         tryStart(context, Intent(Intent.ACTION_VIEW, Uri.parse(platform.webUrl)))
     }
 

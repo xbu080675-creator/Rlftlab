@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 79
-        versionName = "1.0.0-dev.79"
+        versionCode = 80
+        versionName = "1.0.0-dev.80"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -189,3 +189,5 @@ dependencies {
 // dev.69: persist Tournament Edition identities and explicit archival slots so old seasons remain queryable and can be enriched without being overwritten by the current tournament window.
 
 // dev.70: separate annual Championship Points from tournament standings and model reverse-queryable qualification routes with explicit official/provider/derived evidence.
+
+// dev.80: shared Cito realtime bus + broadcast-safe Global/Fight HUD phone simulator.
