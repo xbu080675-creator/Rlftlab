@@ -40,28 +40,76 @@ def _trace(message: str):
         _TRACE.append(message)
 
 
-def _budget_posts(posts, cfg=None):
-    keywords = [str(x).lower() for x in ((cfg or {}).get("keywords") or [])]
+def _alias_hit(text: str, alias: str) -> bool:
+    alias = str(alias or "").strip()
+    if not alias:
+        return False
+    if re.fullmatch(r"[A-Za-z0-9]+", alias) and len(alias) <= 3:
+        return re.search(rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])", text, re.I) is not None
+    return alias.lower() in text.lower()
+
+
+def _team_hits(text: str, cfg: dict) -> list[str]:
+    hits = []
+    for code, aliases in ((cfg or {}).get("teamAliases") or {}).items():
+        candidates = [code, *(aliases or [])]
+        if any(_alias_hit(text, alias) for alias in candidates):
+            hits.append(str(code).upper())
+    return hits
+
+
+def _post_relevance(source: dict, row: dict, cfg: dict) -> tuple[int, str, list[str]]:
+    text = str(row.get("text") or "")
+    lowered = text.lower()
+    keywords = [str(x).lower() for x in ((cfg or {}).get("keywords") or []) if str(x).strip()]
+    keyword_hit = any(keyword in lowered for keyword in keywords)
+    hits = _team_hits(text, cfg)
+    own_team = str((source or {}).get("team") or "").upper()
+    is_team_source = str((source or {}).get("source") or "").upper() == "TEAM_SOCIAL" or bool(own_team)
+    opponents = [team for team in hits if team != own_team]
+    matchup_hit = bool(opponents) if is_team_source else len(set(hits)) >= 2
+
+    score = 0
+    basis = "LOW_CONFIDENCE"
+    if keyword_hit and matchup_hit:
+        score += 500
+        basis = "MATCHUP_PLUS_LINEUP"
+    elif matchup_hit:
+        score += 260
+        basis = "MATCHUP"
+    elif keyword_hit:
+        score += 140
+        basis = "LINEUP_KEYWORD"
+
+    if row.get("images"):
+        score += 30
+    if row.get("published"):
+        score += 10
+
+    teams = ([own_team] if own_team else []) + opponents if is_team_source else hits
+    return score, basis, list(dict.fromkeys([team for team in teams if team]))[:3]
+
+
+def _budget_posts(posts, cfg=None, source=None):
     ranked = []
     for index, post in enumerate(posts or []):
         row = dict(post)
-        text = str(row.get("text") or "")
-        images = list(row.get("images") or [])[:MAX_IMAGES_PER_POST]
-        row["images"] = images
-        score = 0
-        lowered = text.lower()
-        if any(keyword and keyword in lowered for keyword in keywords):
-            score += 100
-        if images:
-            score += 20
-        if row.get("published"):
-            score += 5
+        row["images"] = list(row.get("images") or [])[:MAX_IMAGES_PER_POST]
+        score, basis, teams = _post_relevance(source or {}, row, cfg or {})
+        row["candidateBasis"] = basis
+        row["candidateTeams"] = teams
+        row["candidateScore"] = score
         ranked.append((score, -index, row))
     ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
+
+    # If we found proper Team A + Team B + lineup candidates, OCR those first
+    # and do not let sponsor/image-only posts consume the bounded OCR budget.
+    primary = [row for score, _, row in ranked if row.get("candidateBasis") == "MATCHUP_PLUS_LINEUP"]
+    if primary:
+        return primary[:MAX_POSTS_PER_SOURCE]
     return [row for _, _, row in ranked[:MAX_POSTS_PER_SOURCE]]
 
 
-# Trace parser decisions without changing the parser's behavior.
 _original_detect_teams = global_collector.base.detect_teams
 _original_extract_from_lines = global_collector.base.extract_from_lines
 _original_choose_lineups = global_collector.base.choose_lineups
@@ -101,7 +149,7 @@ _original_process_posts = global_collector._process_posts
 
 def _bounded_process_posts(source, cfg, posts, transport_label):
     global _TRACE, _ACTIVE_SOURCE, _ACTIVE_OCR_INDEX
-    bounded = _budget_posts(posts, cfg)
+    bounded = _budget_posts(posts, cfg, source)
     _TRACE = []
     previous_source = _ACTIVE_SOURCE
     previous_index = _ACTIVE_OCR_INDEX
@@ -113,9 +161,10 @@ def _bounded_process_posts(source, cfg, posts, transport_label):
         _ACTIVE_SOURCE = previous_source
         _ACTIVE_OCR_INDEX = previous_index
     account = source.get("account")
+    basis_summary = ",".join(str(row.get("candidateBasis") or "?") for row in bounded[:3])
     trace_lines = [f"{account}: trace {line}" for line in _TRACE]
     diagnostics = [
-        f"{account}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s",
+        f"{account}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s basis={basis_summary}",
         *trace_lines,
     ] + diagnostics
     return evidence, diagnostics
@@ -128,7 +177,7 @@ _original_weibo_fetch = global_collector.base.fetch_weibo_posts
 
 def _bounded_weibo_fetch(uid, limit=20):
     posts = _original_weibo_fetch(uid, min(limit, MAX_POSTS_PER_SOURCE))
-    return _budget_posts(posts, None)
+    return _budget_posts(posts, None, None)
 
 
 global_collector.base.fetch_weibo_posts = _bounded_weibo_fetch
