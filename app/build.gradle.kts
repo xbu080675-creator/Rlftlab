@@ -108,7 +108,19 @@ dependencies {
     // never bundled into the APK. Pin the runtime so model verification/benchmark behavior is stable.
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.0")
 
+    // dev.92 four-lane roster vision. OCR models are bundled so the basic fallback works
+    // without Google Play Services or a first-run model download.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+
+    // Optional system-AI lane (AICore / Gemini Nano). Unsupported devices simply skip it.
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.91: robust official-roster team identity crosswalk, visible feed diagnostics, CI/OTA verified release.
+// dev.92: four-lane roster acquisition = remote normalized feed + bundled OCR + optional system AI + optional local vision.
