@@ -391,7 +391,8 @@ private fun GoldHistoryPanel(
             .filter { it.game == current.game }
             .sortedBy { it.elapsedSeconds }
         (archived + current)
-            .distinctBy { it.elapsedSeconds }
+            .associateBy { it.elapsedSeconds }
+            .values
             .sortedBy { it.elapsedSeconds }
     }
     // Selection is anchored to actual game time. Backfill can insert/rebuild frames without moving
