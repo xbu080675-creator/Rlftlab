@@ -103,7 +103,9 @@ object StorageCacheManager {
     private fun cacheRoots(context: Context): List<File> = buildList {
         add(context.cacheDir)
         context.externalCacheDir?.let { add(it) }
-    }.distinctBy { runCatching { it.canonicalPath }.getOrElse { it.absolutePath } }
+    }.distinctBy { file ->
+        runCatching { file.canonicalPath }.getOrElse { file.absolutePath }
+    }
 
     private fun dirSize(root: File): Long =
         if (!root.exists()) 0L else root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
