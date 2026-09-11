@@ -1,5 +1,7 @@
-dev.83：本地智能核心第一阶段。RiftLab 将本地模型从单一“趋势判断功能”升级为全局可选辅助层：实时 HUD、BP、赛前、赛后、首页洞察、搜索问答和通知都通过统一 LocalAiCore 接口消费同一套本地智能能力。赛事事实仍由 Riot/Cito/OP.GG/综合数据图等事实层提供，AI 只负责场景识别、趋势判断、重要性排序和解释，不允许改写事实；模型异常、未下载、过热或超时均自动回退 RuleTrendFallback，不阻塞基础观赛功能。
+dev.84：加入可控缓存管理，避免 RiftLab 长期使用后临时文件持续膨胀到数百 MB 甚至 1 GB 以上。
 
-新增设备能力检测与模型推荐框架：按 RAM、可用存储、CPU 核心、ABI 与热状态生成 TIER_0~TIER_4 档位；模型不随 APK 强制下载，也不会因“设备可运行”自动启用，必须由用户明确选择。当前安全种子目录包含 Qwen3 0.6B INT4 No-think（约 330 MiB）作为 TIER_2 及以上设备的实时小模型候选；后续远端 Model Catalog 可增加/撤销更大模型和下载镜像，而无需修改上层业务。模型下载完成后还必须通过校验与本机实时基准测试，才允许安装为全局推理 backend。
+新增 StorageCacheManager，对 app cacheDir 与 externalCacheDir 做统一统计、手动清理和自动压力回收；设置页新增 STORAGE · CACHE 区域，可直接看到当前可清理缓存大小与文件数，并一键“清理缓存”。清理前先通过 Coil 正常清空活动图片缓存，再删除其余可丢弃临时文件，包括图片缓存、OTA 更新 APK/断点文件及其他 cache root 临时内容。
 
-新增 TrendEngine：事实帧→场景分类→趋势方向→S/A/B/HIDDEN 优先级→HUD Gate。高价值异常（如大招未学习、打野位置暴露、惩戒不可用、局部人数差）可由规则层立即判断；复杂组合交给可选本地模型异步增强。模型单次推理默认 500ms 延迟预算，超时结果丢弃并回退规则层。版本目标 1.0.0-dev.83 / versionCode 83。
+缓存与持久数据严格隔离：比赛档案、Timeline/Archive、用户设置、Android Keystore 加密的 Provider Key，以及用户主动下载的本地 AI 模型都不属于“缓存”，不会被一键缓存清理删除。为防止长期无人处理，应用启动后还会异步执行压力检查：可清理缓存达到约 768 MiB 时，按最旧文件优先回收到约 384 MiB；整个过程只操作 cacheDir/externalCacheDir，不触碰 filesDir 持久数据。
+
+保留现有 Coil 图片磁盘缓存上限 96 MiB；新增缓存管理覆盖 OTA 断点和未来更多临时数据源缓存。版本 1.0.0-dev.84 / versionCode 84。
