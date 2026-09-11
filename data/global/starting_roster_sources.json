@@ -1,7 +1,54 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "lookbackHours": 36,
   "keywords": ["首发", "首发名单", "先发", "starting roster", "starting lineup", "lineup", "roster", "선발", "선발 명단", "라인업", "先発", "スタメン"],
+  "leaguePolicies": {
+    "LPL": {
+      "adapter": "LPL_DAILY_ROSTER",
+      "lineupKeywords": ["首发名单", "首发", "先发"],
+      "matchupTokens": ["对战", "VS", "vs"],
+      "preferredOcrLanguages": "eng+chi_sim",
+      "officialLeaguePostCanContainMultipleMatches": true,
+      "imageOrderFollowsMatchupOrder": true,
+      "allowImageOnlyTeamFallback": true
+    },
+    "LCK": {
+      "adapter": "MATCH_TARGET_LINEUP",
+      "lineupKeywords": ["starting lineup", "starting roster", "lineup", "roster", "선발", "선발 명단", "라인업"],
+      "matchupTokens": ["VS", "vs", "v", "대"],
+      "preferredOcrLanguages": "eng+kor",
+      "officialLeaguePostCanContainMultipleMatches": false,
+      "imageOrderFollowsMatchupOrder": false,
+      "allowImageOnlyTeamFallback": true
+    },
+    "LEC": {
+      "adapter": "MATCH_TARGET_LINEUP",
+      "lineupKeywords": ["starting lineup", "starting roster", "lineup", "roster"],
+      "matchupTokens": ["VS", "vs", "v"],
+      "preferredOcrLanguages": "eng",
+      "officialLeaguePostCanContainMultipleMatches": false,
+      "imageOrderFollowsMatchupOrder": false,
+      "allowImageOnlyTeamFallback": true
+    },
+    "LCS": {
+      "adapter": "MATCH_TARGET_LINEUP",
+      "lineupKeywords": ["starting lineup", "starting roster", "lineup", "roster"],
+      "matchupTokens": ["VS", "vs", "v"],
+      "preferredOcrLanguages": "eng",
+      "officialLeaguePostCanContainMultipleMatches": false,
+      "imageOrderFollowsMatchupOrder": false,
+      "allowImageOnlyTeamFallback": true
+    },
+    "LCP": {
+      "adapter": "MATCH_TARGET_LINEUP",
+      "lineupKeywords": ["starting lineup", "starting roster", "lineup", "roster", "首发", "先発", "スタメン", "선발", "라인업"],
+      "matchupTokens": ["VS", "vs", "v", "对战", "対", "대"],
+      "preferredOcrLanguages": "eng+chi_sim+jpn+kor",
+      "officialLeaguePostCanContainMultipleMatches": false,
+      "imageOrderFollowsMatchupOrder": false,
+      "allowImageOnlyTeamFallback": true
+    }
+  },
   "leagues": [
     {
       "league": "LPL",
@@ -74,7 +121,6 @@
     "EDG": ["EDG", "EDward Gaming"],
     "LGD": ["LGD", "LGD Gaming"],
     "TT": ["TT", "ThunderTalk Gaming"],
-
     "T1": ["T1"],
     "GEN": ["GEN", "Gen.G", "GenG"],
     "HLE": ["HLE", "Hanwha Life Esports"],
@@ -83,7 +129,6 @@
     "NS": ["NS", "Nongshim RedForce"],
     "DRX": ["DRX"],
     "BRO": ["BRO", "OKSavingsBank BRION", "BRION"],
-
     "G2": ["G2", "G2 Esports"],
     "FNC": ["FNC", "Fnatic"],
     "KC": ["KC", "Karmine Corp"],
@@ -93,12 +138,10 @@
     "SK": ["SK", "SK Gaming"],
     "GX": ["GX", "GIANTX"],
     "TH": ["TH", "Team Heretics"],
-
     "C9": ["C9", "Cloud9"],
     "TL": ["TL", "Team Liquid"],
     "FLY": ["FLY", "FlyQuest"],
     "100T": ["100T", "100 Thieves"],
-
     "CFO": ["CFO", "CTBC Flying Oyster"],
     "GAM": ["GAM", "GAM Esports"],
     "SHG": ["SHG", "Fukuoka SoftBank HAWKS gaming", "SoftBank HAWKS gaming"],
