@@ -35,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,6 +67,8 @@ import com.riftlab.app.data.TournamentEditionArchiveStore
 import com.riftlab.app.data.TournamentResearchProvider
 import com.riftlab.app.data.Worlds2026QualifiedTeams
 import com.riftlab.app.data.ResearchEvidence
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -145,8 +148,15 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
     val center by MatchSessionStore.scheduleCenter.collectAsState()
     val standingsCenter by StandingsCenterStore.state.collectAsState()
     val archiveCenter by TournamentEditionArchiveStore.state.collectAsState()
-    val buckets = remember(center.matches, standingsCenter.tournaments, archiveCenter.editions) {
-        buildCompetitionBuckets(center.matches, standingsCenter.tournaments, archiveCenter.editions)
+    val buckets by produceState(
+        initialValue = emptyList<ScheduleCompetitionBucket>(),
+        center.matches,
+        standingsCenter.tournaments,
+        archiveCenter.editions
+    ) {
+        value = withContext(Dispatchers.Default) {
+            buildCompetitionBuckets(center.matches, standingsCenter.tournaments, archiveCenter.editions)
+        }
     }
     var selectedBucketKey by remember { mutableStateOf<String?>(null) }
     var selectedDetailMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
@@ -1464,23 +1474,96 @@ private fun chooseInitialBucket(
         ?: buckets.last()
 }
 
+private data class IndexedScheduleMatch(
+    val match: ScheduledEsportsMatch,
+    val date: LocalDate
+)
+
+/**
+ * Index schedule rows once before binding them to tournament editions.
+ *
+ * The old implementation scanned every schedule row for every tournament. After dev.73 expanded
+ * the global Riot schedule and tournament catalogue, the standings catalogue arriving shortly after
+ * opening the dialog could turn that into millions of date/string comparisons on the UI thread.
+ */
+private class ScheduleMatchIndex(matches: List<ScheduledEsportsMatch>) {
+    private val indexed = matches.mapNotNull { match ->
+        matchStartDate(match)?.let { date -> IndexedScheduleMatch(match, date) }
+    }
+    private val byLeagueId = indexed
+        .filter { it.match.leagueId.isNotBlank() }
+        .groupBy { it.match.leagueId }
+    private val byLeagueSlug = indexed
+        .filter { it.match.leagueSlug.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.leagueSlug) }
+    private val byLeagueName = indexed
+        .filter { it.match.league.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.league) }
+    private val noLeagueIdBySlug = indexed
+        .filter { it.match.leagueId.isBlank() && it.match.leagueSlug.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.leagueSlug) }
+    private val noLeagueIdByName = indexed
+        .filter { it.match.leagueId.isBlank() && it.match.league.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.league) }
+    private val noLeagueIdNoSlugByName = indexed
+        .filter { it.match.leagueId.isBlank() && it.match.leagueSlug.isBlank() && it.match.league.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.league) }
+    private val noSlugByName = indexed
+        .filter { it.match.leagueSlug.isBlank() && it.match.league.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.league) }
+
+    fun matchesFor(tournament: EsportsTournamentRef): List<ScheduledEsportsMatch> {
+        val leagueId = tournament.leagueId
+        val leagueSlug = normalizeLeagueToken(tournament.leagueSlug)
+        val leagueName = normalizeLeagueToken(tournament.leagueName)
+        val candidates = when {
+            leagueId.isNotBlank() -> buildList {
+                addAll(byLeagueId[leagueId].orEmpty())
+                if (leagueSlug.isNotBlank()) {
+                    addAll(noLeagueIdBySlug[leagueSlug].orEmpty())
+                    if (leagueName.isNotBlank()) addAll(noLeagueIdNoSlugByName[leagueName].orEmpty())
+                } else if (leagueName.isNotBlank()) {
+                    // Preserve sameLeague(): if the tournament has no slug, a match without a leagueId
+                    // is allowed to fall back to the league name even when the match itself has a slug.
+                    addAll(noLeagueIdByName[leagueName].orEmpty())
+                }
+            }
+            leagueSlug.isNotBlank() -> buildList {
+                addAll(byLeagueSlug[leagueSlug].orEmpty())
+                if (leagueName.isNotBlank()) addAll(noSlugByName[leagueName].orEmpty())
+            }
+            leagueName.isNotBlank() -> byLeagueName[leagueName].orEmpty()
+            else -> emptyList()
+        }
+        val start = runCatching { LocalDate.parse(tournament.startDate.take(10)) }.getOrNull() ?: return emptyList()
+        val end = runCatching { LocalDate.parse(tournament.endDate.take(10)) }.getOrNull() ?: return emptyList()
+        return candidates.asSequence()
+            .filter { row -> !row.date.isBefore(start) && !row.date.isAfter(end) }
+            .map { it.match }
+            .distinctBy(::scheduleIdentity)
+            .sortedBy(::matchStartEpochMs)
+            .toList()
+    }
+}
+
 private fun buildCompetitionBuckets(
     matches: List<ScheduledEsportsMatch>,
     tournaments: List<EsportsTournamentRef>,
     archivedEditions: List<TournamentEditionArchiveRecord> = emptyList()
 ): List<ScheduleCompetitionBucket> {
+    // Build the schedule index once. This keeps tournament-directory updates roughly O(matches +
+    // matching rows) instead of O(tournaments × matches).
+    val matchIndex = ScheduleMatchIndex(matches)
+
     // Tournament existence comes from the Tournament Directory / durable archive. A temporarily
     // empty schedule only means that the match list is still syncing (or has not been published);
     // it must never delete the event itself from the directory.
     val official = tournaments.map { tournament ->
-        val tournamentMatches = matches.filter { match ->
-            sameLeague(match, tournament) &&
-                matchStartDate(match)?.let { StandingsCenterStore.containsDate(tournament, it) } == true
-        }
+        val tournamentMatches = matchIndex.matchesFor(tournament)
         ScheduleCompetitionBucket(
             key = tournament.id,
             title = StandingsCenterStore.displayTournamentName(tournament),
-            matches = tournamentMatches.sortedBy(::matchStartEpochMs),
+            matches = tournamentMatches,
             firstEpochMs = tournamentMatches.minOfOrNull(::matchStartEpochMs) ?: tournamentStartEpochMs(tournament),
             tournamentId = tournament.id,
             tournament = tournament,
@@ -1501,14 +1584,11 @@ private fun buildCompetitionBuckets(
                 leagueSlug = edition.leagueSlug,
                 leagueName = edition.leagueName
             )
-            val editionMatches = matches.filter { match ->
-                sameLeague(match, tournament) &&
-                    matchStartDate(match)?.let { StandingsCenterStore.containsDate(tournament, it) } == true
-            }
+            val editionMatches = matchIndex.matchesFor(tournament)
             ScheduleCompetitionBucket(
                 key = edition.tournamentId,
                 title = edition.displayName.ifBlank { StandingsCenterStore.displayTournamentName(tournament) },
-                matches = editionMatches.sortedBy(::matchStartEpochMs),
+                matches = editionMatches,
                 firstEpochMs = editionMatches.minOfOrNull(::matchStartEpochMs) ?: tournamentStartEpochMs(tournament),
                 tournamentId = edition.tournamentId,
                 tournament = tournament,
@@ -1517,7 +1597,7 @@ private fun buildCompetitionBuckets(
         }
 
     val directory = official + archived
-    val used = directory.flatMap { it.matches }.map(::scheduleIdentity).toSet()
+    val used = directory.asSequence().flatMap { it.matches.asSequence() }.map(::scheduleIdentity).toHashSet()
     val fallback = buildFallbackBuckets(matches.filterNot { scheduleIdentity(it) in used })
     val base = (directory + fallback)
         .distinctBy { it.key }
