@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.riftlab.app.BuildConfig
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSourcePhase
-import com.riftlab.app.data.LplStartingRosterCenter
+import com.riftlab.app.data.StartingRosterCenter
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.TimelineEventEvidence
@@ -199,9 +199,9 @@ private fun PreScreen() {
     val data by MatchSessionStore.preMatchFlow.collectAsState()
     val scheduleStatus by MatchSessionStore.scheduleStatus.collectAsState()
     val target by MatchSessionStore.targetMatch.collectAsState()
-    val officialRosterState by LplStartingRosterCenter.state.collectAsState()
-    val leftOfficial = target?.teams?.getOrNull(0)?.let(LplStartingRosterCenter::evidenceFor)
-    val rightOfficial = target?.teams?.getOrNull(1)?.let(LplStartingRosterCenter::evidenceFor)
+    val officialRosterState by StartingRosterCenter.state.collectAsState()
+    val leftOfficial = target?.teams?.getOrNull(0)?.let(StartingRosterCenter::evidenceFor)
+    val rightOfficial = target?.teams?.getOrNull(1)?.let(StartingRosterCenter::evidenceFor)
     val displayBlueRoster = leftOfficial?.starters ?: data.blueRoster
     val displayRedRoster = rightOfficial?.starters ?: data.redRoster
 
@@ -276,14 +276,14 @@ private fun PreScreen() {
                 val socialCount = listOf(leftOfficial, rightOfficial).count { it != null }
                 if (socialCount > 0) {
                     Text(
-                        "OFFICIAL SOCIAL $socialCount/2 · 官网不再作为首发显示门槛",
+                        "OFFICIAL ROSTER $socialCount/2 · 官网不再作为首发显示门槛",
                         color = RiftCyan,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         listOfNotNull(leftOfficial, rightOfficial).joinToString(" · ") { evidence ->
-                            "${evidence.account} ${evidence.source.name}"
+                            "${evidence.account} · ${evidence.platform} · ${evidence.source.name}"
                         },
                         color = RiftMuted,
                         fontSize = 11.sp,

@@ -1,11 +1,9 @@
-dev.87：同时推进两条刚刚在真实比赛日暴露出的关键链路：本地 AI 真正进入可运行阶段；LPL 首发不再等待官网，改为官方社媒抢先、官网后确认。
+dev.88：把 dev.87 的 LPL 专用首发通道升级为全球官方首发情报中心，并解决中国大陆客户端无法稳定直连海外社交网站的问题。
 
-本地 AI：接入 LiteRT-LM Android 0.17.0，候选模型固定为 Qwen3 0.6B INT4 No-think 的 LiteRT Community .litertlm 包。模型仍然不随 APK 打包，用户明确选择后才下载；下载完成必须匹配固定 SHA-256。VERIFIED 之后新增“运行真机基准”，会真实加载 Engine 并完成一次短推理，同时检查热状态与耗时；只有真实加载/推理通过才进入 READY，总开关仍由用户手动开启。AI 后端只能从已有 TrendFact 中选择场景和高价值信号，不能创造/改写比赛事实。
+新增 StartingRosterFeed / StartingRosterCenter，首发逻辑不再绑定 LPL。统一支持 TEAM_SOCIAL、LEAGUE_SOCIAL、OFFICIAL_SITE、OTHER_OFFICIAL 四类官方证据；俱乐部官方社媒、赛事官方社媒与官网属于同级高可信来源，官网不再是显示门槛。若同级官方来源给出不同五人名单，不静默覆盖，直接标记冲突等待确认。
 
-LocalAiCore 新增规则优先异步入口：规则结果立即返回，AI 在后台补充；每个 gameId 使用单调 revision，新的比赛帧到达后，旧 AI 结果即使晚回来也会被丢弃，避免过期判断覆盖新 HUD。模型不可用、未启用、超时、热状态过高或结果无效时继续 RuleTrendFallback。
+Android 客户端不直接抓 X / Instagram / YouTube / 微博页面。海外与区域官方源由云端采集/OCR 后归一化成 data/global/starting_rosters.json，APP 只拉取小型结构化证据。下载顺序优先中国大陆友好的 Gitee 只读镜像，其次 jsDelivr，最后 GitHub raw；GitHub 仍然是唯一代码/数据源真相，Gitee 仅作为分发镜像。这样国内用户无需 VPN 也能收到国际赛区首发。
 
-首发链路：新增 LplStartingRosterFeed / LplStartingRosterCenter，独立于 5 分钟赛程刷新，以约 60 秒级检查官方首发镜像。证据支持 TEAM_WEIBO / LPL_WEIBO / OFFICIAL_SITE，并区分 TEXT / IMAGE_OCR / CROSS_CONFIRMED。俱乐部或 LPL 官博先发时即可进入 APP，官网只作为后续更高等级交叉确认源，不再作为“能否显示首发”的门槛；无法确认的一侧继续保持未知，绝不从 roster pool 顺序猜首发。
+全球首发证据使用赛事本地时区匹配比赛日，支持 LPL/LCK/LCP/PCS/LJL/LEC/LCS/LTA 等默认时区，并允许每条证据显式覆盖 timezone，避免用户手机时区影响 tomorrow/比赛日匹配。角色归一化支持 TOP/JUG/JGL/JUNGLE/MID/BOT/ADC/BOTTOM/SUP/SUPPORT 以及中文位置名。
 
-已用 2026-09-11 晚间真实案例作为首条证据：iG 官方微博 23:00 发布 9 月 12 日 iG vs AL 首发，TheShy / Wei / Rookie / JiaQi / Meiko；LPL 官博随后 23:03 跟进，而官网当时尚未发布。只写入已明确核实的 iG 一侧，不根据截图未完整展示的 AL 内容补猜。
-
-版本 1.0.0-dev.87 / versionCode 87。
+首发 UI 已切换到 StartingRosterCenter，显示来源账号、平台与证据类型。旧 LplStartingRosterFeed / LplStartingRosterCenter 保留为兼容壳但不再承载实现。版本目标 1.0.0-dev.88 / versionCode 88。
