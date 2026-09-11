@@ -23,8 +23,13 @@ internal class LolEsportsScheduleDataSource(
 ) : ScheduleDataSource {
     override suspend fun fetchLeagueSchedule(): List<ScheduledEsportsMatch> {
         val riot = client.fetchGlobalSchedule().map(::verifySeriesCompletion)
-        val citoRows = runCatching { cito.fetch() }.getOrDefault(emptyList()).map(::verifySeriesCompletion)
-        val merged = mergeSchedule(riot, citoRows)
+        val citoRows = runCatching { cito.fetch() }
+            .getOrDefault(emptyList())
+            .map(::verifySeriesCompletion)
+        val internationalRows = runCatching { InternationalEventMirrorProvider.fetchMatches() }
+            .getOrDefault(emptyList())
+            .map(::verifySeriesCompletion)
+        val merged = mergeSchedule(mergeSchedule(riot, citoRows), internationalRows)
         CitoArchiveCoordinator.observe(merged)
         return TeamAssetCatalog.enrichMatches(merged)
     }
@@ -45,13 +50,32 @@ internal class LolEsportsScheduleDataSource(
     private fun sameSeries(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
         if (a.matchId.isNotBlank() && b.matchId.isNotBlank() && a.matchId == b.matchId) return true
         if (a.eventId.isNotBlank() && b.eventId.isNotBlank() && a.eventId == b.eventId) return true
-        val aTeams = a.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        val bTeams = b.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
-        if (aTeams.size < 2 || aTeams != bTeams) return false
-        val aDay = a.startTimeIso.take(10)
-        val bDay = b.startTimeIso.take(10)
-        return aDay.isNotBlank() && aDay == bDay
+        if (a.bestOf > 0 && b.bestOf > 0 && a.bestOf != b.bestOf) return false
+
+        val aStart = parseStart(a.startTimeIso)
+        val bStart = parseStart(b.startTimeIso)
+        if (aStart != null && bStart != null) {
+            val deltaMs = kotlin.math.abs(aStart.toEpochMilli() - bStart.toEpochMilli())
+            if (deltaMs > 90L * 60L * 1000L) return false
+        } else {
+            val aDay = a.startTimeIso.take(10)
+            val bDay = b.startTimeIso.take(10)
+            if (aDay.isBlank() || aDay != bDay) return false
+        }
+
+        val aTeams = a.teams.take(2).map(::teamAliases)
+        val bTeams = b.teams.take(2).map(::teamAliases)
+        if (aTeams.size < 2 || bTeams.size < 2 || aTeams.any { it.isEmpty() } || bTeams.any { it.isEmpty() }) return false
+
+        return aTeams.all { left -> bTeams.any { right -> left.intersect(right).isNotEmpty() } } &&
+            bTeams.all { right -> aTeams.any { left -> right.intersect(left).isNotEmpty() } }
     }
+
+    private fun teamAliases(team: EsportsTeamRef): Set<String> =
+        listOf(team.slug, team.code, team.name)
+            .map(::teamToken)
+            .filter { it.isNotBlank() }
+            .toSet()
 
     /**
      * Riot's schedule endpoint can transiently mark a not-yet-played series completed.
@@ -88,13 +112,21 @@ internal class LolEsportsStandingsDataSource(
     private val tournamentRefs = linkedMapOf<String, EsportsTournamentRef>()
 
     override suspend fun fetchLeagueTournaments(): List<EsportsTournamentRef> {
-        val tournaments = client.fetchGlobalTournaments()
+        val riot = client.fetchGlobalTournaments()
+        val international = runCatching { InternationalEventMirrorProvider.fetchTournaments() }
+            .getOrDefault(emptyList())
+        val tournaments = (riot + international).distinctBy { it.id }
         tournamentRefs.clear()
         tournaments.forEach { tournamentRefs[it.id] = it }
         return tournaments
     }
 
     override suspend fun fetchStandings(tournamentId: String): TournamentStandings? {
+        // Provider-only international events currently contribute schedule / participants / results,
+        // not a fabricated standings table. Keep Standings explicitly unavailable until a verified
+        // provider standings feed is added.
+        if (tournamentId.startsWith("rft-event:")) return null
+
         val riot = runCatching { client.fetchTournamentStandings(tournamentId) }.getOrNull()
         val hasRiotRows = riot?.stages?.any { stage ->
             stage.sections.any { it.rankings.isNotEmpty() || it.matches.isNotEmpty() }
@@ -160,9 +192,38 @@ internal class LolEsportsLiveDataSource(
         var currentGameId = ""
         var previous: LiveSnapshot? = null
         var lockedFromSchedule = false
+        var observedTargetKey = ""
 
         while (currentCoroutineContext().isActive) {
             try {
+                val registeredTarget = LiveMatchTargetRegistry.snapshot()
+                val nextTargetKey = LiveMatchTargetRegistry.key(registeredTarget)
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    currentEvent = null
+                    knownGames = emptyList()
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+                    lockedFromSchedule = false
+                }
+                if (registeredTarget != null && isExternalProviderTarget(registeredTarget)) {
+                    currentEvent = null
+                    knownGames = emptyList()
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+                    lockedFromSchedule = false
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "Riot LiveStats · 当前赛事使用非 Riot Event ID，等待其它实时源",
+                        eventId = registeredTarget.eventId,
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(5_000)
+                    continue
+                }
+
                 if (currentEvent == null) {
                     val scheduled = LiveMatchTargetRegistry.snapshot()
                     if (scheduled != null && scheduled.eventId.isNotBlank()) {
@@ -328,7 +389,7 @@ internal class LolEsportsLiveDataSource(
 
     /**
      * The window endpoint is cursor based. Using Schedule.startTime is wrong for delayed starts
-     * and currently returns no JSON for this LPL series. Query near wall-clock "now" instead,
+     * and can return no JSON for delayed series. Query near wall-clock "now" instead,
      * with progressively wider safety lags, and accept the first meaningful current snapshot.
      */
     private suspend fun fetchLatestSnapshot(
@@ -378,6 +439,9 @@ internal class LolEsportsLiveDataSource(
 
     private suspend fun getJson(url: String): JSONObject =
         RiotResilientHttp.getJson(url, connectTimeoutMs = 5_000, readTimeoutMs = 5_000)
+
+    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =
+        match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")
 
     private fun teamLabel(match: ScheduledEsportsMatch): String =
         match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }

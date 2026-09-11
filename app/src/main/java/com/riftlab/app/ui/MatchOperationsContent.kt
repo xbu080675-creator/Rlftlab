@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.riftlab.app.data.GameTimeline
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSnapshot
 import com.riftlab.app.data.MatchDetailRepository
@@ -41,6 +43,7 @@ import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleFrame
 import com.riftlab.app.data.MatchLifecycleRecord
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.OpggHistoricalFrameResolver
 import com.riftlab.app.data.OpggHistoryBackfillState
 import com.riftlab.app.data.OpggHistoryPhase
@@ -49,8 +52,10 @@ import com.riftlab.app.data.RiotHistoryPhase
 import com.riftlab.app.data.RiotLiveStatsHistoryResolver
 import com.riftlab.app.data.ScheduleMatchPhase
 import com.riftlab.app.data.ScheduledEsportsMatch
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * Match data plane from an event-operator point of view.
@@ -69,6 +74,7 @@ internal fun MatchOperationsContent() {
     val records by MatchLifecycleArchive.records.collectAsState()
     val riotHistory by RiotLiveStatsHistoryResolver.states.collectAsState()
     val opggHistory by OpggHistoricalFrameResolver.states.collectAsState()
+    val timelines by MatchTimelineStore.timelines.collectAsState()
 
     val baseMatch = detail.match
     if (baseMatch == null) {
@@ -124,6 +130,7 @@ internal fun MatchOperationsContent() {
         }
     val backfill = riotHistory[RiotLiveStatsHistoryResolver.stateKey(match, selectedGame)]
     val opggBackfill = opggHistory[OpggHistoricalFrameResolver.stateKey(match, selectedGame)]
+    val timeline = currentSnapshot?.let { MatchTimelineStore.find(it, timelines) }
 
     LaunchedEffect(match.eventId, match.matchId, selectedGame, phase, frames.size, backfill?.phase) {
         if (selectedGame > 0 && phase != ScheduleMatchPhase.UPCOMING && frames.size < 2) {
@@ -183,7 +190,7 @@ internal fun MatchOperationsContent() {
             }
             currentSnapshot != null -> {
                 item { LiveStatePanel(currentSnapshot, phase, frames.size) }
-                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill, opggBackfill) }
+                item { GoldHistoryPanel(currentSnapshot, frames, phase, backfill, opggBackfill, timeline) }
                 item { PlayerOperatorTable(currentSnapshot, phase) }
             }
             else -> {
@@ -372,24 +379,33 @@ private fun GoldHistoryPanel(
     frames: List<MatchLifecycleFrame>,
     phase: ScheduleMatchPhase,
     backfill: RiotHistoryBackfillState?,
-    opggBackfill: OpggHistoryBackfillState?
+    opggBackfill: OpggHistoryBackfillState?,
+    timeline: GameTimeline?
 ) {
     val snapshots = remember(frames, current) {
         val archived = frames.map { it.snapshot }.filter { it.game == current.game }
         if (archived.lastOrNull()?.elapsedSeconds == current.elapsedSeconds) archived else archived + current
     }
+    var selectedIndex by remember(current.gameId, current.game, snapshots.size) {
+        mutableIntStateOf((snapshots.size - 1).coerceAtLeast(0))
+    }
+    LaunchedEffect(snapshots.size, phase) {
+        if (snapshots.isNotEmpty()) {
+            selectedIndex = if (phase == ScheduleMatchPhase.LIVE) snapshots.lastIndex else selectedIndex.coerceIn(0, snapshots.lastIndex)
+        }
+    }
     OperatorPanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("ECONOMY OVER TIME", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("ECONOMY OVER TIME", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Text(
-                    if (phase == ScheduleMatchPhase.COMPLETED) "历史经济过程" else "经济随比赛时间动态变化",
+                    if (phase == ScheduleMatchPhase.COMPLETED) "历史经济过程 · 可拖动回看" else "经济随比赛时间动态变化",
                     color = RiftText,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Text("${snapshots.size} points", color = RiftMuted, fontSize = 8.sp)
+            Text("${snapshots.size} points", color = RiftMuted, fontSize = 9.sp)
         }
         Spacer(Modifier.height(8.dp))
         if (snapshots.size < 2) {
@@ -413,7 +429,52 @@ private fun GoldHistoryPanel(
                 )
             }
         } else {
-            GoldHistoryChart(snapshots)
+            val safeIndex = selectedIndex.coerceIn(0, snapshots.lastIndex)
+            val selected = snapshots[safeIndex]
+            val previous = snapshots.getOrNull(safeIndex - 1)
+            GoldHistoryChart(snapshots, safeIndex)
+            Slider(
+                value = safeIndex.toFloat(),
+                onValueChange = { selectedIndex = it.roundToInt().coerceIn(0, snapshots.lastIndex) },
+                valueRange = 0f..snapshots.lastIndex.toFloat(),
+                steps = (snapshots.size - 2).coerceAtLeast(0)
+            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("节点 ${formatOperatorClock(selected.elapsedSeconds)}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text("${safeIndex + 1}/${snapshots.size}", color = RiftMuted, fontSize = 9.sp)
+            }
+            Spacer(Modifier.height(5.dp))
+            OperatorScrubMetricRow(
+                "${selected.blue} ${formatGold(selected.blueGold)}",
+                "Δ ${signedGold(selected.goldDiff)}",
+                if (selected.blueXp > 0 || selected.redXp > 0) "XP Δ ${signedGold(selected.blueXp - selected.redXp)}" else "XP —",
+                "${selected.red} ${formatGold(selected.redGold)}"
+            )
+            val nearestEvent = timeline?.events
+                ?.minByOrNull { event -> abs(event.seconds - selected.elapsedSeconds) }
+                ?.takeIf { event -> abs(event.seconds - selected.elapsedSeconds) <= 20 }
+            Spacer(Modifier.height(7.dp))
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(RiftPanelAlt, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
+                    .padding(10.dp)
+            ) {
+                Text(
+                    nearestEvent?.let { "${formatOperatorClock(it.seconds)} · ${it.title}" } ?: nodeEventSummary(previous, selected),
+                    color = if (nearestEvent != null) RiftCyan else RiftText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    nearestEvent?.detail?.ifBlank { "来自连续状态帧的可核实事件。" }
+                        ?: "节点由真实状态帧选取；没有离散事件时不会为了曲线观感编造击杀/资源事件。",
+                    color = RiftMuted,
+                    fontSize = 8.sp,
+                    lineHeight = 12.sp,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
+            }
             Spacer(Modifier.height(7.dp))
             val first = snapshots.first()
             val last = snapshots.last()
@@ -437,7 +498,7 @@ private fun GoldHistoryPanel(
 }
 
 @Composable
-private fun GoldHistoryChart(points: List<LiveSnapshot>) {
+private fun GoldHistoryChart(points: List<LiveSnapshot>, selectedIndex: Int) {
     val cyan = RiftCyan
     val red = RiftRed
     val line = RiftLine.copy(alpha = 0.55f)
@@ -454,7 +515,7 @@ private fun GoldHistoryChart(points: List<LiveSnapshot>) {
 
     Canvas(
         Modifier.fillMaxWidth()
-            .height(118.dp)
+            .height(132.dp)
             .background(Color.Black.copy(alpha = 0.18f), CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
             .border(1.dp, line, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
             .padding(8.dp)
@@ -486,6 +547,48 @@ private fun GoldHistoryChart(points: List<LiveSnapshot>) {
         }
         drawPath(bluePath, cyan, style = Stroke(width = 2.4f))
         drawPath(redPath, red, style = Stroke(width = 2.4f))
+        points.getOrNull(selectedIndex)?.let { point ->
+            val x = xOf(point.elapsedSeconds)
+            drawLine(line.copy(alpha = 0.9f), Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.5f)
+            drawCircle(cyan, radius = 5.5f, center = Offset(x, yOf(point.blueGold)))
+            drawCircle(red, radius = 5.5f, center = Offset(x, yOf(point.redGold)))
+        }
+    }
+}
+
+private fun nodeEventSummary(previous: LiveSnapshot?, current: LiveSnapshot): String {
+    current.latestEvent.takeIf { it.isNotBlank() }?.let { return it }
+    if (previous == null) return "比赛状态起点"
+    val events = buildList {
+        val bk = current.blueKills - previous.blueKills
+        val rk = current.redKills - previous.redKills
+        val bt = current.blueTowers - previous.blueTowers
+        val rt = current.redTowers - previous.redTowers
+        val bd = current.blueDragons - previous.blueDragons
+        val rd = current.redDragons - previous.redDragons
+        val bb = current.blueBarons - previous.blueBarons
+        val rb = current.redBarons - previous.redBarons
+        if (bk > 0) add("${current.blue} +$bk 击杀")
+        if (rk > 0) add("${current.red} +$rk 击杀")
+        if (bt > 0) add("${current.blue} +$bt 塔")
+        if (rt > 0) add("${current.red} +$rt 塔")
+        if (bd > 0) add("${current.blue} +$bd 龙")
+        if (rd > 0) add("${current.red} +$rd 龙")
+        if (bb > 0) add("${current.blue} +$bb 男爵")
+        if (rb > 0) add("${current.red} +$rb 男爵")
+        val swing = current.goldDiff - previous.goldDiff
+        if (abs(swing) >= 1000) add("经济摆动 ${signedGold(swing)}")
+    }
+    return events.joinToString(" · ").ifBlank { "状态采样点 · 无离散事件" }
+}
+
+@Composable
+private fun OperatorScrubMetricRow(left: String, centerLeft: String, centerRight: String, right: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(left, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        Text(centerLeft, color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        Text(centerRight, color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        Text(right, color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

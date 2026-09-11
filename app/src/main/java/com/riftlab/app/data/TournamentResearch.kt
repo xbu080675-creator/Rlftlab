@@ -114,6 +114,7 @@ object TournamentResearchProvider {
         identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") || identity.contains("全球先锋赛") -> "全球先锋赛"
         identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> "Esports World Cup"
         identity.contains("demacia") || identity.contains("德玛西亚") -> "德杯国际邀请赛"
+        Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) -> "WSCI"
         Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> "WSCL"
         identity.contains("americas cup") || identity.contains("america cup") || identity.contains("美洲杯") -> "美洲杯"
         identity.contains("emea masters") || identity.contains("emea 大师赛") -> "EMEA 大师赛"
@@ -126,7 +127,7 @@ object TournamentResearchProvider {
             identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") ||
             identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) ||
             identity.contains("demacia") || identity.contains("德玛西亚") ||
-            Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) ||
+            Regex("(^|[^a-z])wsc[il]([^a-z]|$)").containsMatchIn(identity) ||
             identity.contains("americas cup") || identity.contains("emea masters")
 
     private fun resolveVersion(
@@ -196,7 +197,7 @@ object TournamentResearchProvider {
                 category = "赛事更新",
                 title = "赛程快照",
                 detail = "$competitionTitle 当前归档 ${matches.size} 场系列赛；赛程窗口 $range。",
-                source = "RiftLab Unified Schedule (Riot/Cito)",
+                source = "RiftLab Unified Schedule (Riot/Cito/International Mirror)",
                 evidence = ResearchEvidence.PROVIDER
             )
             if (teams.isNotEmpty()) {
@@ -204,7 +205,7 @@ object TournamentResearchProvider {
                     category = "参赛阵容",
                     title = "参赛战队快照",
                     detail = "当前赛程已识别 ${teams.size} 支战队。后续资格确认、替补或退赛变更会作为新的赛事更新保留，而不是覆盖掉旧快照。",
-                    source = "RiftLab Unified Schedule (Riot/Cito)",
+                    source = "RiftLab Unified Schedule (Riot/Cito/International Mirror)",
                     evidence = ResearchEvidence.PROVIDER
                 )
             }

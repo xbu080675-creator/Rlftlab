@@ -54,6 +54,8 @@ import com.riftlab.app.BuildConfig
 import com.riftlab.app.data.LivePlayerSnapshot
 import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
+import com.riftlab.app.data.MatchTimelineStore
+import com.riftlab.app.data.TimelineEventEvidence
 import com.riftlab.app.data.MockAiInsightEngine
 import com.riftlab.app.data.EsportsStaffRef
 import com.riftlab.app.data.PlayerCard
@@ -192,7 +194,7 @@ private fun PreScreen() {
         item { SectionTitle("REAL DATA SOURCE / 赛程源") }
         item {
             Panel(accent = target != null) {
-                Text("RIOT LOL ESPORTS · SCHEDULE", color = if (target != null) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                Text("UNIFIED SCHEDULE · RIOT / CITO / INTERNATIONAL", color = if (target != null) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 Spacer(Modifier.height(6.dp))
                 Text(scheduleStatus, fontWeight = FontWeight.Medium, fontSize = 12.sp)
                 target?.let { match ->
@@ -278,12 +280,16 @@ private fun PreScreen() {
         item {
             Panel {
                 Text(
-                    if (data.recentHeadToHead.isEmpty()) "当前历史窗口没有可核实的近期直接交手。" else recentSeriesLabel(data.blue, data.recentHeadToHead),
+                    if (data.recentHeadToHead.isEmpty()) {
+                        "当前历史窗口没有可核实的近期直接交手。"
+                    } else {
+                        "${data.blue} 视角（W/L 均以 ${data.blue} 为准）\n" + recentSeriesRows(data.recentHeadToHead)
+                    },
                     color = RiftText,
-                    fontSize = 9.sp,
-                    lineHeight = 14.sp
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
                 )
-                Text("SOURCE  Unified Schedule · Riot/Cito", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE  Unified Schedule · Riot/Cito/International Mirror · 结果视角已标明", color = RiftMuted, fontSize = 9.sp)
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -293,6 +299,7 @@ private fun PreScreen() {
 @Composable
 private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuya: () -> Unit) {
     val snapshot by MatchSessionStore.live.collectAsState()
+    val timelines by MatchTimelineStore.timelines.collectAsState()
     val status by MatchSessionStore.liveSourceStatus.collectAsState()
     val scheduled by MatchSessionStore.preMatchFlow.collectAsState()
     val target by MatchSessionStore.targetMatch.collectAsState()
@@ -319,14 +326,18 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
     }
     val displayBlue = if (isLive) snapshot.blue else scheduled.blue.takeUnless { it.isBlank() || it == "—" } ?: "—"
     val displayRed = if (isLive) snapshot.red else scheduled.red.takeUnless { it.isBlank() || it == "—" } ?: "—"
+    val unifiedEvent = if (isLive && snapshot.game > 0) {
+        MatchTimelineStore.find(snapshot, timelines)?.events
+            ?.lastOrNull { it.seconds <= snapshot.elapsedSeconds }
+    } else null
     val ai = remember { MockAiInsightEngine() }
-    var insight by remember { androidx.compose.runtime.mutableStateOf("等待 Riot 实时帧；暂不生成局势判断。") }
+    var insight by remember { androidx.compose.runtime.mutableStateOf("等待实时 Provider 有效帧；暂不生成局势判断。") }
 
     LaunchedEffect(snapshot, status.phase) {
         insight = if (isLive && (snapshot.blueGold > 0 || snapshot.redGold > 0)) {
             ai.analyze(snapshot, null)
         } else {
-            "等待 Riot 实时帧；本地局势解读暂不生成，避免把占位数据当真。"
+            "等待实时 Provider 有效帧；本地局势解读暂不生成，避免把占位数据当真。"
         }
     }
 
@@ -411,12 +422,39 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Analytics, null, tint = if (isLive) RiftCyan else RiftMuted)
                     Spacer(Modifier.width(8.dp))
-                    Text("LOCAL LIVE READ", color = if (isLive) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                    Text("UNIFIED LIVE EVENT / 统一事件", color = if (isLive) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(insight, fontWeight = FontWeight.Medium, lineHeight = 21.sp)
                 Spacer(Modifier.height(8.dp))
-                Text(snapshot.latestEvent, color = RiftMuted, fontSize = 11.sp)
+                if (unifiedEvent != null) {
+                    Text(
+                        "${unifiedEvent.type.name} · ${unifiedEvent.title}",
+                        color = RiftText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (unifiedEvent.detail.isNotBlank()) {
+                        Text(unifiedEvent.detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                    }
+                    Text(
+                        "EVIDENCE  ${liveEventEvidenceLabel(unifiedEvent.evidence)}",
+                        color = if (unifiedEvent.evidence == TimelineEventEvidence.DERIVED_WINDOW) RiftMuted else RiftCyan,
+                        fontSize = 8.sp
+                    )
+                    Text(
+                        "SOURCE  ${unifiedEvent.source.ifBlank { "统一事件模型" }}",
+                        color = RiftMuted,
+                        fontSize = 8.sp
+                    )
+                } else {
+                    Text(
+                        "统一事件流等待下一条可核实事件；Provider 自由文本只保留作诊断，不作为赛事事件事实展示。",
+                        color = RiftMuted,
+                        fontSize = 10.sp,
+                        lineHeight = 15.sp
+                    )
+                }
             }
         }
 
@@ -448,6 +486,13 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         }
         item { Spacer(Modifier.height(20.dp)) }
     }
+}
+
+private fun liveEventEvidenceLabel(evidence: TimelineEventEvidence): String = when (evidence) {
+    TimelineEventEvidence.LOCAL_CAPTURE -> "本机捕获"
+    TimelineEventEvidence.VERIFIED_DELTA -> "连续帧确认"
+    TimelineEventEvidence.DERIVED_WINDOW -> "派生导航窗口"
+    TimelineEventEvidence.PROVIDER_EXPLICIT -> "Provider 明确事件"
 }
 
 @Composable
@@ -640,7 +685,11 @@ private fun staffLabel(team: String, staff: List<EsportsStaffRef>): String = bui
 private fun recentSeriesLabel(team: String, rows: List<PreRecentSeries>): String = buildString {
     append(team).append("\n")
     if (rows.isEmpty()) append("当前历史窗口暂无已结束 Series")
-    else rows.forEach { row ->
+    else append(recentSeriesRows(rows))
+}.trimEnd()
+
+private fun recentSeriesRows(rows: List<PreRecentSeries>): String = buildString {
+    rows.forEach { row ->
         append(row.outcome).append("  ")
             .append(row.scoreFor).append(':').append(row.scoreAgainst)
             .append(" vs ").append(row.opponentCode)

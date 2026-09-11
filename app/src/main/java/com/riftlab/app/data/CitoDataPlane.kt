@@ -209,6 +209,7 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
         var gameNumber = 1
         var lastEmission = ""
         var lastWsPayload: JSONObject? = null
+        var observedTargetKey = ""
         val wsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         var wsJob = wsScope.launch { }
 
@@ -236,6 +237,15 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
                     continue
                 }
 
+                val nextTargetKey = LiveMatchTargetRegistry.key(target)
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    citoMatchId = ""
+                    gameId = ""
+                    gameNumber = 1
+                    lastEmission = ""
+                    lastWsPayload = null
+                }
                 val matchKey = MatchLifecycleArchive.keyFor(target)
                 if (citoMatchId.isBlank()) {
                     citoMatchId = resolveCitoMatchId(target)
@@ -264,11 +274,9 @@ internal class CitoLiveDataSource : LiveMatchDataSource {
                 var snapshot: LiveSnapshot? = null
                 var transport = "REST fallback"
                 val ws = lastWsPayload
-                if (ws != null) {
+                if (ws != null && gameId.isNotBlank()) {
                     val candidate = CitoJson.parseLiveBoard(ws, target, gameNumber)
-                    if (candidate != null && CitoJson.meaningful(candidate) &&
-                        (gameId.isBlank() || candidate.gameId.isBlank() || candidate.gameId == gameId)
-                    ) {
+                    if (candidate != null && CitoJson.meaningful(candidate) && candidate.gameId == gameId) {
                         snapshot = candidate
                         transport = "WebSocket"
                         CitoRawArchive.append(matchKey, candidate.gameId.ifBlank { gameId }, "websocket", ws)
@@ -610,6 +618,12 @@ internal object CitoJson {
         val redPlayers = mutableListOf<LivePlayerSnapshot>()
         for (i in 0 until playerArray.length()) {
             val p = playerArray.optJSONObject(i) ?: continue
+            val rawSide = firstString(p, "side", "team").lowercase()
+            val side = when (rawSide) {
+                "blue", "left", "teama" -> "BLUE"
+                "red", "right", "teamb" -> "RED"
+                else -> ""
+            }
             val player = LivePlayerSnapshot(
                 participantId = firstInt(p, "participantId", "participant_id").takeIf { it > 0 } ?: i + 1,
                 role = normalizeRole(firstString(p, "role", "position")),
@@ -620,12 +634,18 @@ internal object CitoJson {
                 deaths = firstInt(p, "deaths"),
                 assists = firstInt(p, "assists"),
                 creepScore = firstInt(p, "creepScore", "cs"),
-                gold = firstInt(p, "totalGold", "gold")
+                gold = firstInt(p, "totalGold", "gold"),
+                teamId = firstString(p, "teamId", "team_id", "esportsTeamId"),
+                side = side
             )
-            when (firstString(p, "side", "team").lowercase()) {
-                "blue", "left", "teama" -> bluePlayers += player
-                "red", "right", "teamb" -> redPlayers += player
-                else -> if (player.participantId <= 5) bluePlayers += player else redPlayers += player
+            when (player.side) {
+                "BLUE" -> bluePlayers += player
+                "RED" -> redPlayers += player
+                else -> if (player.participantId <= 5) {
+                    bluePlayers += player.copy(side = "BLUE")
+                } else {
+                    redPlayers += player.copy(side = "RED")
+                }
             }
         }
 

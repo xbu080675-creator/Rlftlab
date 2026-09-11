@@ -26,11 +26,31 @@ import kotlin.math.abs
 enum class TimelineEventType {
     GAME_START,
     KILL,
+    MULTI_KILL_WINDOW,
+    TEAM_FIGHT_WINDOW,
     TOWER,
     DRAGON,
+    SOUL,
+    ELDER_DRAGON,
+    HERALD,
+    ATAKHAN,
     BARON,
+    GOLD_LEAD_CHANGE,
     GOLD_SWING,
+    ITEM_SPIKE,
+    PLAYER_LEVEL_CHANGE,
+    PLAYER_CS_CHANGE,
+    PLAYER_KDA_CHANGE,
+    GAME_PAUSE,
+    GAME_RESUME,
     GAME_END
+}
+
+enum class TimelineEventEvidence {
+    LOCAL_CAPTURE,
+    VERIFIED_DELTA,
+    DERIVED_WINDOW,
+    PROVIDER_EXPLICIT
 }
 
 data class MatchTimelineEvent(
@@ -39,7 +59,9 @@ data class MatchTimelineEvent(
     val team: String = "",
     val title: String,
     val detail: String = "",
-    val amount: Int = 1
+    val amount: Int = 1,
+    val evidence: TimelineEventEvidence = TimelineEventEvidence.VERIFIED_DELTA,
+    val source: String = ""
 )
 
 data class MatchTimelinePoint(
@@ -94,12 +116,19 @@ object MatchTimelineStore {
             }
 
             val derived = if (previous == null) {
+                val nearOpening = snapshot.elapsedSeconds in 0..30
                 listOf(
                     MatchTimelineEvent(
-                        seconds = 0,
+                        seconds = if (nearOpening) 0 else snapshot.elapsedSeconds,
                         type = TimelineEventType.GAME_START,
-                        title = "GAME START",
-                        detail = "G${snapshot.game} · ${snapshot.blue} vs ${snapshot.red}"
+                        title = if (nearOpening) "GAME START" else "CAPTURE START",
+                        detail = if (nearOpening) {
+                            "G${snapshot.game} · ${snapshot.blue} vs ${snapshot.red} · RiftLab 在开局窗口接入"
+                        } else {
+                            "RiftLab 于 ${formatClock(snapshot.elapsedSeconds)} 接入本局实时流；这是本机采集起点，不代表比赛在此刻开始。"
+                        },
+                        evidence = TimelineEventEvidence.LOCAL_CAPTURE,
+                        source = snapshot.source
                     )
                 )
             } else {
@@ -151,7 +180,9 @@ object MatchTimelineStore {
                 seconds = current.durationSeconds,
                 type = TimelineEventType.GAME_END,
                 title = "GAME END",
-                detail = "本地记录到最终实时帧 · ${formatClock(current.durationSeconds)}"
+                detail = "本地记录到最终实时帧 · ${formatClock(current.durationSeconds)}",
+                evidence = TimelineEventEvidence.LOCAL_CAPTURE,
+                source = snapshot.source
             )
             val timeline = current.copy(
                 events = (current.events + endEvent).distinctBy {
@@ -183,35 +214,60 @@ object MatchTimelineStore {
 
     private fun deriveEvents(previous: LiveSnapshot, current: LiveSnapshot): List<MatchTimelineEvent> = buildList {
         val second = current.elapsedSeconds
+        val intervalSeconds = (current.elapsedSeconds - previous.elapsedSeconds).coerceAtLeast(0)
+        val blueKillDelta = (current.blueKills - previous.blueKills).coerceAtLeast(0)
+        val redKillDelta = (current.redKills - previous.redKills).coerceAtLeast(0)
 
         appendKillEvents(
             output = this,
             second = second,
             team = current.blue,
-            teamDelta = current.blueKills - previous.blueKills,
+            teamDelta = blueKillDelta,
             previousPlayers = previous.bluePlayers,
-            currentPlayers = current.bluePlayers
+            currentPlayers = current.bluePlayers,
+            source = current.source
         )
         appendKillEvents(
             output = this,
             second = second,
             team = current.red,
-            teamDelta = current.redKills - previous.redKills,
+            teamDelta = redKillDelta,
             previousPlayers = previous.redPlayers,
-            currentPlayers = current.redPlayers
+            currentPlayers = current.redPlayers,
+            source = current.source
         )
 
-        appendObjectiveDelta(this, second, current.blue, "防御塔", TimelineEventType.TOWER, current.blueTowers - previous.blueTowers)
-        appendObjectiveDelta(this, second, current.red, "防御塔", TimelineEventType.TOWER, current.redTowers - previous.redTowers)
-        appendObjectiveDelta(this, second, current.blue, "小龙", TimelineEventType.DRAGON, current.blueDragons - previous.blueDragons)
-        appendObjectiveDelta(this, second, current.red, "小龙", TimelineEventType.DRAGON, current.redDragons - previous.redDragons)
-        appendObjectiveDelta(this, second, current.blue, "男爵", TimelineEventType.BARON, current.blueBarons - previous.blueBarons)
-        appendObjectiveDelta(this, second, current.red, "男爵", TimelineEventType.BARON, current.redBarons - previous.redBarons)
+        // A burst of >=3 total kills in one <=20s capture interval is useful as a navigation hint,
+        // but is not official proof that Riot classified the sequence as a team fight.
+        val combatKills = blueKillDelta + redKillDelta
+        if (combatKills >= 3 && intervalSeconds in 1..20) {
+            add(
+                MatchTimelineEvent(
+                    seconds = second,
+                    type = TimelineEventType.TEAM_FIGHT_WINDOW,
+                    title = "团战窗口候选 · +$combatKills 击杀",
+                    detail = "连续实时帧在 ${intervalSeconds}s 内记录到双方合计 +$combatKills 击杀；仅作为 DERIVED_WINDOW 导航锚点，不声称官方事件分类。",
+                    amount = combatKills,
+                    evidence = TimelineEventEvidence.DERIVED_WINDOW,
+                    source = current.source
+                )
+            )
+        }
+
+        appendObjectiveDelta(this, second, current.blue, "防御塔", TimelineEventType.TOWER, current.blueTowers - previous.blueTowers, current.source)
+        appendObjectiveDelta(this, second, current.red, "防御塔", TimelineEventType.TOWER, current.redTowers - previous.redTowers, current.source)
+        appendObjectiveDelta(this, second, current.blue, "小龙（类型未知）", TimelineEventType.DRAGON, current.blueDragons - previous.blueDragons, current.source)
+        appendObjectiveDelta(this, second, current.red, "小龙（类型未知）", TimelineEventType.DRAGON, current.redDragons - previous.redDragons, current.source)
+        appendObjectiveDelta(this, second, current.blue, "男爵", TimelineEventType.BARON, current.blueBarons - previous.blueBarons, current.source)
+        appendObjectiveDelta(this, second, current.red, "男爵", TimelineEventType.BARON, current.redBarons - previous.redBarons, current.source)
+
+        appendPlayerDeltaEvents(this, second, current.blue, previous.bluePlayers, current.bluePlayers, current.source)
+        appendPlayerDeltaEvents(this, second, current.red, previous.redPlayers, current.redPlayers, current.source)
 
         val oldDiff = previous.goldDiff
         val newDiff = current.goldDiff
         val leadChangedHands = (oldDiff > 250 && newDiff < -250) || (oldDiff < -250 && newDiff > 250)
-        val suddenSwing = abs(newDiff - oldDiff) >= 1800 && current.elapsedSeconds - previous.elapsedSeconds <= 20
+        val suddenSwing = abs(newDiff - oldDiff) >= 1800 && intervalSeconds in 1..20
         if (leadChangedHands || suddenSwing) {
             val leader = when {
                 newDiff > 0 -> current.blue
@@ -221,10 +277,12 @@ object MatchTimelineStore {
             add(
                 MatchTimelineEvent(
                     seconds = second,
-                    type = TimelineEventType.GOLD_SWING,
+                    type = if (leadChangedHands) TimelineEventType.GOLD_LEAD_CHANGE else TimelineEventType.GOLD_SWING,
                     team = if (newDiff > 0) current.blue else if (newDiff < 0) current.red else "",
                     title = if (leadChangedHands) "经济领先易手" else "经济快速摆动",
-                    detail = "$leader · ${signedGold(newDiff)} · 本段 ${signedGold(newDiff - oldDiff)}"
+                    detail = "$leader · ${signedGold(newDiff)} · 本段 ${signedGold(newDiff - oldDiff)}",
+                    evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                    source = current.source
                 )
             )
         }
@@ -236,7 +294,8 @@ object MatchTimelineStore {
         team: String,
         teamDelta: Int,
         previousPlayers: List<LivePlayerSnapshot>,
-        currentPlayers: List<LivePlayerSnapshot>
+        currentPlayers: List<LivePlayerSnapshot>,
+        source: String
     ) {
         if (teamDelta <= 0) return
         val previousById = previousPlayers.associateBy { playerKey(it) }
@@ -254,8 +313,22 @@ object MatchTimelineStore {
                     team = team,
                     title = "$team · $name +$amount 击杀",
                     detail = "由连续实时 KDA 数值差分确认；不推断未提供的受害者配对",
-                    amount = amount
+                    amount = amount,
+                    evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                    source = source
                 )
+                if (amount >= 2) {
+                    output += MatchTimelineEvent(
+                        seconds = second,
+                        type = TimelineEventType.MULTI_KILL_WINDOW,
+                        team = team,
+                        title = "$team · $name 采样窗口 +$amount 击杀",
+                        detail = "连续实时帧确认该选手在同一采样窗口新增 $amount 个击杀；不等同官方 Double / Triple / Quadra / Penta Kill 判定。",
+                        amount = amount,
+                        evidence = TimelineEventEvidence.DERIVED_WINDOW,
+                        source = source
+                    )
+                }
             }
         } else {
             output += MatchTimelineEvent(
@@ -264,7 +337,9 @@ object MatchTimelineStore {
                 team = team,
                 title = "$team +$teamDelta 击杀",
                 detail = "由队伍击杀总数差分确认",
-                amount = teamDelta
+                amount = teamDelta,
+                evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                source = source
             )
         }
     }
@@ -275,7 +350,8 @@ object MatchTimelineStore {
         team: String,
         label: String,
         type: TimelineEventType,
-        delta: Int
+        delta: Int,
+        source: String
     ) {
         if (delta <= 0) return
         output += MatchTimelineEvent(
@@ -283,18 +359,85 @@ object MatchTimelineStore {
             type = type,
             team = team,
             title = "$team · $label +$delta",
-            detail = "由连续实时资源计数差分确认",
-            amount = delta
+            detail = "由连续实时资源计数差分确认；若上游只提供小龙总数，不推断龙种、龙魂或远古龙。",
+            amount = delta,
+            evidence = TimelineEventEvidence.VERIFIED_DELTA,
+            source = source
         )
+    }
+
+    private fun appendPlayerDeltaEvents(
+        output: MutableList<MatchTimelineEvent>,
+        second: Int,
+        team: String,
+        previousPlayers: List<LivePlayerSnapshot>,
+        currentPlayers: List<LivePlayerSnapshot>,
+        source: String
+    ) {
+        if (previousPlayers.isEmpty() || currentPlayers.isEmpty()) return
+        val previousById = previousPlayers.associateBy(::playerKey)
+        currentPlayers.forEach { player ->
+            val before = previousById[playerKey(player)] ?: return@forEach
+            val name = player.summonerName.ifBlank { player.role }
+            val levelDelta = player.level - before.level
+            if (levelDelta > 0) {
+                output += MatchTimelineEvent(
+                    seconds = second,
+                    type = TimelineEventType.PLAYER_LEVEL_CHANGE,
+                    team = team,
+                    title = "$name · Lv.${before.level} → Lv.${player.level}",
+                    detail = "连续实时玩家状态差分",
+                    amount = levelDelta,
+                    evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                    source = source
+                )
+            }
+
+            // CS is already fully available in timeline snapshots. Emit an event only at 50-CS
+            // milestones so the event stream stays navigable instead of producing one row per minion.
+            if (player.creepScore > before.creepScore) {
+                val oldBucket = before.creepScore.coerceAtLeast(0) / 50
+                val newBucket = player.creepScore.coerceAtLeast(0) / 50
+                if (newBucket > oldBucket) {
+                    output += MatchTimelineEvent(
+                        seconds = second,
+                        type = TimelineEventType.PLAYER_CS_CHANGE,
+                        team = team,
+                        title = "$name · ${newBucket * 50} CS",
+                        detail = "连续实时 CS 数值跨越 50 刀里程碑；完整 CS 变化仍保留在状态快照中。",
+                        amount = player.creepScore - before.creepScore,
+                        evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                        source = source
+                    )
+                }
+            }
+
+            val deaths = player.deaths - before.deaths
+            val assists = player.assists - before.assists
+            if (deaths > 0 || assists > 0) {
+                output += MatchTimelineEvent(
+                    seconds = second,
+                    type = TimelineEventType.PLAYER_KDA_CHANGE,
+                    team = team,
+                    title = "$name · KDA ${player.kills}/${player.deaths}/${player.assists}",
+                    detail = "连续实时 KDA 数值差分：死亡 +${deaths.coerceAtLeast(0)} · 助攻 +${assists.coerceAtLeast(0)}；不据此猜测击杀/阵亡配对。",
+                    amount = deaths.coerceAtLeast(0) + assists.coerceAtLeast(0),
+                    evidence = TimelineEventEvidence.VERIFIED_DELTA,
+                    source = source
+                )
+            }
+        }
     }
 
     private fun playerKey(player: LivePlayerSnapshot): String =
         player.participantId.takeIf { it > 0 }?.toString()
             ?: token(player.summonerName).ifBlank { player.role.uppercase() }
 
-    private fun timelineKey(snapshot: LiveSnapshot): String = snapshot.gameId.trim().ifBlank {
-        "${token(snapshot.blue)}_${token(snapshot.red)}_G${snapshot.game}"
-    }
+    private fun timelineKey(snapshot: LiveSnapshot): String =
+        snapshot.targetKey.trim().takeIf { it.isNotBlank() }?.let { "$it:G${snapshot.game}" }
+            ?: snapshot.gameId.trim().ifBlank {
+                "${token(snapshot.blue)}_${token(snapshot.red)}_G${snapshot.game}"
+            }
 
     private fun token(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
@@ -361,6 +504,8 @@ object MatchTimelineStore {
                         .put("title", event.title)
                         .put("detail", event.detail)
                         .put("amount", event.amount)
+                        .put("evidence", event.evidence.name)
+                        .put("source", event.source)
                 )
             }
         })
@@ -386,7 +531,11 @@ object MatchTimelineStore {
                         team = item.optString("team"),
                         title = item.optString("title"),
                         detail = item.optString("detail"),
-                        amount = item.optInt("amount", 1)
+                        amount = item.optInt("amount", 1),
+                        evidence = runCatching {
+                            TimelineEventEvidence.valueOf(item.optString("evidence"))
+                        }.getOrDefault(TimelineEventEvidence.VERIFIED_DELTA),
+                        source = item.optString("source")
                     )
                 )
             }
@@ -422,6 +571,7 @@ object MatchTimelineStore {
         .put("latestEvent", snapshot.latestEvent)
         .put("source", snapshot.source)
         .put("gameId", snapshot.gameId)
+        .put("targetKey", snapshot.targetKey)
         .put("bluePlayers", playersToJson(snapshot.bluePlayers))
         .put("redPlayers", playersToJson(snapshot.redPlayers))
 
@@ -444,7 +594,8 @@ object MatchTimelineStore {
         bluePlayers = playersFromJson(root.optJSONArray("bluePlayers") ?: JSONArray()),
         redPlayers = playersFromJson(root.optJSONArray("redPlayers") ?: JSONArray()),
         source = root.optString("source"),
-        gameId = root.optString("gameId")
+        gameId = root.optString("gameId"),
+        targetKey = root.optString("targetKey")
     )
 
     private fun playersToJson(players: List<LivePlayerSnapshot>): JSONArray = JSONArray().apply {
@@ -461,6 +612,8 @@ object MatchTimelineStore {
                     .put("assists", player.assists)
                     .put("creepScore", player.creepScore)
                     .put("gold", player.gold)
+                    .put("teamId", player.teamId)
+                    .put("side", player.side)
             )
         }
     }
@@ -479,7 +632,9 @@ object MatchTimelineStore {
                     deaths = player.optInt("deaths"),
                     assists = player.optInt("assists"),
                     creepScore = player.optInt("creepScore"),
-                    gold = player.optInt("gold")
+                    gold = player.optInt("gold"),
+                    teamId = player.optString("teamId"),
+                    side = player.optString("side")
                 )
             )
         }

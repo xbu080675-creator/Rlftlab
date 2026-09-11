@@ -61,7 +61,10 @@ import com.riftlab.app.data.TeamAssetCatalog
 import com.riftlab.app.data.TournamentStandings
 import com.riftlab.app.data.TournamentDrawSlot
 import com.riftlab.app.data.TournamentGovernanceProvider
+import com.riftlab.app.data.TournamentEditionArchiveRecord
+import com.riftlab.app.data.TournamentEditionArchiveStore
 import com.riftlab.app.data.TournamentResearchProvider
+import com.riftlab.app.data.Worlds2026QualifiedTeams
 import com.riftlab.app.data.ResearchEvidence
 import java.time.Instant
 import java.time.LocalDate
@@ -90,6 +93,7 @@ private enum class ScheduleDirectorySection(val label: String) {
 private enum class InternationalCompetitionMenu(val label: String) {
     WORLDS("全球总决赛"),
     DEMACIA_GLOBAL("德杯国际邀请赛"),
+    WSCI("WSCI"),
     WSCL("WSCL"),
     FIRST_STAND("全球先锋赛"),
     MSI("季中冠军赛"),
@@ -140,14 +144,16 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
     LaunchedEffect(Unit) { StandingsCenterStore.ensureRunning() }
     val center by MatchSessionStore.scheduleCenter.collectAsState()
     val standingsCenter by StandingsCenterStore.state.collectAsState()
-    val buckets = remember(center.matches, standingsCenter.tournaments) {
-        buildCompetitionBuckets(center.matches, standingsCenter.tournaments)
+    val archiveCenter by TournamentEditionArchiveStore.state.collectAsState()
+    val buckets = remember(center.matches, standingsCenter.tournaments, archiveCenter.editions) {
+        buildCompetitionBuckets(center.matches, standingsCenter.tournaments, archiveCenter.editions)
     }
     var selectedBucketKey by remember { mutableStateOf<String?>(null) }
     var selectedDetailMatch by remember { mutableStateOf<ScheduledEsportsMatch?>(null) }
     var selectedTeam by remember { mutableStateOf<EsportsTeamRef?>(null) }
     var tabIndex by remember { mutableIntStateOf(0) }
     val selectedBucket = buckets.firstOrNull { it.key == selectedBucketKey }
+    val selectedArchive = archiveCenter.editions.firstOrNull { it.tournamentId == selectedBucket?.tournamentId }
     val selectedStandings = standingsCenter.standings
         ?.takeIf { it.tournamentId == selectedBucket?.tournamentId }
 
@@ -167,7 +173,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                     } ?: selectedTeam?.let { team ->
                         "战队资料 · ${team.name.ifBlank { teamCode(team) }}"
                     } ?: if (selectedBucket == null) {
-                        "联赛 / 国际赛 · 赛区订阅已同步"
+                        "联赛 / 国际赛 · 赛事订阅已同步"
                     } else {
                         if (selectedBucket.researchOnly) "年度赛事研究 · 版本 / 规则 / 抽签 / 赛程" else competitionRange(selectedBucket.matches)
                     },
@@ -226,6 +232,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                             EventCenterTab.RESEARCH -> ResearchView(
                                 bucket = selectedBucket,
                                 standings = selectedStandings,
+                                archivedEdition = selectedArchive,
                                 onOpenSchedule = { tabIndex = EventCenterTab.SCHEDULE.ordinal }
                             )
                             EventCenterTab.SCHEDULE -> CompetitionMatches(
@@ -243,11 +250,12 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                                 scheduleMatches = selectedBucket.matches,
                                 bucket = selectedBucket
                             )
-                            EventCenterTab.RULES -> RulesView(selectedBucket, selectedStandings)
-                            EventCenterTab.DRAW -> DrawView(selectedBucket, selectedStandings)
+                            EventCenterTab.RULES -> RulesView(selectedBucket, selectedStandings, selectedArchive)
+                            EventCenterTab.DRAW -> DrawView(selectedBucket, selectedStandings, selectedArchive)
                             EventCenterTab.TEAMS -> TeamsView(
                                 standings = selectedStandings,
                                 scheduleMatches = leagueWideTeamMatches(selectedBucket, center.matches),
+                                knownParticipantCodes = (selectedArchive?.participantTeamCodes.orEmpty() + officialParticipantCodesForBucket(selectedBucket)).distinct(),
                                 onTeamClick = { team ->
                                     TeamDetailRepository.open(team, center.matches)
                                     selectedTeam = team
@@ -499,10 +507,15 @@ private fun InternationalEventPlaceholder(menu: InternationalCompetitionMenu) {
             "最新国际赛事 · 固定入口",
             "德杯国际邀请赛独立归入国际赛事，不归入 LPL 常规联赛。参赛队、分组、赛程和直播信息在可信赛事源可用后自动填充。"
         )
+        InternationalCompetitionMenu.WSCI -> Triple(
+            "WSCI",
+            "国际赛事 · 独立赛事入口",
+            "WSCI 作为独立国际赛事建档。赛程、比分和战队来自已标注 Provider；缺少 Standings、Seed 或晋级来源时保持未知。"
+        )
         InternationalCompetitionMenu.WSCL -> Triple(
             "WSCL",
             "国际赛事 · 当前赛事入口保留",
-            "WSCL 不归入已经停摆的 2026 LDL。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回 LDL。"
+            "WSCL 独立归入国际赛事。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回联赛目录。"
         )
         else -> Triple(
             menu.label,
@@ -597,7 +610,8 @@ private fun internationalCompetitionKind(bucket: ScheduleCompetitionBucket): Int
         sample?.leagueSlug.orEmpty(), sample?.league.orEmpty(), bucket.title
     ).joinToString(" ").lowercase()
     return when {
-        identity.contains("demacia cup") || identity.contains("德玛西亚杯") || identity.contains("demacia global invitational") -> InternationalCompetitionMenu.DEMACIA_GLOBAL
+        identity.contains("demacia cup") || identity.contains("德玛西亚杯") || identity.contains("德杯国际邀请赛") || identity.contains("demacia global invitational") -> InternationalCompetitionMenu.DEMACIA_GLOBAL
+        Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCI
         Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) -> InternationalCompetitionMenu.WSCL
         identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") || identity.contains("全球先锋赛") -> InternationalCompetitionMenu.FIRST_STAND
         identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) || identity.contains("季中冠军赛") -> InternationalCompetitionMenu.MSI
@@ -794,7 +808,7 @@ private fun StandingsView(standings: TournamentStandings?) {
         stage.sections.filter { it.rankings.isNotEmpty() }
     }
     if (sections.isEmpty()) {
-        EmptyData("等待 Riot Standings 排名数据")
+        EmptyData("当前可信数据源尚未提供 Standings 排名数据")
         return
     }
 
@@ -875,8 +889,18 @@ private fun androidx.compose.foundation.layout.RowScope.TableText(
 @Composable
 private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
     val seasonYear = bucket.matches.mapNotNull(::matchStartDate).firstOrNull()?.year
-    if (!bucketLeagueLabel(bucket).equals("LPL", ignoreCase = true)) {
-        EmptyData("${bucketLeagueLabel(bucket)} 年度积分尚未接入；不会显示 LPL 数据作为替代。")
+        ?: bucket.tournament?.startDate?.take(4)?.toIntOrNull()
+    val league = bucketLeagueLabel(bucket).uppercase()
+    if (league != "LPL") {
+        val message = when (league) {
+            "LCK" -> "LCK 的 Worlds 资格由最终阶段 / 季后赛名次直接产生，不使用 LPL 式年度 Championship Points 表。请查看“规则”和资格路径。"
+            "LCS" -> "LCS 的 Worlds 资格按 Split 3 最终阶段名次直接产生；这里不显示一张不存在的 LPL 式年度积分表。"
+            "CBLOL" -> "CBLOL 的 Worlds 资格按 Split 3 最终名次产生；这里不把“不使用 Championship Points”误报成“积分未同步”。"
+            "LCP" -> "LCP 采用混合资格体系：部分席位由季后赛名次直通，另有席位由 Championship Points 直接决定；当前队伍总分只在可信完整数据可重算/官方总表可用时展示。"
+            "LEC" -> "LEC Worlds 席位按最终阶段资格规则结算；官方第三席描述仍需更明确映射时保持待确认，不套用 LPL 年度积分。"
+            else -> "$league 当前资格机制不等同于 LPL Championship Points；请以该赛区官方规则 / 资格路径为准。"
+        }
+        EmptyData(message)
         return
     }
     if (seasonYear != LplChampionshipPoints2026.season) {
@@ -987,7 +1011,7 @@ private fun BracketView(
             (stage.slug.contains("playoff", true) || stage.slug.contains("regional", true))
     }
     if (stages.isEmpty()) {
-        EmptyData("等待 Riot Standings 淘汰赛数据")
+        EmptyData("当前可信数据源尚未提供淘汰赛 / Bracket 数据")
         return
     }
 
@@ -1078,18 +1102,23 @@ private fun BracketTeamLine(code: String, score: String) {
 private fun ResearchView(
     bucket: ScheduleCompetitionBucket,
     standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?,
     onOpenSchedule: () -> Unit
 ) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
     }
-    val research = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches, governance) {
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
+    }
+    val research = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches, governance, archivedEdition?.patchVersions) {
         TournamentResearchProvider.resolve(
             tournament = bucket.tournament,
             competitionTitle = bucket.title,
             matches = bucket.matches,
             standings = standings,
-            governance = governance
+            governance = governance,
+            verifiedPatchVersions = archivedEdition?.patchVersions.orEmpty()
         )
     }
 
@@ -1218,9 +1247,16 @@ private fun researchEvidenceColor(value: ResearchEvidence) = when (value) {
 }
 
 @Composable
-private fun RulesView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+private fun RulesView(
+    bucket: ScheduleCompetitionBucket,
+    standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?
+) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
     }
     val snapshot = governance.rules
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1259,9 +1295,16 @@ private fun RulesView(bucket: ScheduleCompetitionBucket, standings: TournamentSt
 }
 
 @Composable
-private fun DrawView(bucket: ScheduleCompetitionBucket, standings: TournamentStandings?) {
-    val governance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
+private fun DrawView(
+    bucket: ScheduleCompetitionBucket,
+    standings: TournamentStandings?,
+    archivedEdition: TournamentEditionArchiveRecord?
+) {
+    val liveGovernance = remember(bucket.key, standings?.tournamentId, standings?.stages, bucket.matches) {
         TournamentGovernanceProvider.resolve(bucket.tournament, bucket.title, bucket.matches, standings)
+    }
+    val governance = remember(liveGovernance, archivedEdition?.archivedRules, archivedEdition?.archivedDraw) {
+        TournamentEditionArchiveStore.mergeGovernanceForDisplay(archivedEdition, liveGovernance)
     }
     val snapshot = governance.draw
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1318,9 +1361,10 @@ private fun DrawView(bucket: ScheduleCompetitionBucket, standings: TournamentSta
 private fun TeamsView(
     standings: TournamentStandings?,
     scheduleMatches: List<ScheduledEsportsMatch>,
+    knownParticipantCodes: List<String> = emptyList(),
     onTeamClick: (EsportsTeamRef) -> Unit
 ) {
-    val teams = remember(standings?.tournamentId, standings?.stages, scheduleMatches) {
+    val teams = remember(standings?.tournamentId, standings?.stages, scheduleMatches, knownParticipantCodes) {
         val fromSchedule = scheduleMatches.flatMap { it.teams }
         val fromRankings = standings?.stages.orEmpty().flatMap { stage ->
             stage.sections.flatMap { section -> section.rankings.map { it.team } }
@@ -1328,7 +1372,12 @@ private fun TeamsView(
         val fromMatches = standings?.stages.orEmpty().flatMap { stage ->
             stage.sections.flatMap { section -> section.matches.flatMap { it.teams } }
         }
-        (fromSchedule + fromRankings + fromMatches)
+        val knownVariants = knownParticipantCodes
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() && it != "TBD" && it != "—" }
+            .distinct()
+            .map { code -> EsportsTeamRef(id = "", code = code, name = code) }
+        (fromSchedule + fromRankings + fromMatches + knownVariants)
             .filter { teamCode(it) != "TBD" && teamCode(it) != "—" }
             .groupBy(TeamAssetCatalog::canonicalKey)
             .values
@@ -1417,32 +1466,78 @@ private fun chooseInitialBucket(
 
 private fun buildCompetitionBuckets(
     matches: List<ScheduledEsportsMatch>,
-    tournaments: List<EsportsTournamentRef>
+    tournaments: List<EsportsTournamentRef>,
+    archivedEditions: List<TournamentEditionArchiveRecord> = emptyList()
 ): List<ScheduleCompetitionBucket> {
-    val official = tournaments.mapNotNull { tournament ->
+    // Tournament existence comes from the Tournament Directory / durable archive. A temporarily
+    // empty schedule only means that the match list is still syncing (or has not been published);
+    // it must never delete the event itself from the directory.
+    val official = tournaments.map { tournament ->
         val tournamentMatches = matches.filter { match ->
             sameLeague(match, tournament) &&
                 matchStartDate(match)?.let { StandingsCenterStore.containsDate(tournament, it) } == true
         }
-        if (tournamentMatches.isEmpty()) return@mapNotNull null
         ScheduleCompetitionBucket(
             key = tournament.id,
             title = StandingsCenterStore.displayTournamentName(tournament),
             matches = tournamentMatches.sortedBy(::matchStartEpochMs),
-            firstEpochMs = tournamentMatches.minOfOrNull(::matchStartEpochMs) ?: Long.MAX_VALUE,
+            firstEpochMs = tournamentMatches.minOfOrNull(::matchStartEpochMs) ?: tournamentStartEpochMs(tournament),
             tournamentId = tournament.id,
-            tournament = tournament
+            tournament = tournament,
+            researchOnly = tournamentMatches.isEmpty()
         )
     }
 
-    val used = official.flatMap { it.matches }.map(::scheduleIdentity).toSet()
+    val officialIds = official.mapNotNull { it.tournamentId }.toSet()
+    val archived = archivedEditions
+        .filter { it.tournamentId.isNotBlank() && it.tournamentId !in officialIds }
+        .map { edition ->
+            val tournament = EsportsTournamentRef(
+                id = edition.tournamentId,
+                slug = edition.slug,
+                startDate = edition.startDate,
+                endDate = edition.endDate,
+                leagueId = edition.leagueId,
+                leagueSlug = edition.leagueSlug,
+                leagueName = edition.leagueName
+            )
+            val editionMatches = matches.filter { match ->
+                sameLeague(match, tournament) &&
+                    matchStartDate(match)?.let { StandingsCenterStore.containsDate(tournament, it) } == true
+            }
+            ScheduleCompetitionBucket(
+                key = edition.tournamentId,
+                title = edition.displayName.ifBlank { StandingsCenterStore.displayTournamentName(tournament) },
+                matches = editionMatches.sortedBy(::matchStartEpochMs),
+                firstEpochMs = editionMatches.minOfOrNull(::matchStartEpochMs) ?: tournamentStartEpochMs(tournament),
+                tournamentId = edition.tournamentId,
+                tournament = tournament,
+                researchOnly = editionMatches.isEmpty()
+            )
+        }
+
+    val directory = official + archived
+    val used = directory.flatMap { it.matches }.map(::scheduleIdentity).toSet()
     val fallback = buildFallbackBuckets(matches.filterNot { scheduleIdentity(it) in used })
-    val base = (official + fallback)
+    val base = (directory + fallback)
         .distinctBy { it.key }
         .sortedBy { it.firstEpochMs }
     return addAnnualResearchPlaceholders(base)
         .distinctBy { it.key }
         .sortedBy { it.firstEpochMs }
+}
+
+private fun tournamentStartEpochMs(tournament: EsportsTournamentRef): Long = runCatching {
+    LocalDate.parse(tournament.startDate.take(10))
+        .atStartOfDay(ZoneId.systemDefault())
+        .toInstant()
+        .toEpochMilli()
+}.getOrElse { Long.MAX_VALUE }
+
+private fun officialParticipantCodesForBucket(bucket: ScheduleCompetitionBucket): List<String> {
+    val year = researchEditionYear(bucket)
+    val isWorlds = internationalCompetitionKind(bucket) == InternationalCompetitionMenu.WORLDS
+    return if (year == 2026 && isWorlds) Worlds2026QualifiedTeams.teams.map { it.code } else emptyList()
 }
 
 private fun addAnnualResearchPlaceholders(

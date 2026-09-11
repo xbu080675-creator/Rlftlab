@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
 
 object MatchSessionStore {
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
-    @Volatile private var subscribedLeagueKeys: Set<String> = setOf("LPL")
+    @Volatile private var subscribedLeagueKeys: Set<String> = setOf("GLOBAL")
 
     private val emptyPreMatch = PreMatchInfo(
         league = "LoL Esports",
@@ -25,11 +25,11 @@ object MatchSessionStore {
         blue = "—",
         red = "—",
         startTime = "--:--",
-        blueForm = "RIOT SCHEDULE",
-        redForm = "RIOT SCHEDULE",
+        blueForm = "UNIFIED SCHEDULE",
+        redForm = "UNIFIED SCHEDULE",
         blueRoster = emptyList(),
         redRoster = emptyList(),
-        rosterNote = "正在同步 Riot 全球 LoL Esports 赛程；不会用 Mock 首发或 Rank 填空。"
+        rosterNote = "正在同步 Unified Schedule；不会用 Mock 首发或 Rank 填空。"
     )
 
     private val _preMatch = MutableStateFlow(emptyPreMatch)
@@ -83,7 +83,7 @@ object MatchSessionStore {
     private val _targetMatch = MutableStateFlow<ScheduledEsportsMatch?>(null)
     val targetMatch: StateFlow<ScheduledEsportsMatch?> = _targetMatch.asStateFlow()
 
-    private val _scheduleStatus = MutableStateFlow("正在连接 Riot LoL Esports 赛程中心…")
+    private val _scheduleStatus = MutableStateFlow("正在连接 Unified Schedule 赛事中心…")
     val scheduleStatus: StateFlow<String> = _scheduleStatus.asStateFlow()
 
     private val _rosterStatus = MutableStateFlow("ROSTER · 等待选中赛事")
@@ -164,7 +164,7 @@ object MatchSessionStore {
     }
 
     fun updateLeagueSubscriptions(keys: Set<String>) {
-        val normalized = keys.map(::subscriptionLeagueToken).filter { it.isNotBlank() }.toSet().ifEmpty { setOf("LPL") }
+        val normalized = keys.map(::subscriptionLeagueToken).filter { it.isNotBlank() }.toSet().ifEmpty { setOf("GLOBAL") }
         if (normalized == subscribedLeagueKeys) return
         subscribedLeagueKeys = normalized
         scope.launch { applySubscribedHomepageTarget() }
@@ -183,7 +183,7 @@ object MatchSessionStore {
             currentMatch = current,
             nextMatch = next,
             statusMessage = if (target == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+                "赛事订阅 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else {
                 buildScheduleStatus(all, current, next)
             }
@@ -191,12 +191,12 @@ object MatchSessionStore {
         _scheduleStatus.value = _scheduleCenter.value.statusMessage
         if (target != null) refreshPreMatchFromTarget(target) else {
             _preMatch.value = emptyPreMatch
-            _rosterStatus.value = "ROSTER · 订阅赛区当前无可选赛事"
+            _rosterStatus.value = "ROSTER · 赛事订阅当前无可选赛事"
         }
     }
 
     private suspend fun refreshScheduleAndRoster() {
-        _scheduleStatus.value = "正在同步 Riot 全球赛事分页赛程…"
+        _scheduleStatus.value = "正在同步 Unified Schedule 全球赛事…"
         try {
             val matches = scheduleSource.fetchLeagueSchedule()
             _schedule.value = matches
@@ -227,7 +227,7 @@ object MatchSessionStore {
             _targetMatch.value = homepageTarget
             LiveMatchTargetRegistry.update(homepageTarget)
             _scheduleStatus.value = if (homepageTarget == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Riot 分页暂无赛事"
+                "赛事订阅 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else center.statusMessage
 
             // Post-match recovery is independent from the live target. Always resolve the most
@@ -246,7 +246,7 @@ object MatchSessionStore {
                 refreshPreMatchFromTarget(homepageTarget)
             } else {
                 _preMatch.value = emptyPreMatch
-                _rosterStatus.value = "ROSTER · 订阅赛区当前没有可选赛事"
+                _rosterStatus.value = "ROSTER · 赛事订阅当前没有可选赛事"
             }
         } catch (t: Throwable) {
             val message = "赛程中心 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"
@@ -313,14 +313,19 @@ object MatchSessionStore {
     private suspend fun refreshPreMatchFromTarget(target: ScheduledEsportsMatch): String {
         val left = target.teams.getOrNull(0) ?: return "0/2"
         val right = target.teams.getOrNull(1) ?: return "0/2"
-        _rosterStatus.value = "ROSTER · 正在同步 Riot getTeams…"
+        _rosterStatus.value = "ROSTER · 正在同步队伍资料源…"
 
-        val leftDetails = runCatching {
-            teamLookupSlug(left)?.let { teamSource.fetchTeam(it) }
-        }.getOrNull()
-        val rightDetails = runCatching {
-            teamLookupSlug(right)?.let { teamSource.fetchTeam(it) }
-        }.getOrNull()
+        val externalProviderTarget = isExternalProviderTarget(target)
+        val leftDetails = if (externalProviderTarget) {
+            null
+        } else {
+            runCatching { teamLookupSlug(left)?.let { teamSource.fetchTeam(it) } }.getOrNull()
+        }
+        val rightDetails = if (externalProviderTarget) {
+            null
+        } else {
+            runCatching { teamLookupSlug(right)?.let { teamSource.fetchTeam(it) } }.getOrNull()
+        }
 
         val leftRiotRoster = leftDetails?.players.orEmpty().toPlayerCards()
         val rightRiotRoster = rightDetails?.players.orEmpty().toPlayerCards()
@@ -347,6 +352,8 @@ object MatchSessionStore {
             blueRoster = leftRoster,
             redRoster = rightRoster,
             rosterNote = when {
+                externalProviderTarget ->
+                    "当前赛程来自外部赛事 Provider；Provider team id 不会冒充 Riot team id。尚未建立可信跨源映射前，Roster / Staff 保持未知。"
                 connectedCount == 2 && autoStarterCount == 2 ->
                     "两队 roster 已连接且五位置均唯一；可作为当前 roster 五人展示，但仍不把 roster pool 额外成员擅自标成替补。Rank 继续等待独立 Ranked 数据源。"
                 connectedCount == 2 ->
@@ -364,7 +371,11 @@ object MatchSessionStore {
             redRecentSeries = rightRecent,
             recentHeadToHead = recentH2h
         )
-        _rosterStatus.value = "ROSTER · RIOT GETTEAMS $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        _rosterStatus.value = if (externalProviderTarget) {
+            "ROSTER · PROVIDER TEAM NAMESPACE · CROSSWALK PENDING"
+        } else {
+            "ROSTER · TEAM SOURCES $connectedCount/2 · AUTO STARTERS $autoStarterCount/2"
+        }
         return "$connectedCount/2"
     }
 
@@ -427,16 +438,21 @@ object MatchSessionStore {
             scoreAgainst = scoreAgainst,
             outcome = outcome,
             startTimeIso = match.startTimeIso,
-            source = "Unified Schedule · Riot/Cito"
+            source = "Unified Schedule · Riot/Cito/International Mirror"
         )
     }
 
+    private fun isExternalProviderTarget(match: ScheduledEsportsMatch): Boolean =
+        match.eventId.startsWith("provider:") ||
+            match.matchId.startsWith("provider:") ||
+            match.leagueId.startsWith("rft-event:")
+
     private fun matchesTeamIdentity(candidate: EsportsTeamRef, target: EsportsTeamRef): Boolean {
-        val a = listOf(candidate.id, candidate.code, candidate.name, candidate.slug)
+        val a = listOf(candidate.slug, candidate.code, candidate.name)
             .map(::teamIdentityToken)
             .filter { it.isNotBlank() }
             .toSet()
-        val b = listOf(target.id, target.code, target.name, target.slug)
+        val b = listOf(target.slug, target.code, target.name)
             .map(::teamIdentityToken)
             .filter { it.isNotBlank() }
             .toSet()
@@ -447,8 +463,8 @@ object MatchSessionStore {
         value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
     private fun teamLookupSlug(team: EsportsTeamRef): String? {
-        if (team.id.isNotBlank()) return team.id
         if (team.slug.isNotBlank()) return team.slug
+        if (team.id.isNotBlank()) return team.id
 
         return team.name
             .lowercase()
@@ -464,7 +480,7 @@ object MatchSessionStore {
                     role = player.role,
                     id = player.summonerName,
                     rank = "RANK 待接",
-                    recent = "Riot roster"
+                    recent = "Verified team source"
                 )
             }
 
@@ -488,10 +504,11 @@ object MatchSessionStore {
         if (team.recordWins > 0 || team.recordLosses > 0) {
             "${team.recordWins}W-${team.recordLosses}L"
         } else {
-            "RIOT SCHEDULE"
+            "UNIFIED SCHEDULE"
         }
 
     private fun matchesHomepageSubscription(match: ScheduledEsportsMatch): Boolean {
+        if ("GLOBAL" in subscribedLeagueKeys) return true
         val key = canonicalLeagueKey(match)
         return key.isNotBlank() && key in subscribedLeagueKeys
     }
@@ -547,7 +564,7 @@ object MatchSessionStore {
         val completed = matches.count(::isCompletedState)
         val currentText = current?.let { "${scheduleActivityLabel(it)} ${teamsLabel(it)}" } ?: "NO ACTIVE EVENT"
         val nextText = next?.let { "NEXT ${teamsLabel(it)} ${formatLocalDateTime(it.startTimeIso)}" } ?: "NO NEXT"
-        return "${RiotResilientHttp.sourceLabel()} · Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
+        return "Unified Schedule · ${matches.size} 场 · 已结束 $completed · $currentText · $nextText"
     }
 
     private fun teamsLabel(match: ScheduledEsportsMatch): String =

@@ -203,7 +203,8 @@ object OpggHistoricalFrameResolver {
                         blueXp = bf.xp,
                         redXp = rf.xp,
                         source = "OP.GG Esports · gameByMatch.team.frames · third-party",
-                        gameId = if (opggGameId.isBlank()) "opgg:$matchId:g$gameNumber" else "opgg:$opggGameId"
+                        gameId = if (opggGameId.isBlank()) "opgg:$matchId:g$gameNumber" else "opgg:$opggGameId",
+                        targetKey = LiveMatchTargetRegistry.key(match)
                     )
                 )
                 stored++

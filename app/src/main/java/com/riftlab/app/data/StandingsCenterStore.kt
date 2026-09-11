@@ -54,9 +54,9 @@ object StandingsCenterStore {
                 selectedTournament = selected,
                 lastRefreshEpochMs = System.currentTimeMillis(),
                 statusMessage = if (selected != null) {
-                    "Riot Standings · ${displayTournamentName(selected)}"
+                    "Standings · ${displayTournamentName(selected)}"
                 } else {
-                    "Riot Standings · 暂无可用赛事"
+                    "Standings · 暂无可用赛事"
                 }
             )
 
@@ -77,7 +77,11 @@ object StandingsCenterStore {
             _state.value = _state.value.copy(
                 standings = standings,
                 lastRefreshEpochMs = System.currentTimeMillis(),
-                statusMessage = "Riot Standings · ${displayTournamentName(tournament)}"
+                statusMessage = when {
+                    tournament.id.startsWith("rft-event:") && standings == null ->
+                        "${displayTournamentName(tournament)} · 当前可信 Provider 未提供 Standings，保持未知"
+                    else -> "Standings · ${displayTournamentName(tournament)}"
+                }
             )
         } catch (t: Throwable) {
             if (_state.value.selectedTournament?.id != tournament.id) return
@@ -89,14 +93,20 @@ object StandingsCenterStore {
 
     private fun chooseCurrentTournament(tournaments: List<EsportsTournamentRef>): EsportsTournamentRef? {
         val today = LocalDate.now()
-        return tournaments.firstOrNull { tournament ->
-            val start = parseDate(tournament.startDate)
-            val end = parseDate(tournament.endDate)
-            start != null && end != null && !today.isBefore(start) && !today.isAfter(end)
-        } ?: tournaments
-            .filter { parseDate(it.startDate)?.let { date -> !date.isAfter(today) } == true }
+        return tournaments
+            .filter { tournament ->
+                val start = parseDate(tournament.startDate)
+                val end = parseDate(tournament.endDate)
+                start != null && end != null && !today.isBefore(start) && !today.isAfter(end)
+            }
             .maxByOrNull { it.startDate }
-            ?: tournaments.lastOrNull()
+            ?: tournaments
+                .filter { parseDate(it.startDate)?.let { date -> !date.isAfter(today) } == true }
+                .maxByOrNull { it.startDate }
+            ?: tournaments.minByOrNull { tournament ->
+                parseDate(tournament.startDate)?.let { kotlin.math.abs(java.time.temporal.ChronoUnit.DAYS.between(today, it)) }
+                    ?: Long.MAX_VALUE
+            }
     }
 
     fun displayTournamentName(tournament: EsportsTournamentRef): String {
@@ -111,6 +121,10 @@ object StandingsCenterStore {
             identity.contains("mid-season") || Regex("(^|[^a-z])msi([^a-z]|$)").containsMatchIn(identity) -> "$year 季中冠军赛"
             identity.contains("first stand") || identity.contains("first-stand") || identity.contains("first_stand") -> "$year First Stand"
             identity.contains("esports world cup") || Regex("(^|[^a-z])ewc([^a-z]|$)").containsMatchIn(identity) -> "$year Esports World Cup"
+            Regex("(^|[^a-z])wsci([^a-z]|$)").containsMatchIn(identity) ->
+                if (identity.contains("qualifier") || identity.contains("regional")) "$year WSCI 区域资格赛" else "$year WSCI"
+            Regex("(^|[^a-z])wscl([^a-z]|$)").containsMatchIn(identity) ->
+                if (identity.contains("qualifier") || identity.contains("regional")) "$year WSCL 区域资格赛" else "$year WSCL"
             slug.contains("split_1") -> "$year $leagueName 第一赛段"
             slug.contains("split_2") -> "$year $leagueName 第二赛段"
             slug.contains("split_3") -> "$year $leagueName 第三赛段"

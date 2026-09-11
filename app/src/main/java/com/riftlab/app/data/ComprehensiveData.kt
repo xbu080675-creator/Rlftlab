@@ -262,6 +262,7 @@ object TournamentIdentityResolver {
             identity.contains("demacia") -> "DEMACIA"
             identity.contains("emea masters") -> "EMEA_MASTERS"
             identity.contains("americas cup") -> "AMERICAS_CUP"
+            identity.contains("wsci") -> "WSCI"
             identity.contains("wscl") -> "WSCL"
             else -> normalizeToken(ref.leagueSlug.ifBlank { ref.leagueName.ifBlank { "UNKNOWN" } })
         }
@@ -288,6 +289,8 @@ object TournamentIdentityResolver {
                     "MSI" -> "季中冠军赛"
                     "FIRST_STAND" -> "First Stand"
                     "EWC" -> "Esports World Cup"
+                    "WSCI" -> "WSCI"
+                    "WSCL" -> "WSCL"
                     else -> ref.leagueName.ifBlank { ref.leagueSlug.uppercase() }.ifBlank { ref.slug }
                 }
             )
@@ -484,12 +487,28 @@ object ComprehensiveDataAssembler {
             if (completedGame != null && completed != null) addAll(toPlayerStats(completed, completedGame, teams))
         }.distinctBy { listOf(it.gameId, it.playerId) }
         val standingRows = flattenStandings(standings)
+        val externalSchedule = scheduled?.let {
+            it.eventId.startsWith("provider:") || it.leagueId.startsWith("rft-event:")
+        } == true
+        val externalTournament = tournament?.id?.startsWith("rft-event:") == true
 
         val provenance = buildList {
-            if (scheduled != null) add(DataProvenance("riot-schedule", "Riot LoL Esports Schedule", DataAuthority.OFFICIAL, DataFreshnessClass.MINUTES))
-            if (tournament != null || standings != null) add(DataProvenance("riot-standings", "Riot Tournament / Standings", DataAuthority.OFFICIAL, DataFreshnessClass.MINUTES))
+            if (scheduled != null) {
+                if (externalSchedule) {
+                    add(DataProvenance("international-event-mirror", "RFT.gg public event mirror", DataAuthority.PROVIDER, DataFreshnessClass.HOURLY))
+                } else {
+                    add(DataProvenance("riot-schedule", "Riot LoL Esports Schedule", DataAuthority.OFFICIAL, DataFreshnessClass.MINUTES))
+                }
+            }
+            if (tournament != null || standings != null) {
+                if (externalTournament) {
+                    add(DataProvenance("international-tournament-mirror", "International Tournament Mirror", DataAuthority.PROVIDER, DataFreshnessClass.HOURLY))
+                } else {
+                    add(DataProvenance("riot-standings", "Riot Tournament / Standings", DataAuthority.OFFICIAL, DataFreshnessClass.MINUTES))
+                }
+            }
             if (prematch != null && prematch.blueRoster.isNotEmpty().or(prematch.redRoster.isNotEmpty())) {
-                add(DataProvenance("riot-teams", "Riot getTeams roster", DataAuthority.OFFICIAL, DataFreshnessClass.HOURLY))
+                add(DataProvenance("team-data", "Riot/Cito normalized roster", DataAuthority.PROVIDER, DataFreshnessClass.HOURLY))
             }
             if (liveGame != null && live != null) {
                 add(DataProvenance("live-router", live.source.ifBlank { "Live Provider Router" }, DataAuthority.PROVIDER, DataFreshnessClass.REALTIME))
@@ -532,7 +551,7 @@ object ComprehensiveDataAssembler {
                 teamId = team?.teamId.orEmpty(),
                 role = card.role,
                 starterStatus = "STARTER_CANDIDATE",
-                source = "Riot getTeams / normalized roster"
+                source = "Riot/Cito team data / normalized roster"
             )
         }
         return side(prematch.blueRoster, teams.getOrNull(0), "blue") +

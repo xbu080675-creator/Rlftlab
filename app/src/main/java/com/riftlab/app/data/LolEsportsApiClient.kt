@@ -154,9 +154,7 @@ internal class LolEsportsApiClient {
             }.distinctBy { it.id }
         }.getOrDefault(emptyList())
 
-        return discovered.ifEmpty {
-            listOf(TrackedLeagueRef(LolEsportsConfig.LPL_LEAGUE_ID, "lpl", "LPL"))
-        }
+        return discovered
     }
 
     private suspend fun fetchSchedulePage(pageToken: String?, leagueId: String): JSONObject {
@@ -438,8 +436,8 @@ internal class LolEsportsApiClient {
             latestEvent = "",
             blueBarons = blueBarons,
             redBarons = redBarons,
-            bluePlayers = parsePlayers(blueMeta, blue),
-            redPlayers = parsePlayers(redMeta, red),
+            bluePlayers = parsePlayers(blueMeta, blue, blueTeamId, "BLUE"),
+            redPlayers = parsePlayers(redMeta, red, redTeamId, "RED"),
             source = "Riot LoL Esports Live",
             gameId = game.gameId
         )
@@ -498,7 +496,12 @@ internal class LolEsportsApiClient {
         }
     }
 
-    private fun parsePlayers(metadata: JSONObject, frameTeam: JSONObject): List<LivePlayerSnapshot> {
+    private fun parsePlayers(
+        metadata: JSONObject,
+        frameTeam: JSONObject,
+        teamId: String,
+        side: String
+    ): List<LivePlayerSnapshot> {
         val metaArray = metadata.optJSONArray("participantMetadata") ?: JSONArray()
         val metaById = mutableMapOf<Int, JSONObject>()
         for (i in 0 until metaArray.length()) {
@@ -523,7 +526,9 @@ internal class LolEsportsApiClient {
                         deaths = player.optInt("deaths", 0),
                         assists = player.optInt("assists", 0),
                         creepScore = player.optInt("creepScore", 0),
-                        gold = player.optInt("totalGold", 0)
+                        gold = player.optInt("totalGold", 0),
+                        teamId = teamId,
+                        side = side
                     )
                 )
             }

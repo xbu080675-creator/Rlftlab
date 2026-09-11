@@ -76,6 +76,26 @@ fun QualificationPathCenterPanel() {
         if (snapshot.mechanismDetail.isNotBlank()) {
             Text(snapshot.mechanismDetail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp)
         }
+        if (snapshot.segments.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text("MECHANISM SEGMENTS / 资格机制拆分", color = RiftText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            snapshot.segments.forEach { segment ->
+                Spacer(Modifier.height(4.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(RiftPanel, CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp))
+                        .padding(6.dp)
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(segment.type.label, color = RiftCyan, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                        Text(segment.evidence.label, color = evidenceColor(segment.evidence), fontSize = 7.sp)
+                    }
+                    Text(segment.detail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp)
+                    Text("SOURCE  ${segment.source}", color = RiftMuted, fontSize = 6.sp)
+                }
+            }
+        }
         Spacer(Modifier.height(7.dp))
 
         if (snapshot.routes.isEmpty()) {

@@ -348,6 +348,8 @@ object MatchLifecycleArchive {
         .put("startTimeIso", match.startTimeIso)
         .put("state", match.state)
         .put("bestOf", match.bestOf)
+        .put("leagueId", match.leagueId)
+        .put("leagueSlug", match.leagueSlug)
         .put("teams", JSONArray().apply { match.teams.forEach { put(teamToJson(it)) } })
 
     private fun matchFromJson(root: JSONObject): ScheduledEsportsMatch {
@@ -363,7 +365,9 @@ object MatchLifecycleArchive {
             startTimeIso = root.optString("startTimeIso"),
             state = root.optString("state"),
             bestOf = root.optInt("bestOf"),
-            teams = teams
+            teams = teams,
+            leagueId = root.optString("leagueId"),
+            leagueSlug = root.optString("leagueSlug")
         )
     }
 
@@ -433,6 +437,7 @@ object MatchLifecycleArchive {
         .put("latestEvent", snapshot.latestEvent)
         .put("source", snapshot.source)
         .put("gameId", snapshot.gameId)
+        .put("targetKey", snapshot.targetKey)
         .put("bluePlayers", playersToJson(snapshot.bluePlayers))
         .put("redPlayers", playersToJson(snapshot.redPlayers))
 
@@ -457,7 +462,8 @@ object MatchLifecycleArchive {
         redPlayers = playersFromJson(root.optJSONArray("redPlayers") ?: JSONArray()),
         latestEvent = root.optString("latestEvent"),
         source = root.optString("source"),
-        gameId = root.optString("gameId")
+        gameId = root.optString("gameId"),
+        targetKey = root.optString("targetKey")
     )
 
     private fun playersToJson(players: List<LivePlayerSnapshot>): JSONArray = JSONArray().apply {
@@ -474,6 +480,8 @@ object MatchLifecycleArchive {
                     .put("assists", player.assists)
                     .put("creepScore", player.creepScore)
                     .put("gold", player.gold)
+                    .put("teamId", player.teamId)
+                    .put("side", player.side)
             )
         }
     }
@@ -492,7 +500,9 @@ object MatchLifecycleArchive {
                     deaths = root.optInt("deaths"),
                     assists = root.optInt("assists"),
                     creepScore = root.optInt("creepScore"),
-                    gold = root.optInt("gold")
+                    gold = root.optInt("gold"),
+                    teamId = root.optString("teamId"),
+                    side = root.optString("side")
                 )
             )
         }

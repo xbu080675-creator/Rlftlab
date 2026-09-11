@@ -15,6 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,6 +34,7 @@ fun TournamentEditionArchiveInlinePanel() {
     val qualificationCenter by QualificationCenterStore.state.collectAsState()
     val selected = state.selected
     val qualification = qualificationCenter.snapshotsByTournamentId[state.selectedTournamentId]
+    var showAllHistory by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -41,11 +45,11 @@ fun TournamentEditionArchiveInlinePanel() {
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text("TOURNAMENT EDITIONS / 年度赛事档案", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 8.sp)
+                Text("TOURNAMENT EDITIONS / 年度赛事档案", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 9.sp)
             }
             Column {
-                Text("${state.editions.size} EDITIONS", color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text("${state.editions.size} EDITIONS", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 if (!state.followingCurrent) {
                     Text(
                         "跟随当前赛事",
@@ -66,7 +70,17 @@ fun TournamentEditionArchiveInlinePanel() {
             return@Column
         }
 
-        val trail = recentTrail(state.editions, state.selectedTournamentId)
+        val completeTrail = fullHistoryTrail(state.editions, selected?.edition)
+        if (completeTrail.size > 6) {
+            Text(
+                if (showAllHistory) "收起 · 最近 6 届" else "查看全部历史 · ${completeTrail.size} 届",
+                color = RiftCyan,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { showAllHistory = !showAllHistory }.padding(vertical = 6.dp)
+            )
+        }
+        val trail = if (showAllHistory) completeTrail else recentTrail(state.editions, state.selectedTournamentId)
         trail.forEach { edition ->
             val active = edition.tournamentId == state.selectedTournamentId
             Row(
@@ -80,14 +94,14 @@ fun TournamentEditionArchiveInlinePanel() {
                 Text(
                     edition.displayName,
                     color = if (active) RiftCyan else RiftText,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     edition.startDate.take(10).ifBlank { edition.seasonYear?.toString() ?: "DATE ?" },
                     color = RiftMuted,
-                    fontSize = 8.sp
+                    fontSize = 9.sp
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -104,7 +118,7 @@ fun TournamentEditionArchiveInlinePanel() {
             Text(
                 "SERIES ${detail.edition.scheduleSeriesCount} · TEAMS ${detail.edition.participantTeamCodes.size} · ${detail.research?.version?.versionLabel ?: detail.edition.archivedSlots.firstOrNull { it.key == "patch" }?.detail ?: "PATCH 待同步"}",
                 color = RiftMuted,
-                fontSize = 8.sp
+                fontSize = 9.sp
             )
             Spacer(Modifier.height(7.dp))
 
@@ -122,7 +136,7 @@ fun TournamentEditionArchiveInlinePanel() {
                                 .background(RiftPanel, CutCornerShape(topStart = 4.dp, bottomEnd = 4.dp))
                                 .padding(horizontal = 6.dp, vertical = 5.dp)
                         ) {
-                            Text(slot.label, color = RiftText, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                            Text(slot.label, color = RiftText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                             Text(
                                 displayState.label,
                                 color = when (displayState) {
@@ -131,9 +145,9 @@ fun TournamentEditionArchiveInlinePanel() {
                                     TournamentEditionSlotState.PENDING -> RiftMuted
                                     TournamentEditionSlotState.SOURCE_ERROR -> RiftRed
                                 },
-                                fontSize = 8.sp
+                                fontSize = 9.sp
                             )
-                            Text(displayDetail, color = RiftMuted, fontSize = 7.sp, lineHeight = 10.sp, maxLines = 3)
+                            Text(displayDetail, color = RiftMuted, fontSize = 8.sp, lineHeight = 12.sp, maxLines = 3)
                         }
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -144,6 +158,22 @@ fun TournamentEditionArchiveInlinePanel() {
 
         Text(state.statusMessage, color = RiftMuted, fontSize = 8.sp)
     }
+}
+
+private fun fullHistoryTrail(
+    editions: List<TournamentEditionArchiveRecord>,
+    selected: TournamentEditionArchiveRecord?
+): List<TournamentEditionArchiveRecord> {
+    if (selected == null) return editions.sortedByDescending { it.startDate }
+    val contextual = editions.filter { candidate ->
+        when {
+            selected.family.isNotBlank() && selected.family != "OTHER" -> candidate.family == selected.family
+            selected.leagueId.isNotBlank() -> candidate.leagueId == selected.leagueId
+            selected.leagueSlug.isNotBlank() -> candidate.leagueSlug.equals(selected.leagueSlug, ignoreCase = true)
+            else -> true
+        }
+    }
+    return contextual.sortedByDescending { it.startDate }
 }
 
 private fun recentTrail(

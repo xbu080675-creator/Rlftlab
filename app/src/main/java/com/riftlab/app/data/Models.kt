@@ -200,7 +200,9 @@ data class LivePlayerSnapshot(
     val deaths: Int,
     val assists: Int,
     val creepScore: Int,
-    val gold: Int
+    val gold: Int,
+    val teamId: String = "",
+    val side: String = ""
 )
 
 data class LiveSnapshot(
@@ -224,7 +226,9 @@ data class LiveSnapshot(
     val bluePlayers: List<LivePlayerSnapshot> = emptyList(),
     val redPlayers: List<LivePlayerSnapshot> = emptyList(),
     val source: String = "unknown",
-    val gameId: String = ""
+    val gameId: String = "",
+    // Stable schedule-series identity. Provider-local gameId values must never define a real game.
+    val targetKey: String = ""
 ) {
     val goldDiff: Int get() = blueGold - redGold
 }
