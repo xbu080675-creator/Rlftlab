@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 81
-        versionName = "1.0.0-dev.81"
+        versionCode = 82
+        versionName = "1.0.0-dev.82"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -193,3 +193,5 @@ dependencies {
 // dev.80: shared Cito realtime bus + broadcast-safe Global/Fight HUD phone simulator.
 
 // dev.81: full BLG vs AL BP-to-match simulation and full-width Chinese event-xray tactical layer.
+
+// dev.82: replace the modal/full-width tactical card with a distributed edge HUD after phone testing; keep the match picture center and broadcast scoreboard area clear.
