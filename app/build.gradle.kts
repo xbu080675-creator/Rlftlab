@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 83
-        versionName = "1.0.0-dev.83"
+        versionCode = 84
+        versionName = "1.0.0-dev.84"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -197,3 +197,5 @@ dependencies {
 // dev.82: replace the modal/full-width tactical card with a distributed edge HUD after phone testing; keep the match picture center and broadcast scoreboard area clear.
 
 // dev.83: optional process-wide local intelligence core, device-tier model recommendation, rule fallback and scene-priority contract. Local models are user-selected and never required for base app operation.
+
+// dev.84: managed disposable-cache accounting, manual cleanup UI and automatic pressure trimming. Persistent archives, credentials, settings and downloaded local-AI models are excluded.
