@@ -1,10 +1,12 @@
 package com.riftlab.app.data
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.io.File
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -33,45 +35,173 @@ data class StartingRosterEvidence(
     val observedAtEpochMs: Long,
     val evidenceType: StartingRosterEvidenceType,
     val confidence: Float,
+    val sourceUrl: String = "",
     val crossConfirmed: Boolean = false,
     val conflict: Boolean = false
+)
+
+data class StartingRosterFetchResult(
+    val evidence: Map<String, StartingRosterEvidence> = emptyMap(),
+    val endpointLabel: String = "NONE",
+    val endpointUrl: String = "",
+    val usedLastGood: Boolean = false,
+    val checkedEndpoints: Int = 0,
+    val diagnostics: String = ""
 )
 
 /**
  * Global official starting-roster feed.
  *
- * Important design boundary: the Android app does not need to visit X / Instagram / YouTube /
- * Weibo / regional league sites directly. A cloud-side collector normalizes official announcements
- * into one JSON feed. This keeps the China client usable without a VPN and also avoids coupling the
- * APK to changing social-site HTML/API behavior.
- *
- * Origin order intentionally prefers a mainland-friendly mirror, then CDN/GitHub canonical copies.
- * GitHub remains source-of-truth; mirrors are delivery endpoints only.
+ * Android never crawls social HTML directly. Upstream collectors/OCR normalize official announcements
+ * into one small JSON feed. The phone validates every delivery endpoint before trusting it, keeps
+ * trying when a mirror is stale for the current match, and persists the last known-good matching
+ * payload so a temporary network outage cannot erase an already confirmed official roster.
  */
 internal class StartingRosterFeed(
+    context: Context,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(6, TimeUnit.SECONDS)
         .readTimeout(6, TimeUnit.SECONDS)
         .build()
 ) {
     companion object {
-        val FEED_URLS = listOf(
-            // Read-only distribution mirror for users without overseas network access.
-            "https://gitee.com/xiaobaiaaa1/Rlftlab/raw/main/data/global/starting_rosters.json",
-            // Public CDN fallback. Availability in mainland networks can vary by carrier.
-            "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/global/starting_rosters.json",
-            // Canonical source-of-truth fallback.
-            "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/global/starting_rosters.json"
+        private data class Endpoint(val label: String, val url: String)
+
+        private val ENDPOINTS = listOf(
+            Endpoint("GITEE", "https://gitee.com/xiaobaiaaa1/Rlftlab/raw/main/data/global/starting_rosters.json"),
+            Endpoint("JSDELIVR", "https://cdn.jsdelivr.net/gh/xbu080675-creator/Rlftlab@main/data/global/starting_rosters.json"),
+            Endpoint("GITHUB_RAW", "https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/data/global/starting_rosters.json")
         )
 
+        val FEED_URLS: List<String> = ENDPOINTS.map { it.url }
         private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
+        private const val MAX_SCHEMA_VERSION = 3
     }
 
-    suspend fun fetchFor(target: ScheduledEsportsMatch): Map<String, StartingRosterEvidence> = withContext(Dispatchers.IO) {
-        if (target.teams.size < 2) return@withContext emptyMap()
-        val body = fetchFirstAvailable() ?: return@withContext emptyMap()
-        val root = runCatching { JSONObject(body) }.getOrNull() ?: return@withContext emptyMap()
-        val rows = root.optJSONArray("evidence") ?: return@withContext emptyMap()
+    private data class Candidate(
+        val label: String,
+        val url: String,
+        val body: String,
+        val evidence: Map<String, StartingRosterEvidence>,
+        val updatedAtEpochMs: Long
+    )
+
+    private val appContext = context.applicationContext
+    private val lastGoodFile: File = File(appContext.filesDir, "starting_roster/last_good.json")
+    private val unhealthyUntil = mutableMapOf<String, Long>()
+
+    suspend fun fetchFor(target: ScheduledEsportsMatch): StartingRosterFetchResult = withContext(Dispatchers.IO) {
+        if (target.teams.size < 2) return@withContext StartingRosterFetchResult(diagnostics = "target_missing_teams")
+
+        val diagnostics = mutableListOf<String>()
+        val candidates = mutableListOf<Candidate>()
+        var checked = 0
+        val now = System.currentTimeMillis()
+
+        for (endpoint in ENDPOINTS) {
+            val blockedUntil = unhealthyUntil[endpoint.url] ?: 0L
+            if (blockedUntil > now) {
+                diagnostics += "${endpoint.label}:cooldown"
+                continue
+            }
+            checked++
+            val body = fetchBody(endpoint, diagnostics) ?: continue
+            val root = validateRoot(body, endpoint.label, diagnostics) ?: continue
+            val evidence = parseEvidence(root, target)
+            val updatedAt = parseInstant(root.optString("updatedAt")) ?: 0L
+            diagnostics += "${endpoint.label}:ok:${evidence.size}/2"
+            candidates += Candidate(endpoint.label, endpoint.url, body, evidence, updatedAt)
+
+            // Two teams is the maximum useful match coverage. Once a healthy endpoint has both,
+            // later mirrors cannot improve match coverage; stop wasting network time.
+            if (evidence.size >= 2 && evidence.values.none { it.conflict }) break
+        }
+
+        val bestNetwork = candidates
+            .filter { it.evidence.isNotEmpty() }
+            .maxWithOrNull(
+                compareBy<Candidate> { it.evidence.size }
+                    .thenBy { it.evidence.values.maxOfOrNull(StartingRosterEvidence::observedAtEpochMs) ?: 0L }
+                    .thenBy { it.updatedAtEpochMs }
+            )
+
+        if (bestNetwork != null) {
+            persistLastGood(bestNetwork.body)
+            return@withContext StartingRosterFetchResult(
+                evidence = bestNetwork.evidence,
+                endpointLabel = bestNetwork.label,
+                endpointUrl = bestNetwork.url,
+                usedLastGood = false,
+                checkedEndpoints = checked,
+                diagnostics = diagnostics.joinToString(" · ")
+            )
+        }
+
+        val cachedBody = runCatching { lastGoodFile.takeIf(File::isFile)?.readText() }.getOrNull()
+        if (!cachedBody.isNullOrBlank()) {
+            val cachedRoot = validateRoot(cachedBody, "LAST_GOOD", diagnostics)
+            val cachedEvidence = cachedRoot?.let { parseEvidence(it, target) }.orEmpty()
+            if (cachedEvidence.isNotEmpty()) {
+                diagnostics += "LAST_GOOD:hit:${cachedEvidence.size}/2"
+                return@withContext StartingRosterFetchResult(
+                    evidence = cachedEvidence,
+                    endpointLabel = "LAST_GOOD",
+                    usedLastGood = true,
+                    checkedEndpoints = checked,
+                    diagnostics = diagnostics.joinToString(" · ")
+                )
+            }
+        }
+
+        val validButNoMatch = candidates.isNotEmpty()
+        StartingRosterFetchResult(
+            endpointLabel = if (validButNoMatch) "VALID_NO_MATCH" else "NO_VALID_SOURCE",
+            checkedEndpoints = checked,
+            diagnostics = diagnostics.joinToString(" · ").ifBlank { "no_endpoint_attempted" }
+        )
+    }
+
+    private fun fetchBody(endpoint: Endpoint, diagnostics: MutableList<String>): String? {
+        return runCatching {
+            val request = Request.Builder()
+                .url(endpoint.url)
+                .header("Cache-Control", "no-cache")
+                .header("Accept", "application/json,text/plain;q=0.9,*/*;q=0.1")
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    diagnostics += "${endpoint.label}:http_${response.code}"
+                    unhealthyUntil[endpoint.url] = System.currentTimeMillis() + 3 * 60_000L
+                    return@use null
+                }
+                response.body?.string()?.takeIf { it.isNotBlank() }
+            }
+        }.onFailure { error ->
+            diagnostics += "${endpoint.label}:${error::class.java.simpleName}"
+            unhealthyUntil[endpoint.url] = System.currentTimeMillis() + 3 * 60_000L
+        }.getOrNull()
+    }
+
+    private fun validateRoot(body: String, label: String, diagnostics: MutableList<String>): JSONObject? {
+        val root = runCatching { JSONObject(body) }.getOrNull()
+        if (root == null) {
+            diagnostics += "$label:invalid_json"
+            return null
+        }
+        val schema = root.optInt("schemaVersion", -1)
+        if (schema !in 1..MAX_SCHEMA_VERSION) {
+            diagnostics += "$label:bad_schema_$schema"
+            return null
+        }
+        if (root.optJSONArray("evidence") == null) {
+            diagnostics += "$label:no_evidence_array"
+            return null
+        }
+        return root
+    }
+
+    private fun parseEvidence(root: JSONObject, target: ScheduledEsportsMatch): Map<String, StartingRosterEvidence> {
+        val rows = root.optJSONArray("evidence") ?: return emptyMap()
         val leftAliases = aliases(target.teams[0])
         val rightAliases = aliases(target.teams[1])
         val accepted = mutableListOf<StartingRosterEvidence>()
@@ -79,10 +209,7 @@ internal class StartingRosterFeed(
         for (i in 0 until rows.length()) {
             val row = rows.optJSONObject(i) ?: continue
             val timezone = row.optString("timezone").ifBlank { defaultTimezone(target) }
-            val matchDate = row.optString("matchDateLocal").ifBlank {
-                // Backward compatibility for the first LPL seed.
-                row.optString("matchDateChina")
-            }
+            val matchDate = row.optString("matchDateLocal").ifBlank { row.optString("matchDateChina") }
             val targetDate = localDate(target.startTimeIso, timezone) ?: continue
             if (matchDate != targetDate) continue
 
@@ -98,9 +225,9 @@ internal class StartingRosterFeed(
             val startersJson = row.optJSONArray("starters") ?: continue
             val starters = mutableListOf<PlayerCard>()
             for (j in 0 until startersJson.length()) {
-                val p = startersJson.optJSONObject(j) ?: continue
-                val role = normalizeRole(p.optString("role")) ?: continue
-                val id = p.optString("id").trim()
+                val player = startersJson.optJSONObject(j) ?: continue
+                val role = normalizeRole(player.optString("role")) ?: continue
+                val id = player.optString("id").trim()
                 if (id.isBlank()) continue
                 starters += PlayerCard(
                     role = role,
@@ -115,8 +242,8 @@ internal class StartingRosterFeed(
             val evidenceType = runCatching {
                 StartingRosterEvidenceType.valueOf(row.optString("evidenceType"))
             }.getOrNull() ?: continue
-            val published = runCatching { Instant.parse(row.optString("publishedAt")).toEpochMilli() }.getOrNull() ?: continue
-            val observed = runCatching { Instant.parse(row.optString("observedAt")).toEpochMilli() }.getOrDefault(published)
+            val published = parseInstant(row.optString("publishedAt")) ?: continue
+            val observed = parseInstant(row.optString("observedAt")) ?: published
 
             accepted += StartingRosterEvidence(
                 matchDateLocal = targetDate,
@@ -132,38 +259,32 @@ internal class StartingRosterFeed(
                 observedAtEpochMs = observed,
                 evidenceType = evidenceType,
                 confidence = row.optDouble("confidence", 1.0).toFloat().coerceIn(0f, 1f),
+                sourceUrl = row.optString("sourceUrl"),
                 crossConfirmed = row.optBoolean("crossConfirmed", evidenceType == StartingRosterEvidenceType.CROSS_CONFIRMED)
             )
         }
 
-        resolveByTeam(accepted)
+        return resolveByTeam(accepted)
     }
 
-    private fun fetchFirstAvailable(): String? {
-        for (url in FEED_URLS) {
-            val body = runCatching {
-                val request = Request.Builder()
-                    .url(url)
-                    .header("Cache-Control", "no-cache")
-                    .build()
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@use null
-                    response.body?.string()?.takeIf { it.isNotBlank() }
-                }
-            }.getOrNull()
-            if (!body.isNullOrBlank()) return body
+    private fun persistLastGood(body: String) {
+        runCatching {
+            lastGoodFile.parentFile?.mkdirs()
+            val temp = File(lastGoodFile.parentFile, "${lastGoodFile.name}.tmp")
+            temp.writeText(body)
+            if (!temp.renameTo(lastGoodFile)) {
+                lastGoodFile.writeText(body)
+                temp.delete()
+            }
         }
-        return null
     }
 
     private fun resolveByTeam(rows: List<StartingRosterEvidence>): Map<String, StartingRosterEvidence> {
         return rows.groupBy { token(it.team) }.mapValues { (_, candidates) ->
             val bestRank = candidates.maxOfOrNull { sourceRank(it.source) } ?: 0
             val finalists = candidates.filter { sourceRank(it.source) == bestRank }
-            val distinctLineups = finalists.map { lineupKey(it) }.distinct()
-
+            val distinctLineups = finalists.map(::lineupKey).distinct()
             if (distinctLineups.size > 1) {
-                // Two same-trust official sources disagree. Never silently overwrite one with another.
                 finalists.maxByOrNull { it.publishedAtEpochMs }!!.copy(conflict = true)
             } else {
                 val winner = finalists.maxByOrNull { it.publishedAtEpochMs }!!
@@ -234,4 +355,6 @@ internal class StartingRosterFeed(
             .withZone(ZoneId.of(timezone))
             .format(Instant.parse(iso))
     }.getOrNull()
+
+    private fun parseInstant(raw: String): Long? = runCatching { Instant.parse(raw).toEpochMilli() }.getOrNull()
 }
