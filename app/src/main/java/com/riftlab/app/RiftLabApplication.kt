@@ -15,7 +15,12 @@ import com.riftlab.app.data.MatchTimelineCapture
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.QualificationCenterStore
 import com.riftlab.app.data.RiotPersistedMirror
+import com.riftlab.app.data.StorageCacheManager
 import com.riftlab.app.data.TournamentEditionArchiveStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * One ImageLoader for the whole app.
@@ -30,6 +35,8 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
             private set
     }
 
+    private val maintenanceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
@@ -43,6 +50,12 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         // Local AI is optional and process-wide. Initialization only profiles the device and prepares
         // recommendations; it never downloads or enables a model without the user's explicit choice.
         LocalAiCore.initialize(this)
+
+        // Cache pressure guard. Only cacheDir/externalCacheDir are eligible. Persistent archives,
+        // encrypted provider keys, user settings and downloaded local-AI models are never touched.
+        maintenanceScope.launch {
+            StorageCacheManager.trimIfNeeded(this@RiftLabApplication)
+        }
 
         // Existing providers remain the source of truth. dev.68 normalizes the active graph,
         // dev.69 retains Tournament Editions, and dev.70 keeps qualification paths/annual points
