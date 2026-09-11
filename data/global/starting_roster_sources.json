@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "lookbackHours": 36,
-  "keywords": ["首发", "首发名单", "先发", "starting roster", "starting lineup", "lineup"],
+  "keywords": ["首发", "首发名单", "先发", "starting roster", "starting lineup", "lineup", "roster", "선발", "선발 명단", "라인업", "先発", "スタメン"],
   "leagues": [
     {
       "league": "LPL",
@@ -12,6 +12,46 @@
       "kind": "WEIBO_MOBILE",
       "uid": "5756404150",
       "profileUrl": "https://weibo.com/u/5756404150"
+    },
+    {
+      "league": "LCK",
+      "timezone": "Asia/Seoul",
+      "platform": "X",
+      "account": "LCK",
+      "source": "LEAGUE_SOCIAL",
+      "kind": "X_SYNDICATION",
+      "handle": "LCK",
+      "profileUrl": "https://x.com/LCK"
+    },
+    {
+      "league": "LEC",
+      "timezone": "Europe/Berlin",
+      "platform": "X",
+      "account": "LEC",
+      "source": "LEAGUE_SOCIAL",
+      "kind": "X_SYNDICATION",
+      "handle": "LEC",
+      "profileUrl": "https://x.com/LEC"
+    },
+    {
+      "league": "LCS",
+      "timezone": "America/Los_Angeles",
+      "platform": "X",
+      "account": "LCS",
+      "source": "LEAGUE_SOCIAL",
+      "kind": "X_SYNDICATION",
+      "handle": "LCSOfficial",
+      "profileUrl": "https://x.com/LCSOfficial"
+    },
+    {
+      "league": "LCP",
+      "timezone": "Asia/Taipei",
+      "platform": "X",
+      "account": "LCP",
+      "source": "LEAGUE_SOCIAL",
+      "kind": "X_SYNDICATION",
+      "handle": "lolpacificen",
+      "profileUrl": "https://x.com/lolpacificen"
     }
   ],
   "teams": [
@@ -33,6 +73,37 @@
     "LNG": ["LNG", "LNG Esports"],
     "EDG": ["EDG", "EDward Gaming"],
     "LGD": ["LGD", "LGD Gaming"],
-    "TT": ["TT", "ThunderTalk Gaming"]
+    "TT": ["TT", "ThunderTalk Gaming"],
+
+    "T1": ["T1"],
+    "GEN": ["GEN", "Gen.G", "GenG"],
+    "HLE": ["HLE", "Hanwha Life Esports"],
+    "DK": ["DK", "Dplus KIA", "Dplus"],
+    "KT": ["KT", "KT Rolster"],
+    "NS": ["NS", "Nongshim RedForce"],
+    "DRX": ["DRX"],
+    "BRO": ["BRO", "OKSavingsBank BRION", "BRION"],
+
+    "G2": ["G2", "G2 Esports"],
+    "FNC": ["FNC", "Fnatic"],
+    "KC": ["KC", "Karmine Corp"],
+    "MKOI": ["MKOI", "Movistar KOI"],
+    "VIT": ["VIT", "Team Vitality"],
+    "BDS": ["BDS", "Team BDS"],
+    "SK": ["SK", "SK Gaming"],
+    "GX": ["GX", "GIANTX"],
+    "TH": ["TH", "Team Heretics"],
+
+    "C9": ["C9", "Cloud9"],
+    "TL": ["TL", "Team Liquid"],
+    "FLY": ["FLY", "FlyQuest"],
+    "100T": ["100T", "100 Thieves"],
+
+    "CFO": ["CFO", "CTBC Flying Oyster"],
+    "GAM": ["GAM", "GAM Esports"],
+    "SHG": ["SHG", "Fukuoka SoftBank HAWKS gaming", "SoftBank HAWKS gaming"],
+    "GZ": ["GZ", "Ground Zero Gaming"],
+    "DFM": ["DFM", "DetonatioN FocusMe"],
+    "TSW": ["TSW", "Team Secret Whales"]
   }
 }
