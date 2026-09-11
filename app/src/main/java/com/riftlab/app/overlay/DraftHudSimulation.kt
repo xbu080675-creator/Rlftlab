@@ -49,8 +49,10 @@ data class DraftHudState(
 )
 
 /**
- * BLG vs AL · 2026 LPL 第三赛段 · 第一局的演示 BP。
- * 所有英雄、胜率、样本与对位数据均为模拟数据，仅用于 UI/交互测试。
+ * 2026-09-07 LPL 第三赛段季后赛胜者组决赛 · AL vs BLG · G1。
+ * 英雄与选手对应真实赛果；胜率、样本、CSD@15 等分析值仍为模拟值，仅用于 UI/交互测试。
+ * 蓝色方 AL：加里奥 / 潘森 / 辛德拉 / 伊泽瑞尔 / 卡尔玛。
+ * 红色方 BLG：兰博 / 奇亚娜 / 瑞兹 / 艾希 / 萨勒芬妮。
  */
 object DraftHudSimulation {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -58,16 +60,16 @@ object DraftHudSimulation {
     private var handoffEnabled = true
 
     private val script = listOf(
-        DraftHudPick(DraftSide.BLUE, DraftRole.TOP, "Bin", "纳尔", 52.8, 74, 18, 61.1, "上路"),
-        DraftHudPick(DraftSide.RED, DraftRole.TOP, "Flandre", "凯南", 51.9, 69, 15, 60.0, "上路"),
-        DraftHudPick(DraftSide.BLUE, DraftRole.JUG, "Wei", "蔚", 53.4, 81, 16, 62.5, "打野"),
-        DraftHudPick(DraftSide.RED, DraftRole.JUG, "Tarzan", "猴子", 52.7, 88, 21, 61.9, "打野"),
-        DraftHudPick(DraftSide.BLUE, DraftRole.MID, "knight", "阿狸", 54.1, 96, 24, 66.7, "中路"),
-        DraftHudPick(DraftSide.RED, DraftRole.MID, "Shanks", "沙皇", 50.8, 91, 20, 55.0, "中路"),
-        DraftHudPick(DraftSide.BLUE, DraftRole.BOT, "Viper", "卡莎", 52.5, 112, 27, 63.0, "下路"),
-        DraftHudPick(DraftSide.RED, DraftRole.BOT, "Hope", "伊泽瑞尔", 51.2, 108, 26, 57.7, "下路"),
-        DraftHudPick(DraftSide.BLUE, DraftRole.SUP, "ON", "洛", 53.0, 84, 19, 63.2, "辅助"),
-        DraftHudPick(DraftSide.RED, DraftRole.SUP, "Kael", "芮尔", 51.6, 86, 22, 59.1, "辅助")
+        DraftHudPick(DraftSide.BLUE, DraftRole.TOP, "Breathe", "加里奥", 50.8, 52, 7, 57.1, "上路"),
+        DraftHudPick(DraftSide.RED, DraftRole.TOP, "Bin", "兰博", 53.6, 71, 17, 64.7, "上路"),
+        DraftHudPick(DraftSide.BLUE, DraftRole.JUG, "Tarzan", "潘森", 51.9, 66, 12, 58.3, "打野"),
+        DraftHudPick(DraftSide.RED, DraftRole.JUG, "Xun", "奇亚娜", 52.7, 43, 9, 66.7, "打野"),
+        DraftHudPick(DraftSide.BLUE, DraftRole.MID, "Shanks", "辛德拉", 51.4, 89, 21, 57.1, "中路"),
+        DraftHudPick(DraftSide.RED, DraftRole.MID, "knight", "瑞兹", 54.0, 78, 19, 68.4, "中路"),
+        DraftHudPick(DraftSide.BLUE, DraftRole.BOT, "Hope", "伊泽瑞尔", 51.6, 103, 24, 58.3, "下路"),
+        DraftHudPick(DraftSide.RED, DraftRole.BOT, "Viper", "艾希", 53.2, 97, 23, 65.2, "下路"),
+        DraftHudPick(DraftSide.BLUE, DraftRole.SUP, "Kael", "卡尔玛", 52.1, 82, 18, 61.1, "辅助"),
+        DraftHudPick(DraftSide.RED, DraftRole.SUP, "ON", "萨勒芬妮", 51.7, 48, 10, 60.0, "辅助")
     )
 
     private val _state = MutableStateFlow(DraftHudState(totalSteps = script.size))
@@ -141,7 +143,7 @@ object DraftHudSimulation {
             active = active,
             autoPlay = autoPlay,
             totalSteps = script.size,
-            message = if (autoPlay) "BLG vs AL · 第一局 BP 自动模拟" else "BLG vs AL · 第一局 BP 手动模拟"
+            message = if (autoPlay) "胜者组决赛 G1 · BP 自动模拟" else "胜者组决赛 G1 · BP 手动模拟"
         )
     }
 
@@ -191,14 +193,14 @@ object DraftHudSimulation {
         val left = blue.lastOrNull { it.role == role } ?: return null
         val right = red.lastOrNull { it.role == role } ?: return null
         val fixture = when (role) {
-            DraftRole.TOP -> Triple("BLG 对线小优", 3.2, 46)
-            DraftRole.JUG -> Triple("野区节奏接近", 0.6, 55)
-            DraftRole.MID -> Triple("BLG 线权小优", 2.4, 63)
-            DraftRole.BOT -> Triple("下路对线接近", 1.1, 71)
-            DraftRole.SUP -> Triple("开团能力各有侧重", -0.4, 58)
+            DraftRole.TOP -> Triple("BLG 推线与团战伤害更主动", -3.4, 46)
+            DraftRole.JUG -> Triple("BLG 野区爆发更高", -1.2, 55)
+            DraftRole.MID -> Triple("BLG 支援节奏更强", -2.6, 63)
+            DraftRole.BOT -> Triple("BLG 下路先手更强", -1.8, 71)
+            DraftRole.SUP -> Triple("AL 保护更稳 · BLG 团战范围更大", 0.2, 58)
         }
         return DraftHudMatchup(role, left.champion, right.champion, fixture.first, fixture.second, fixture.third, if (fixture.third >= 60) "中高" else "中")
     }
 
-    private fun teamName(side: DraftSide): String = if (side == DraftSide.BLUE) "BLG" else "AL"
+    private fun teamName(side: DraftSide): String = if (side == DraftSide.BLUE) "AL" else "BLG"
 }
