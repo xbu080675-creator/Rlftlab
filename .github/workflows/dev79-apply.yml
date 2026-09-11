@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/dev79-apply.yml'
 
+# One-shot release-candidate gate; remove after the branch passes.
 jobs:
   verify:
     runs-on: ubuntu-latest
