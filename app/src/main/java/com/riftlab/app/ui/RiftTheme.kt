@@ -43,7 +43,7 @@ val RiftMuted: Color
  * RiftLab previously mixed Material defaults with many 8–11sp labels. On a high-density phone that
  * made important metadata look like footnotes. Keep the layout density unchanged, but guarantee a
  * modest app-level minimum font scale while still honoring any larger accessibility font scale the
- * user selected in Android settings.
+ * user selected in Android settings. Explicit UI labels should also stay at 10sp or above in source.
  */
 private const val RIFT_MIN_FONT_SCALE = 1.12f
 
