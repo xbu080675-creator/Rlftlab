@@ -74,7 +74,7 @@ internal fun MatchTimelineContent() {
                     .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
                     .padding(14.dp)
             ) {
-                Text("EVENT TIMELINE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("EVENT TIMELINE", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("比赛进程 / 状态回放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(
@@ -84,7 +84,7 @@ internal fun MatchTimelineContent() {
                         "实时阶段优先保存约 10 秒状态快照；海外赛区与国际赛事只使用 RiftLab 本机归档、Riot/官方可核实事件数据，不请求、不解析 Bilibili，也不从终局比分伪造中间过程。"
                     },
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
         }
@@ -102,7 +102,7 @@ internal fun MatchTimelineContent() {
                         Text(
                             "G$game",
                             color = if (selected) RiftCyan else RiftMuted,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.weight(1f)
@@ -143,11 +143,11 @@ internal fun MatchTimelineContent() {
                             .background(RiftPanel, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
                             .padding(14.dp)
                     ) {
-                        Text("TIMELINE 尚未建立", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("TIMELINE 尚未建立", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(
                             "本机实时快照和官方录像章节都暂未解析到。RiftLab 会保留数据缺口，不会从最终比分倒推不存在的历史事件。",
                             color = RiftMuted,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             modifier = Modifier.padding(top = 6.dp)
                         )
                     }
@@ -166,7 +166,7 @@ private fun TimelineVodStatus(text: String) {
             .background(RiftPanel, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
             .padding(14.dp)
     ) {
-        Text("HISTORICAL VOD SOURCE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Text(text, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("HISTORICAL VOD SOURCE", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = RiftMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }

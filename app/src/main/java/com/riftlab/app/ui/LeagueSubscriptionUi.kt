@@ -105,7 +105,7 @@ internal fun LeagueSubscriptionBar() {
         Row(Modifier.fillMaxWidth()) {
             Text("赛事订阅", color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 10.sp)
+            Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 11.sp)
         }
         Spacer(Modifier.height(6.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

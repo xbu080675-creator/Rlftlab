@@ -36,7 +36,7 @@ internal fun TeamLogo(
         Text(
             text = code.take(4).ifBlank { "—" },
             color = if (hasClubSkin) palette.accent else RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
     }

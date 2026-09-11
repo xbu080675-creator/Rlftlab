@@ -96,13 +96,13 @@ internal fun MatchVodContent() {
                     .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 10.dp))
                     .padding(14.dp)
             ) {
-                Text("OFFICIAL MATCH VOD", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("OFFICIAL MATCH VOD", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("官方录像 / RiftLab 原生播放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(
                     "RiftLab 只保存官方稿件的 BVID、CID、分P和事件锚点。播放时临时解析当前可用播放地址，由原生 Media3 播放器直接从 B站 CDN 串流；不下载、不保存整场录像，也不再套 WebView 播放页。",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
         }
@@ -152,27 +152,27 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("OFFICIAL VOD TIMELINE", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("OFFICIAL VOD TIMELINE", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("G${part.game} · B站官方录像历史回放", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-            Text("NATIVE", color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text("NATIVE", color = RiftRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(6.dp))
         Text(
             "本机没有当时的连续实时快照时，用官方录像章节补历史事件锚点。拖动时间轴或点击事件会直接 seek RiftLab 原生播放器；不会从终局比分伪造经济过程。",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
         Spacer(Modifier.height(10.dp))
         RiftNativeVodPlayer(vod, part, startSecond = seekVideoSecond)
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
-            Text("00:00", color = RiftMuted, fontSize = 10.sp)
+            Text("00:00", color = RiftMuted, fontSize = 11.sp)
             Spacer(Modifier.weight(1f))
             Text(formatVodClock(selectedGameSecond), color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text(formatVodClock(part.gameSecondFor(duration)), color = RiftMuted, fontSize = 10.sp)
+            Text(formatVodClock(part.gameSecondFor(duration)), color = RiftMuted, fontSize = 11.sp)
         }
         Slider(
             value = scrub.coerceIn(0f, duration.toFloat()),
@@ -183,15 +183,15 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
         Text(
             "拖动后松手即可跳到对应官方录像位置。",
             color = RiftMuted,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.End
         )
 
         Spacer(Modifier.height(10.dp))
-        Text("EVENT ANCHORS / 官方录像章节", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("EVENT ANCHORS / 官方录像章节", color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         if (part.chapters.isEmpty()) {
-            Text("这一个分P没有公开章节锚点；录像仍可正常播放。", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp))
+            Text("这一个分P没有公开章节锚点；录像仍可正常播放。", color = RiftMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
         } else {
             part.chapters.forEach { chapter ->
                 val gameSecond = part.gameSecondFor(chapter.fromSeconds)
@@ -204,19 +204,19 @@ internal fun BilibiliHistoricalTimelinePanel(vod: BilibiliMatchVod, part: Bilibi
                         .padding(vertical = 7.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Text(formatVodClock(gameSecond), color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(formatVodClock(gameSecond), color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Column(Modifier.weight(1f).padding(start = 9.dp)) {
                         Text(
                             chapter.title,
                             color = chapterColor(chapter.title),
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                         if (chapter.teamName.isNotBlank()) {
-                            Text(chapter.teamName, color = RiftMuted, fontSize = 10.sp)
+                            Text(chapter.teamName, color = RiftMuted, fontSize = 11.sp)
                         }
                     }
-                    Text("跳转 ›", color = RiftMuted, fontSize = 10.sp)
+                    Text("跳转 ›", color = RiftMuted, fontSize = 11.sp)
                 }
             }
         }
@@ -235,12 +235,12 @@ private fun VodSourceHeader(vod: BilibiliMatchVod) {
     ) {
         Text(vod.title, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Text("UP · ${vod.ownerName} · ${vod.bvid}", color = RiftMuted, fontSize = 10.sp)
+        Text("UP · ${vod.ownerName} · ${vod.bvid}", color = RiftMuted, fontSize = 11.sp)
         Spacer(Modifier.height(6.dp))
         Text(
             "在哔哩哔哩打开原稿 ›",
             color = RiftCyan,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable {
                 runCatching {
@@ -264,7 +264,7 @@ private fun VodGameTabs(parts: List<BilibiliVodPart>, selectedGame: Int, onSelec
             Text(
                 "G${part.game}",
                 color = if (selected) RiftCyan else RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -288,9 +288,9 @@ private fun VodChapterList(part: BilibiliVodPart, onSeek: (Int) -> Unit) {
             .border(1.dp, RiftLine, shape)
             .padding(14.dp)
     ) {
-        Text("OFFICIAL CHAPTERS / 录像看点", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text("OFFICIAL CHAPTERS / 录像看点", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         if (part.chapters.isEmpty()) {
-            Text("当前分P没有公开章节信息。", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 7.dp))
+            Text("当前分P没有公开章节信息。", color = RiftMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 7.dp))
         } else {
             part.chapters.forEach { chapter ->
                 Row(
@@ -302,16 +302,16 @@ private fun VodChapterList(part: BilibiliVodPart, onSeek: (Int) -> Unit) {
                     Text(
                         formatVodClock(part.gameSecondFor(chapter.fromSeconds)),
                         color = RiftCyan,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         chapter.title,
                         color = chapterColor(chapter.title),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         modifier = Modifier.weight(1f).padding(start = 9.dp)
                     )
-                    Text("跳转 ›", color = RiftMuted, fontSize = 10.sp)
+                    Text("跳转 ›", color = RiftMuted, fontSize = 11.sp)
                 }
             }
         }
@@ -359,21 +359,21 @@ private fun RiftNativeVodPlayer(vod: BilibiliMatchVod, part: BilibiliVodPart, st
                 Text(
                     sourceError?.take(180) ?: "B站没有返回可用播放描述。",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(
                         "重新获取 ›",
                         color = RiftCyan,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.clickable { refreshNonce += 1 }
                     )
                     Text(
                         "打开官方原稿 ›",
                         color = RiftMuted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         modifier = Modifier.clickable {
                             runCatching {
                                 context.startActivity(
@@ -477,13 +477,13 @@ private fun NativePlayerSurface(
                 Text(
                     "播放失败 · $playbackError",
                     color = RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
                     "刷新播放源 ›",
                     color = RiftCyan,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(onClick = onRefreshSource)
                 )
@@ -492,7 +492,7 @@ private fun NativePlayerSurface(
             Text(
                 "NATIVE · QN ${source.quality} · ${source.format.uppercase()} · ${source.segments.size} 段",
                 color = RiftMuted,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 modifier = Modifier.padding(top = 5.dp)
             )
         }
@@ -532,7 +532,7 @@ private fun NativePlayerStatus(text: String) {
             .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = RiftMuted, fontSize = 10.sp)
+        Text(text, color = RiftMuted, fontSize = 11.sp)
     }
 }
 
@@ -545,8 +545,8 @@ private fun VodStatusPanel(text: String) {
             .border(1.dp, RiftLine, shape)
             .padding(14.dp)
     ) {
-        Text("VOD STATUS", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Text(text, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp))
+        Text("VOD STATUS", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(text, color = RiftMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

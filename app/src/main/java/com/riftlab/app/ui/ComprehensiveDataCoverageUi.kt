@@ -43,7 +43,7 @@ fun ComprehensiveDataCoveragePanel() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
                 Text("COMPREHENSIVE DATA / 全面数据", color = RiftCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text("覆盖度只计算已拿到的真实结构，不拿占位值凑完整", color = RiftMuted, fontSize = 10.sp)
+                Text("覆盖度只计算已拿到的真实结构，不拿占位值凑完整", color = RiftMuted, fontSize = 11.sp)
             }
             Text("${report.scorePercent}%", color = RiftText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         }
@@ -60,8 +60,8 @@ fun ComprehensiveDataCoveragePanel() {
                             .padding(horizontal = 7.dp, vertical = 6.dp)
                     ) {
                         Text(cell.domain.label, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                        Text(cell.state.label, color = color, fontSize = 10.sp)
-                        Text("${cell.availableFields}/${cell.requiredFields}", color = RiftMuted, fontSize = 10.sp)
+                        Text(cell.state.label, color = color, fontSize = 11.sp)
+                        Text("${cell.availableFields}/${cell.requiredFields}", color = RiftMuted, fontSize = 11.sp)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -72,14 +72,14 @@ fun ComprehensiveDataCoveragePanel() {
         Text(
             "GRAPH  SERIES ${if (graph.series != null) 1 else 0} · GAME ${graph.games.size} · TEAM ${graph.teams.size} · PLAYER ${graph.players.size} · STATS ${graph.playerGameStats.size} · QUAL ${graph.qualificationPaths.size}",
             color = RiftMuted,
-            fontSize = 10.sp
+            fontSize = 11.sp
         )
         val missing = report.cells.filter { it.state != DataCoverageState.COMPLETE && it.state != DataCoverageState.NOT_APPLICABLE }
         if (missing.isNotEmpty()) {
             Text(
                 "NEXT GAP  " + missing.take(3).joinToString(" · ") { "${it.domain.label}:${it.missing.firstOrNull() ?: it.state.label}" },
                 color = RiftMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
         }
 

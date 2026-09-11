@@ -13,10 +13,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.TeamDetailRepository
@@ -39,14 +37,7 @@ val RiftText: Color
 val RiftMuted: Color
     @Composable get() = LocalRiftTeamSkin.current.palette(LocalRiftDarkMode.current).muted
 
-/**
- * RiftLab previously mixed Material defaults with many 8–11sp labels. On a high-density phone that
- * made important metadata look like footnotes. Keep the layout density unchanged, but guarantee a
- * modest app-level minimum font scale while still honoring any larger accessibility font scale the
- * user selected in Android settings. Explicit UI labels should also stay at 10sp or above in source.
- */
-private const val RIFT_MIN_FONT_SCALE = 1.12f
-
+/** Central RiftLab type scale. Explicit dense HUD metadata starts at 11sp; normal reading text is 12sp+. */
 private val RiftTypography = Typography(
     titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp),
     titleMedium = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp),
@@ -64,11 +55,6 @@ fun RiftTheme(content: @Composable () -> Unit) {
     val teamState by TeamDetailRepository.state.collectAsState()
     val matchState by MatchDetailRepository.state.collectAsState()
     val dark = isSystemInDarkTheme()
-    val systemDensity = LocalDensity.current
-    val readableDensity = Density(
-        density = systemDensity.density,
-        fontScale = maxOf(systemDensity.fontScale, RIFT_MIN_FONT_SCALE)
-    )
 
     val teamSkin = RiftTeamSkins.resolve(teamState.team)
     val matchSkin = RiftTeamSkins.resolve(matchState.match)
@@ -109,7 +95,6 @@ fun RiftTheme(content: @Composable () -> Unit) {
     }
 
     CompositionLocalProvider(
-        LocalDensity provides readableDensity,
         LocalRiftTeamSkin provides skin,
         LocalRiftDarkMode provides dark
     ) {

@@ -52,7 +52,7 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                 Text(
                     "GLOBAL LIVE PROVIDER SETTINGS",
                     color = RiftMuted,
-                    fontSize = 10.sp
+                    fontSize = 11.sp
                 )
             }
         },
@@ -76,9 +76,9 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                     lineHeight = 17.sp
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("REST  ${CitoApiConfig.REST_BASE_URL}", color = RiftMuted, fontSize = 10.sp)
-                Text("WSS   ${CitoApiConfig.LIVE_WEBSOCKET_URL}", color = RiftMuted, fontSize = 10.sp)
-                Text("AUTH  ${CitoApiConfig.API_KEY_HEADER}", color = RiftMuted, fontSize = 10.sp)
+                Text("REST  ${CitoApiConfig.REST_BASE_URL}", color = RiftMuted, fontSize = 11.sp)
+                Text("WSS   ${CitoApiConfig.LIVE_WEBSOCKET_URL}", color = RiftMuted, fontSize = 11.sp)
+                Text("AUTH  ${CitoApiConfig.API_KEY_HEADER}", color = RiftMuted, fontSize = 11.sp)
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = citoDraft,
@@ -190,14 +190,14 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                 Text(
                     "在正式 BP WebSocket 接入前，用本地脚本模拟 10 次 Pick、选手英雄胜率、对位形成与 Counter/Lane Edge 弹层。全屏 HUD 本身完全触摸穿透，只有屏幕右侧 RIFT 控制条可操作；下方约 40% 默认留给直播官方 BP 包装。所有百分比均标记 SIMULATION，不会写入真实赛事档案。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 15.sp
+                    fontSize = 11.sp,
+                    lineHeight = 18.sp
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     if (draftSim.active) "SIM ${draftSim.step}/${draftSim.totalSteps} · ${draftSim.message}" else "SIM 待机",
                     color = if (draftSim.active) RiftCyan else RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(8.dp))
@@ -236,8 +236,8 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                 Text(
                     "所有 Provider Key 均使用 Android Keystore AES-GCM 加密，仅保存在本机；不会写入源码、GitHub、日志或比赛归档。",
                     color = RiftMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 15.sp
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
                 )
                 if (statusText.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))

@@ -100,7 +100,7 @@ internal fun RiftSectionLabel(value: String, modifier: Modifier = Modifier) {
         Text(
             value,
             color = RiftText,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.35.sp
         )
@@ -117,7 +117,7 @@ internal fun RiftStatusBadge(
     Text(
         text,
         color = resolved,
-        fontSize = 10.sp,
+        fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.45.sp,
         modifier = modifier
