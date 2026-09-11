@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/starting-roster-sync.yml'
       - 'scripts/starting_roster_collector.py'
+      - 'scripts/starting_roster_global_collector.py'
       - 'data/global/starting_roster_sources.json'
 
 permissions:
@@ -29,12 +30,12 @@ jobs:
       - name: Install OCR runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng tesseract-ocr-kor tesseract-ocr-jpn
           python3 -m pip install --disable-pip-version-check --quiet requests beautifulsoup4 pillow pytesseract
 
-      - name: Collect official starting rosters
+      - name: Collect official starting rosters globally
         run: |
-          python3 scripts/starting_roster_collector.py
+          python3 scripts/starting_roster_global_collector.py
 
       - name: Commit normalized evidence
         run: |
