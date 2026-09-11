@@ -338,9 +338,9 @@ internal class StartingRosterFeed(
 
     private fun initialism(value: String): String? {
         val cleaned = value
-            .replace(Regex("['’]s\b", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("""['’]s\b""", RegexOption.IGNORE_CASE), "")
             .trim()
-        val words = cleaned.split(Regex("[^\p{L}\p{N}]+"))
+        val words = cleaned.split(Regex("""[^\p{L}\p{N}]+"""))
             .filter(String::isNotBlank)
         if (words.size < 2) return null
         return token(words.joinToString("") { it.take(1) })
@@ -352,7 +352,7 @@ internal class StartingRosterFeed(
     )
 
     private fun token(value: String): String =
-        value.uppercase().replace(Regex("[^A-Z0-9\p{L}\p{N}]+"), "")
+        value.uppercase().replace(Regex("""[^A-Z0-9\p{L}\p{N}]+"""), "")
 
     private fun sameLeague(rowLeague: String, target: ScheduledEsportsMatch): Boolean {
         val row = token(rowLeague)
