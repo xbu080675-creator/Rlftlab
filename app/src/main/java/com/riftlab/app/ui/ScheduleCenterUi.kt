@@ -173,7 +173,7 @@ private fun ScheduleCenterDialog(onClose: () -> Unit) {
                     } ?: selectedTeam?.let { team ->
                         "战队资料 · ${team.name.ifBlank { teamCode(team) }}"
                     } ?: if (selectedBucket == null) {
-                        "联赛 / 国际赛 · 赛区订阅已同步"
+                        "联赛 / 国际赛 · 赛事订阅已同步"
                     } else {
                         if (selectedBucket.researchOnly) "年度赛事研究 · 版本 / 规则 / 抽签 / 赛程" else competitionRange(selectedBucket.matches)
                     },

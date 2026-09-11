@@ -5,7 +5,7 @@ on:
   schedule:
     - cron: '17 */6 * * *'
   push:
-    branches: [ dev72-integration-batch6 ]
+    branches: [ main ]
     paths:
       - 'tools/sync_international_events.py'
       - '.github/workflows/international-events-sync.yml'

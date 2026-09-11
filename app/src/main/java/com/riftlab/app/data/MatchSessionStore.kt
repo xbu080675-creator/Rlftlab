@@ -183,7 +183,7 @@ object MatchSessionStore {
             currentMatch = current,
             nextMatch = next,
             statusMessage = if (target == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
+                "赛事订阅 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else {
                 buildScheduleStatus(all, current, next)
             }
@@ -191,7 +191,7 @@ object MatchSessionStore {
         _scheduleStatus.value = _scheduleCenter.value.statusMessage
         if (target != null) refreshPreMatchFromTarget(target) else {
             _preMatch.value = emptyPreMatch
-            _rosterStatus.value = "ROSTER · 订阅赛区当前无可选赛事"
+            _rosterStatus.value = "ROSTER · 赛事订阅当前无可选赛事"
         }
     }
 
@@ -227,7 +227,7 @@ object MatchSessionStore {
             _targetMatch.value = homepageTarget
             LiveMatchTargetRegistry.update(homepageTarget)
             _scheduleStatus.value = if (homepageTarget == null) {
-                "订阅赛区 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
+                "赛事订阅 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else center.statusMessage
 
             // Post-match recovery is independent from the live target. Always resolve the most
@@ -246,7 +246,7 @@ object MatchSessionStore {
                 refreshPreMatchFromTarget(homepageTarget)
             } else {
                 _preMatch.value = emptyPreMatch
-                _rosterStatus.value = "ROSTER · 订阅赛区当前没有可选赛事"
+                _rosterStatus.value = "ROSTER · 赛事订阅当前没有可选赛事"
             }
         } catch (t: Throwable) {
             val message = "赛程中心 ERROR · ${t.message?.take(150) ?: t::class.java.simpleName}"

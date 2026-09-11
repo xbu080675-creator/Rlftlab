@@ -3,7 +3,7 @@ name: Android Build
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master, feat/schedule-center, dev55-cito-fullchain ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -16,186 +16,26 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-      - name: Probe Riot LoL Esports schedule center source
-        continue-on-error: true
+        run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0" >/dev/null
+      - name: Verify global esports data plane
         shell: bash
         run: |
-          python - <<'PY'
-          import collections
-          import datetime
-          import json
-          import pathlib
-          import re
-          import urllib.parse
-          import urllib.request
-          import urllib.error
-
-          source = pathlib.Path("app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt").read_text()
-          key = re.search(r'API_KEY = "([^"]+)"', source).group(1)
-          league_id = re.search(r'LPL_LEAGUE_ID = "([^"]+)"', source).group(1)
-          base = re.search(r'PERSISTED_BASE = "([^"]+)"', source).group(1)
-
-          def get(path):
-              req = urllib.request.Request(
-                  base + path,
-                  headers={
-                      "x-api-key": key,
-                      "Accept": "application/json",
-                      "User-Agent": "RiftLab-CI/1.0",
-                  },
-              )
-              try:
-                  with urllib.request.urlopen(req, timeout=15) as response:
-                      return json.load(response), response.status
-              except urllib.error.HTTPError as e:
-                  body = e.read().decode("utf-8", "replace")
-                  print("HTTP", e.code, path, body[:240])
-                  return {}, e.code
-              except Exception as e:
-                  print("ERROR", path, repr(e))
-                  return {}, 0
-
-          def schedule_page(token=None):
-              path = f"/getSchedule?hl=en-US&leagueId={league_id}"
-              if token:
-                  path += "&pageToken=" + urllib.parse.quote(token, safe="")
-              payload, status = get(path)
-              schedule = payload.get("data", {}).get("schedule", {})
-              return schedule, status
-
-          center, status = schedule_page()
-          print("schedule center http:", status)
-          pages = [center]
-
-          for direction in ("older", "newer"):
-              token = center.get("pages", {}).get(direction)
-              seen = set()
-              for _ in range(2):
-                  if not token or token in seen:
-                      break
-                  seen.add(token)
-                  page, page_status = schedule_page(token)
-                  print("schedule page", direction, "http", page_status, "events", len(page.get("events", [])))
-                  pages.append(page)
-                  token = page.get("pages", {}).get(direction)
-
-          events = {}
-          for page in pages:
-              for event in page.get("events", []) or []:
-                  if event.get("type") != "match":
-                      continue
-                  match = event.get("match", {}) or {}
-                  event_id = str(event.get("id") or match.get("id") or "")
-                  if event_id:
-                      events[event_id] = event
-
-          state_counts = collections.Counter(str(e.get("state", "unknown")) for e in events.values())
-          print("schedule unique matches:", len(events))
-          print("schedule states:", dict(state_counts))
-          for event in sorted(events.values(), key=lambda e: str(e.get("startTime", "")))[:8]:
-              teams = event.get("match", {}).get("teams", []) or []
-              codes = " vs ".join(str(t.get("code") or t.get("name") or "?") for t in teams[:2])
-              scores = ":".join(str((t.get("result") or {}).get("gameWins", 0)) for t in teams[:2])
-              print(" match", event.get("startTime"), event.get("state"), codes, scores, event.get("blockName"))
-
-          tournaments_payload, tournaments_status = get(
-              f"/getTournamentsForLeague?hl=en-US&leagueId={league_id}"
-          )
-          leagues = tournaments_payload.get("data", {}).get("leagues", []) or []
-          tournaments = []
-          for league in leagues:
-              tournaments.extend(league.get("tournaments", []) or [])
-          tournaments = sorted(
-              tournaments,
-              key=lambda t: str(t.get("startDate") or t.get("endDate") or ""),
-          )
-          print("tournaments http:", tournaments_status, "count:", len(tournaments))
-          for tournament in tournaments[-10:]:
-              print(
-                  " tournament",
-                  tournament.get("id"),
-                  tournament.get("slug"),
-                  tournament.get("startDate"),
-                  tournament.get("endDate"),
-              )
-
-          today = datetime.date.today().isoformat()
-          current = [
-              t for t in tournaments
-              if str(t.get("startDate") or "")[:10] <= today <= str(t.get("endDate") or "9999-12-31")[:10]
-          ]
-          probe = current[-1:] or tournaments[-1:]
-          for tournament in probe:
-              tournament_id = str(tournament.get("id") or "")
-              if not tournament_id:
-                  continue
-              standings_payload, standings_status = get(
-                  "/getStandings?hl=en-US&tournamentId=" + urllib.parse.quote(tournament_id, safe="")
-              )
-              standings = standings_payload.get("data", {}).get("standings", []) or []
-              print("standings http:", standings_status, "tournament:", tournament.get("slug"), "blocks:", len(standings))
-              for standing in standings:
-                  print(" standing keys:", sorted(standing.keys()))
-                  for stage in standing.get("stages", []) or []:
-                      print(
-                          "  stage",
-                          stage.get("name"),
-                          "slug=", stage.get("slug"),
-                          "type=", stage.get("type"),
-                          "keys=", sorted(stage.keys()),
-                      )
-                      for section in stage.get("sections", []) or []:
-                          rankings = section.get("rankings", []) or []
-                          matches = section.get("matches", []) or []
-                          print(
-                              "   section",
-                              section.get("name"),
-                              "rankings=", len(rankings),
-                              "matches=", len(matches),
-                              "keys=", sorted(section.keys()),
-                          )
-                          if rankings:
-                              rank = rankings[0]
-                              team = (rank.get("teams", []) or [{}])[0]
-                              print(
-                                  "    ranking sample ordinal=", rank.get("ordinal"),
-                                  "ranking keys=", sorted(rank.keys()),
-                                  "team=", team.get("code"),
-                                  "record=", team.get("record"),
-                                  "team keys=", sorted(team.keys()),
-                              )
-                          if matches:
-                              match = matches[0]
-                              match_teams = match.get("teams", []) or []
-                              print(
-                                  "    bracket sample id=", match.get("id"),
-                                  "state=", match.get("state"),
-                                  "previous=", match.get("previousMatchIds"),
-                                  "match keys=", sorted(match.keys()),
-                                  "teams=", [t.get("code") for t in match_teams],
-                              )
-
-          live, live_status = get("/getLive?hl=en-US")
-          live_events = live.get("data", {}).get("schedule", {}).get("events", []) or []
-          lpl_live = []
-          for event in live_events:
-              league = event.get("league", {}) or {}
-              if str(league.get("id", "")) == league_id or str(league.get("slug", "")).lower() == "lpl":
-                  lpl_live.append(event)
-          print("getLive http:", live_status, "LPL events:", len(lpl_live))
-          for event in lpl_live:
-              teams = event.get("match", {}).get("teams", []) or []
-              print(" live", event.get("id"), " / ".join(str(t.get("code", "?")) for t in teams[:2]))
-          PY
+          set -euo pipefail
+          grep -q 'fetchGlobalSchedule' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'GLOBAL_MAJOR_LEAGUE_SLUGS' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'CitoScheduleSupplementProvider' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'InternationalEventMirrorProvider.fetchMatches' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
+          grep -q 'LeagueSubscriptionOption("GLOBAL", "全球赛事")' app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt
+          grep -q 'rft-event:' app/src/main/java/com/riftlab/app/data/InternationalEventMirrorProvider.kt
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
       - name: Build fixed-signed debug APK
-        run: gradle :app:assembleDebug
+        run: gradle clean :app:assembleDebug
       - name: Verify fixed dev signature
         shell: bash
         run: |
+          set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$APKSIGNER" verify --print-certs "$APK"
@@ -205,5 +45,5 @@ jobs:
           test "$DIGEST" = "$EXPECTED"
       - uses: actions/upload-artifact@v4
         with:
-          name: RiftLab-dev5-schedule-center
+          name: RiftLab-dev72-global
           path: app/build/outputs/apk/debug/app-debug.apk
