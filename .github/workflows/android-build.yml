@@ -45,5 +45,5 @@ jobs:
           test "$DIGEST" = "$EXPECTED"
       - uses: actions/upload-artifact@v4
         with:
-          name: RiftLab-dev72-global
+          name: RiftLab-global-debug
           path: app/build/outputs/apk/debug/app-debug.apk
