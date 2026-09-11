@@ -386,13 +386,11 @@ private fun GoldHistoryPanel(
         val archived = frames.map { it.snapshot }.filter { it.game == current.game }
         if (archived.lastOrNull()?.elapsedSeconds == current.elapsedSeconds) archived else archived + current
     }
-    var selectedIndex by remember(current.gameId, current.game, snapshots.size) {
-        mutableIntStateOf((snapshots.size - 1).coerceAtLeast(0))
-    }
-    LaunchedEffect(snapshots.size, phase) {
-        if (snapshots.isNotEmpty()) {
-            selectedIndex = if (phase == ScheduleMatchPhase.LIVE) snapshots.lastIndex else selectedIndex.coerceIn(0, snapshots.lastIndex)
-        }
+    // Keep the scrub selection anchored to game time, not to the current list index. Historical
+    // backfill can append/prepend frames after the user releases the slider; keying state by
+    // snapshots.size used to recreate the state and snap the thumb straight back to the final frame.
+    var selectedElapsedSecond by remember(current.gameId, current.game) {
+        mutableIntStateOf(-1)
     }
     OperatorPanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -429,13 +427,21 @@ private fun GoldHistoryPanel(
                 )
             }
         } else {
-            val safeIndex = selectedIndex.coerceIn(0, snapshots.lastIndex)
+            val safeIndex = when {
+                selectedElapsedSecond < 0 -> snapshots.lastIndex
+                else -> snapshots.indices.minByOrNull { index ->
+                    abs(snapshots[index].elapsedSeconds - selectedElapsedSecond)
+                } ?: snapshots.lastIndex
+            }
             val selected = snapshots[safeIndex]
             val previous = snapshots.getOrNull(safeIndex - 1)
             GoldHistoryChart(snapshots, safeIndex)
             Slider(
                 value = safeIndex.toFloat(),
-                onValueChange = { selectedIndex = it.roundToInt().coerceIn(0, snapshots.lastIndex) },
+                onValueChange = { rawIndex ->
+                    val index = rawIndex.roundToInt().coerceIn(0, snapshots.lastIndex)
+                    selectedElapsedSecond = snapshots[index].elapsedSeconds
+                },
                 valueRange = 0f..snapshots.lastIndex.toFloat(),
                 steps = (snapshots.size - 2).coerceAtLeast(0)
             )
