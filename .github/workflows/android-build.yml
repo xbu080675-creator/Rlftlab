@@ -22,7 +22,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q 'fetchGlobalSchedule' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
-          grep -q 'GLOBAL_MAJOR_LEAGUE_SLUGS' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'fetchGlobalScheduleWindow' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
+          grep -q 'GLOBAL_EXCLUDED_LEAGUE_SLUGS' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
           grep -q 'CitoScheduleSupplementProvider' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
           grep -q 'InternationalEventMirrorProvider.fetchMatches' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
           grep -q 'LeagueSubscriptionOption("GLOBAL", "全球赛事")' app/src/main/java/com/riftlab/app/ui/LeagueSubscriptionUi.kt
