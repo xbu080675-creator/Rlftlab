@@ -1,0 +1,31 @@
+name: dev73 global schedule completeness fix
+
+on:
+  push:
+    branches: [ dev72-postrelease-audit ]
+    paths:
+      - '.github/workflows/dev73-global-schedule-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-postrelease-audit
+          fetch-depth: 0
+      - name: Apply audited schedule fix
+        run: python3 tools/patch_dev73_global_schedule.py
+      - name: Commit repaired schedule path
+        shell: bash
+        run: |
+          git config user.name "PocketSpace"
+          git config user.email "xbu080675@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(schedule): use Riot global unfiltered schedule"
+          git push origin HEAD:dev72-postrelease-audit
