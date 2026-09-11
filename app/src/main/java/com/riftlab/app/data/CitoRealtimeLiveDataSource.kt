@@ -1,6 +1,8 @@
 package com.riftlab.app.data
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,10 +28,10 @@ import org.json.JSONObject
 /**
  * One process-wide Cito realtime bus.
  *
- * Every consumer (live router now; draft/fight HUD and explicit-event adapters next) must subscribe
- * to this bus instead of opening another WebSocket. The bus owns reconnect/freshness only; match
- * identity and REST reconciliation remain in domain adapters so a provider packet can never select
- * the wrong schedule target by itself.
+ * Every realtime consumer must subscribe here instead of opening a second socket. The bus keeps
+ * receive order, provider timestamps when published, event history, reconnect state and transport
+ * freshness. Match identity / REST reconciliation stay in domain adapters so a raw provider packet
+ * can never select a schedule target by itself.
  */
 internal object CitoRealtimeBus {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -76,10 +78,9 @@ internal object CitoRealtimeBus {
 /**
  * Cito live-domain adapter.
  *
- * WebSocket is the live clock. REST is used only to discover the current Cito match/game and to
- * periodically reconcile state after reconnects or when the account does not have WSS entitlement.
- * No undocumented room/subscription message is invented: RiftLab consumes provider push frames as
- * delivered and keeps REST as the authoritative reconnect/catch-up path.
+ * WebSocket is the live clock. REST is bootstrap/reconnect/reconciliation only. No undocumented
+ * room/subscription message is invented: RiftLab accepts provider push frames as delivered and
+ * falls back to the documented REST surface when WSS is unavailable.
  */
 internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
     private val _status = MutableStateFlow(
@@ -95,7 +96,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         var gameId = ""
         var gameNumber = 1
         var lastEmission = ""
-        var lastArchivedSocketAt = 0L
+        var lastArchivedSocketSequence = 0L
         var nextSeriesRefreshAt = 0L
         var nextRestReconcileAt = 0L
         var restOverlay = CitoRealtimeBundle()
@@ -126,10 +127,11 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 gameId = ""
                 gameNumber = 1
                 lastEmission = ""
-                lastArchivedSocketAt = 0L
+                lastArchivedSocketSequence = 0L
                 nextSeriesRefreshAt = 0L
                 nextRestReconcileAt = 0L
                 restOverlay = CitoRealtimeBundle()
+                SideSelectionStore.load(target)
             }
 
             val matchKey = MatchLifecycleArchive.keyFor(target)
@@ -161,7 +163,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                             restOverlay = CitoRealtimeBundle()
                             nextRestReconcileAt = 0L
                             lastEmission = ""
-                            lastArchivedSocketAt = 0L
+                            lastArchivedSocketSequence = 0L
                         }
                         if (context.gameNumber > 0) gameNumber = context.gameNumber
                     }
@@ -169,8 +171,9 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 }
 
                 var bundle = CitoRealtimeBus.bundle.value.merge(restOverlay)
-                bundle.latestSocketPayloadFor(gameId)?.takeIf { it.receivedAtEpochMs > lastArchivedSocketAt }?.let { pushed ->
-                    lastArchivedSocketAt = pushed.receivedAtEpochMs
+                val newSocketPayloads = bundle.socketPayloadsAfter(lastArchivedSocketSequence, gameId)
+                newSocketPayloads.forEach { pushed ->
+                    lastArchivedSocketSequence = maxOf(lastArchivedSocketSequence, pushed.sequence)
                     CitoRawArchive.append(
                         matchKey,
                         pushed.gameId.ifBlank { gameId },
@@ -180,14 +183,16 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 }
 
                 var transport = "WebSocket"
-                var snapshot = bundle.bestBoardFor(gameId)?.let { payload ->
+                val boardPayload = bundle.bestBoardFor(gameId)
+                var snapshot = boardPayload?.let { payload ->
                     CitoJson.parseLiveBoard(payload, target, gameNumber)
                 }
                 if (snapshot != null) {
+                    snapshot = CitoLiveFusion.alignVerifiedSides(snapshot, boardPayload, target, gameNumber)
                     snapshot = CitoLiveFusion.enrichSnapshot(
                         snapshot = snapshot,
                         payloads = bundle.supplementsFor(gameId),
-                        capturedAtEpochMs = bundle.lastDataAtEpochMs
+                        capturedAtEpochMs = bundle.lastDomainDataAtEpochMs
                     )
                 }
 
@@ -201,13 +206,14 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                     if (reconciled.payloads.isNotEmpty()) {
                         restOverlay = restOverlay.merge(reconciled)
                         bundle = CitoRealtimeBus.bundle.value.merge(restOverlay)
-                        val board = bundle.bestBoardFor(gameId)
-                        snapshot = board?.let { CitoJson.parseLiveBoard(it, target, gameNumber) }
+                        val reconciledBoard = bundle.bestBoardFor(gameId)
+                        snapshot = reconciledBoard?.let { CitoJson.parseLiveBoard(it, target, gameNumber) }
                         if (snapshot != null) {
+                            snapshot = CitoLiveFusion.alignVerifiedSides(snapshot, reconciledBoard, target, gameNumber)
                             snapshot = CitoLiveFusion.enrichSnapshot(
                                 snapshot = snapshot,
                                 payloads = bundle.supplementsFor(gameId),
-                                capturedAtEpochMs = bundle.lastDataAtEpochMs
+                                capturedAtEpochMs = bundle.lastDomainDataAtEpochMs
                             )
                         }
                     }
@@ -274,25 +280,25 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         val payloads = buildList {
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveBoardUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-board", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.BOARD, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
+                add(CitoRealtimePayload.rest(CitoRealtimeKind.BOARD, gameId, it, capturedAt))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveMapUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-map", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.MAP, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
+                add(CitoRealtimePayload.rest(CitoRealtimeKind.MAP, gameId, it, capturedAt))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveDetailsUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-details", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.DETAILS, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
+                add(CitoRealtimePayload.rest(CitoRealtimeKind.DETAILS, gameId, it, capturedAt))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveEventsUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-events", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.EVENTS, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
+                add(CitoRealtimePayload.rest(CitoRealtimeKind.EVENTS, gameId, it, capturedAt))
             }
         }
         return CitoRealtimeBundle(
             payloads = payloads,
             lastSocketMessageAtEpochMs = 0L,
-            lastDataAtEpochMs = capturedAt
+            lastDomainDataAtEpochMs = capturedAt
         )
     }
 
@@ -326,6 +332,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
 
     private fun fingerprint(snapshot: LiveSnapshot): String = buildString {
         append(snapshot.gameId).append('|').append(snapshot.elapsedSeconds)
+        append('|').append(snapshot.blue).append('|').append(snapshot.red)
         append('|').append(snapshot.blueGold).append('|').append(snapshot.redGold)
         append('|').append(snapshot.blueKills).append('|').append(snapshot.redKills)
         append('|').append(snapshot.supplementUpdatedAtEpochMs)
@@ -353,6 +360,7 @@ internal enum class CitoRealtimeKind {
     MAP,
     DETAILS,
     EVENTS,
+    DRAFT,
     SERIES,
     READY,
     HEARTBEAT,
@@ -361,60 +369,110 @@ internal enum class CitoRealtimeKind {
 
 internal enum class CitoRealtimeOrigin { WEBSOCKET, REST }
 
+internal object CitoRealtimeOrder {
+    private val sequence = AtomicLong(0L)
+    fun next(): Long = sequence.incrementAndGet()
+}
+
 internal data class CitoRealtimePayload(
     val kind: CitoRealtimeKind,
     val gameId: String,
     val payload: JSONObject,
     val receivedAtEpochMs: Long,
-    val origin: CitoRealtimeOrigin
-)
+    val origin: CitoRealtimeOrigin,
+    val sequence: Long,
+    val providerEpochMs: Long? = null
+) {
+    val orderingEpochMs: Long get() = providerEpochMs ?: receivedAtEpochMs
+
+    companion object {
+        fun rest(kind: CitoRealtimeKind, gameId: String, payload: JSONObject, capturedAt: Long): CitoRealtimePayload =
+            CitoRealtimePayload(
+                kind = kind,
+                gameId = gameId,
+                payload = payload,
+                receivedAtEpochMs = capturedAt,
+                origin = CitoRealtimeOrigin.REST,
+                sequence = CitoRealtimeOrder.next(),
+                providerEpochMs = CitoRealtimeClassifier.providerEpochMs(payload)
+            )
+    }
+}
 
 internal data class CitoRealtimeBundle(
     val payloads: List<CitoRealtimePayload> = emptyList(),
     val lastSocketMessageAtEpochMs: Long = 0L,
-    val lastDataAtEpochMs: Long = 0L
+    val lastDomainDataAtEpochMs: Long = 0L
 ) {
     fun acceptSocket(message: JSONObject): CitoRealtimeBundle {
         val payload = CitoRealtimeClassifier.classify(message, CitoRealtimeOrigin.WEBSOCKET)
+        val domainDataTime = if (payload.kind in setOf(CitoRealtimeKind.READY, CitoRealtimeKind.HEARTBEAT)) {
+            lastDomainDataAtEpochMs
+        } else {
+            maxOf(lastDomainDataAtEpochMs, payload.receivedAtEpochMs)
+        }
         return copy(
             payloads = mergePayloads(payloads + payload),
             lastSocketMessageAtEpochMs = payload.receivedAtEpochMs,
-            lastDataAtEpochMs = maxOf(lastDataAtEpochMs, payload.receivedAtEpochMs)
+            lastDomainDataAtEpochMs = domainDataTime
         )
     }
 
     fun merge(other: CitoRealtimeBundle): CitoRealtimeBundle = copy(
         payloads = mergePayloads(payloads + other.payloads),
         lastSocketMessageAtEpochMs = maxOf(lastSocketMessageAtEpochMs, other.lastSocketMessageAtEpochMs),
-        lastDataAtEpochMs = maxOf(lastDataAtEpochMs, other.lastDataAtEpochMs)
+        lastDomainDataAtEpochMs = maxOf(lastDomainDataAtEpochMs, other.lastDomainDataAtEpochMs)
     )
 
     fun bestBoardFor(gameId: String): JSONObject? = payloads
         .asSequence()
         .filter { it.kind == CitoRealtimeKind.BOARD || it.kind == CitoRealtimeKind.UNKNOWN }
         .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .maxByOrNull { it.receivedAtEpochMs }
-        ?.payload
+        .maxWithOrNull(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
+        ?.let { payload -> CitoRealtimeClassifier.extractBoard(payload.payload, payload.gameId.ifBlank { gameId }) }
 
     fun supplementsFor(gameId: String): List<JSONObject> = payloads
         .asSequence()
         .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .filter { it.kind in setOf(CitoRealtimeKind.BOARD, CitoRealtimeKind.MAP, CitoRealtimeKind.DETAILS, CitoRealtimeKind.EVENTS) }
-        .sortedBy { it.receivedAtEpochMs }
+        .filter {
+            it.kind in setOf(
+                CitoRealtimeKind.BOARD,
+                CitoRealtimeKind.MAP,
+                CitoRealtimeKind.DETAILS,
+                CitoRealtimeKind.EVENTS
+            )
+        }
+        .sortedWith(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
         .map { it.payload }
         .toList()
 
-    fun latestSocketPayloadFor(gameId: String): CitoRealtimePayload? = payloads
+    fun socketPayloadsAfter(sequence: Long, gameId: String): List<CitoRealtimePayload> = payloads
         .asSequence()
-        .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET }
+        .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET && it.sequence > sequence }
         .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
-        .maxByOrNull { it.receivedAtEpochMs }
+        .sortedBy { it.sequence }
+        .toList()
 
-    private fun mergePayloads(rows: List<CitoRealtimePayload>): List<CitoRealtimePayload> = rows
-        .groupBy { Triple(it.kind, it.gameId, it.origin) }
-        .mapNotNull { (_, grouped) -> grouped.maxByOrNull { it.receivedAtEpochMs } }
-        .sortedBy { it.receivedAtEpochMs }
-        .takeLast(32)
+    private fun mergePayloads(rows: List<CitoRealtimePayload>): List<CitoRealtimePayload> {
+        val eventKinds = setOf(CitoRealtimeKind.EVENTS, CitoRealtimeKind.DRAFT)
+        val events = rows
+            .asSequence()
+            .filter { it.kind in eventKinds }
+            .distinctBy { "${it.origin}|${it.gameId}|${it.providerEpochMs}|${it.payload}" }
+            .sortedBy { it.sequence }
+            .takeLast(48)
+            .toList()
+        val states = rows
+            .asSequence()
+            .filter { it.kind !in eventKinds }
+            .groupBy { Triple(it.kind, it.gameId, it.origin) }
+            .mapNotNull { (_, grouped) ->
+                grouped.maxWithOrNull(compareBy<CitoRealtimePayload> { it.orderingEpochMs }.thenBy { it.sequence })
+            }
+        return (states + events)
+            .sortedBy { it.sequence }
+            .takeLast(64)
+    }
 }
 
 internal object CitoRealtimeClassifier {
@@ -428,14 +486,74 @@ internal object CitoRealtimeClassifier {
         val kind = when {
             type == "ready" || type.endsWith(".ready") -> CitoRealtimeKind.READY
             type.contains("ping") || type.contains("pong") || type.contains("heartbeat") -> CitoRealtimeKind.HEARTBEAT
+            type.contains("pick_locked") || type.contains("ban_locked") || type.contains("draft") -> CitoRealtimeKind.DRAFT
+            type.contains("player_down") || type.contains("kill") || type.contains("objective") ||
+                type.contains("tower_destroyed") || type.contains("gold_swing") || type.contains("map_delta") ||
+                type.contains("event") -> CitoRealtimeKind.EVENTS
             type.contains("series") || data.has("currentGameId") -> CitoRealtimeKind.SERIES
-            type.contains("map") || type.contains("player_down") || hasHealthPayload(data) -> CitoRealtimeKind.MAP
+            type.contains("map") || hasHealthPayload(data) -> CitoRealtimeKind.MAP
             type.contains("detail") || type.contains("item") || type.contains("ward") || type.contains("damage") -> CitoRealtimeKind.DETAILS
-            type.contains("event") || type.contains("kill") || type.contains("objective") -> CitoRealtimeKind.EVENTS
             hasBoardPayload(data) -> CitoRealtimeKind.BOARD
             else -> CitoRealtimeKind.UNKNOWN
         }
-        return CitoRealtimePayload(kind, gameId, message, now, origin)
+        return CitoRealtimePayload(
+            kind = kind,
+            gameId = gameId,
+            payload = message,
+            receivedAtEpochMs = now,
+            origin = origin,
+            sequence = CitoRealtimeOrder.next(),
+            providerEpochMs = providerEpochMs(message)
+        )
+    }
+
+    fun providerEpochMs(root: JSONObject): Long? {
+        val candidates = listOf(root, root.optJSONObject("data"), root.optJSONObject("payload"), root.optJSONObject("state"))
+            .filterNotNull()
+        val keys = listOf("frameTimestamp", "timestamp", "eventTimestamp", "updatedAt", "createdAt", "ts")
+        for (obj in candidates) {
+            for (key in keys) {
+                if (!obj.has(key) || obj.isNull(key)) continue
+                when (val raw = obj.opt(key)) {
+                    is Number -> {
+                        val value = raw.toLong()
+                        return if (value in 1_000_000_000L..9_999_999_999L) value * 1000L else value
+                    }
+                    is String -> {
+                        raw.toLongOrNull()?.let { value ->
+                            return if (value in 1_000_000_000L..9_999_999_999L) value * 1000L else value
+                        }
+                        runCatching { Instant.parse(raw).toEpochMilli() }.getOrNull()?.let { return it }
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    fun extractBoard(root: JSONObject, gameIdHint: String): JSONObject {
+        val found = findBoard(root, 0) ?: return root
+        if (gameIdHint.isBlank() || found.has("gameId") || found.optJSONObject("data") != null) return found
+        return JSONObject(found.toString()).apply { put("gameId", gameIdHint) }
+    }
+
+    private fun findBoard(obj: JSONObject, depth: Int): JSONObject? {
+        if (depth > 4) return null
+        if (hasBoardPayload(obj)) return obj
+        val keys = obj.keys()
+        while (keys.hasNext()) {
+            when (val child = obj.opt(keys.next())) {
+                is JSONObject -> findBoard(child, depth + 1)?.let { return it }
+                is JSONArray -> {
+                    for (i in 0 until child.length()) {
+                        child.optJSONObject(i)?.let { nested ->
+                            findBoard(nested, depth + 1)?.let { return it }
+                        }
+                    }
+                }
+            }
+        }
+        return null
     }
 
     private fun unwrap(root: JSONObject): JSONObject =
@@ -509,6 +627,27 @@ internal class CitoRealtimeSocket {
 
 /** Adds Cito-only combat context without replacing canonical scoreboard truth from Riot/Tencent. */
 internal object CitoLiveFusion {
+    fun alignVerifiedSides(
+        snapshot: LiveSnapshot,
+        boardPayload: JSONObject?,
+        target: ScheduledEsportsMatch,
+        gameNumber: Int
+    ): LiveSnapshot {
+        SideSelectionStore.state.value.records.firstOrNull { it.game == gameNumber }?.let { record ->
+            return snapshot.copy(blue = record.blueTeam, red = record.redTeam)
+        }
+
+        val board = boardPayload?.let { CitoRealtimeClassifier.extractBoard(it, snapshot.gameId) }
+        val blueObj = board?.optJSONObject("blueTeam") ?: board?.optJSONObject("blue")
+        val redObj = board?.optJSONObject("redTeam") ?: board?.optJSONObject("red")
+        val blueDirect = resolveExplicitTeam(blueObj, snapshot.bluePlayers, target)
+        val redDirect = resolveExplicitTeam(redObj, snapshot.redPlayers, target)
+        return snapshot.copy(
+            blue = blueDirect.ifBlank { "BLUE" },
+            red = redDirect.ifBlank { "RED" }
+        )
+    }
+
     fun enrichSnapshot(
         snapshot: LiveSnapshot,
         payloads: List<JSONObject>,
@@ -539,6 +678,28 @@ internal object CitoLiveFusion {
                 "${primary.source} · + Cito WSS combat supplement"
             }
         )
+    }
+
+    private fun resolveExplicitTeam(
+        teamObj: JSONObject?,
+        players: List<LivePlayerSnapshot>,
+        target: ScheduledEsportsMatch
+    ): String {
+        if (teamObj != null) {
+            val direct = firstString(teamObj, "code", "name", "teamName", "acronym")
+            if (direct.isNotBlank()) return direct
+            val id = firstString(teamObj, "id", "teamId", "team_id", "esportsTeamId")
+            target.teams.firstOrNull { id.isNotBlank() && it.id == id }?.let { team ->
+                return team.code.ifBlank { team.name }
+            }
+        }
+        val playerTeamIds = players.map { it.teamId }.filter { it.isNotBlank() }.distinct()
+        if (playerTeamIds.size == 1) {
+            target.teams.firstOrNull { it.id == playerTeamIds.single() }?.let { team ->
+                return team.code.ifBlank { team.name }
+            }
+        }
+        return ""
     }
 
     private fun mergeSnapshotPlayers(
@@ -614,7 +775,7 @@ internal object CitoLiveFusion {
         output: MutableList<Pair<JSONObject, String>>,
         depth: Int
     ) {
-        if (depth > 4) return
+        if (depth > 5) return
         val participantLike = obj.has("participantId") || obj.has("summonerName") || obj.has("playerName") ||
             obj.has("currentHealth") || obj.has("alive") || obj.has("items")
         if (participantLike) output += obj to sideHint
@@ -660,7 +821,7 @@ internal object CitoLiveFusion {
             maxHealth = maxHealth,
             items = parseItems(row.opt("items")),
             killParticipation = nullableDouble(row, "killParticipation", "kill_participation", "kp"),
-            damageShare = nullableDouble(row, "damageShare", "damage_share"),
+            damageShare = nullableDouble(row, "championDamageShare", "damageShare", "damage_share"),
             wardsPlaced = nullableInt(row, "wardsPlaced", "wards_placed", "wards"),
             wardsKilled = nullableInt(row, "wardsKilled", "wards_killed", "wardsCleared")
         )
