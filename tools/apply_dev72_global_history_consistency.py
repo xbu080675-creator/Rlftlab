@@ -16,6 +16,27 @@ def replace_once(path: str, old: str, new: str) -> None:
 path = "app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt"
 replace_once(
     path,
+    '''    fun ensure(match: ScheduledEsportsMatch, game: Int) {
+        if (game <= 0 || match.eventId.isBlank()) return
+        val phase = MatchSessionStore.schedulePhase(match)''',
+    '''    fun ensure(match: ScheduledEsportsMatch, game: Int) {
+        if (game <= 0 || match.eventId.isBlank()) return
+        if (match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")) {
+            val key = stateKey(match, game)
+            publish(
+                RiotHistoryBackfillState(
+                    key = key,
+                    game = game,
+                    phase = RiotHistoryPhase.UNAVAILABLE,
+                    message = "该国际赛事使用非 Riot Event ID；RiftLab 不伪绑定 Riot LiveStats 历史流"
+                )
+            )
+            return
+        }
+        val phase = MatchSessionStore.schedulePhase(match)'''
+)
+replace_once(
+    path,
     '''            bluePlayers = parsePlayers(blueMeta, blueFrame),
             redPlayers = parsePlayers(redMeta, redFrame),
             source = "Riot LoL Esports LiveStats · verified window",
