@@ -276,6 +276,9 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                     }
                 }
 
+                Spacer(Modifier.height(22.dp))
+                CacheSettingsPanel()
+
                 Spacer(Modifier.height(14.dp))
                 Text(
                     "所有 Provider Key 均使用 Android Keystore AES-GCM 加密，仅保存在本机；不会写入源码、GitHub、日志或比赛归档。",
