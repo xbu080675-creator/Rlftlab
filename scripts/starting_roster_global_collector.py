@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """Global multi-platform adapter layer for RiftLab starting-roster collector.
 
-The normalized parser/OCR stays in starting_roster_collector.py. This wrapper only
-turns different official publishing platforms into the same post shape:
-{id,url,published,text,images}.
+The normalized parser/OCR stays in starting_roster_collector.py. This wrapper turns
+multiple official publishing platforms into one post shape and hardens the transport
+against anonymous-platform throttling without changing source provenance.
 """
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urljoin
+from zoneinfo import ZoneInfo
 import xml.etree.ElementTree as ET
 
 import requests
@@ -25,7 +28,7 @@ spec.loader.exec_module(base)
 
 SESSION = requests.Session()
 SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36 RiftLabRosterBot/2.0",
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36 RiftLabRosterBot/2.1",
     "Accept-Language": "en-US,en;q=0.9,ko;q=0.8,zh-CN;q=0.8,ja;q=0.7",
 })
 
@@ -50,37 +53,275 @@ def _post(pid, url, text, images=None, published=None):
     }
 
 
+# ---- Global parser hardening -------------------------------------------------
+
+base.ROLE_ALIASES["TOP"].extend(["탑", "トップ"])
+base.ROLE_ALIASES["JUG"].extend(["정글", "ジャングル"])
+base.ROLE_ALIASES["MID"].extend(["미드", "ミッド"])
+base.ROLE_ALIASES["BOT"].extend(["원딜", "ボット"])
+base.ROLE_ALIASES["SUP"].extend(["서폿", "サポート"])
+
+
+def unicode_norm(value):
+    return "".join(ch for ch in (value or "").upper() if ch.isalnum())
+
+
+base.norm = unicode_norm
+
+
+def multilingual_ocr(img):
+    configs = "--psm 6"
+    langs = os.environ.get("RIFTLAB_OCR_LANGS", "chi_sim+eng+kor+jpn")
+    text = base.pytesseract.image_to_string(img, lang=langs, config=configs)
+    data = base.pytesseract.image_to_data(
+        img,
+        lang=langs,
+        config=configs,
+        output_type=base.pytesseract.Output.DICT,
+    )
+    words = []
+    n = len(data.get("text", []))
+    for i in range(n):
+        token = (data["text"][i] or "").strip()
+        try:
+            conf = float(data["conf"][i])
+        except Exception:
+            conf = -1
+        if token and conf >= 20:
+            words.append({
+                "text": token,
+                "left": int(data["left"][i]),
+                "top": int(data["top"][i]),
+                "width": int(data["width"][i]),
+                "height": int(data["height"][i]),
+                "conf": conf,
+            })
+    return text, words, img.size
+
+
+base.ocr_image = multilingual_ocr
+
+
+def global_infer_date(text, published, timezone_name):
+    match = re.search(r"(?<!\d)(\d{1,2})\s*[月/.-]\s*(\d{1,2})\s*日?", text or "")
+    source_time = published or base.utc_now()
+    try:
+        zone = ZoneInfo(timezone_name or "UTC")
+    except Exception:
+        zone = timezone.utc
+    local = source_time.astimezone(zone)
+    if match:
+        month, day = int(match.group(1)), int(match.group(2))
+        return f"{local.year:04d}-{month:02d}-{day:02d}"
+    if any(word in (text or "") for word in ("明日", "明天", "내일", "翌日", "tomorrow", "Tomorrow")):
+        local += timedelta(days=1)
+    return local.date().isoformat()
+
+
+base.infer_date = global_infer_date
+
+
+# ---- Weibo transport ---------------------------------------------------------
+
+def _weibo_post(uid, mblog):
+    images = []
+    for item in mblog.get("pics") or []:
+        large = (item.get("large") or {}).get("url")
+        if large:
+            images.append(large)
+    infos = mblog.get("pic_infos") or {}
+    for pid in mblog.get("pic_ids") or []:
+        info = infos.get(str(pid)) or infos.get(pid) or {}
+        large = (info.get("large") or {}).get("url") or (info.get("largest") or {}).get("url")
+        if large:
+            images.append(large)
+    bid = mblog.get("bid") or mblog.get("mblogid") or mblog.get("id")
+    return _post(
+        mblog.get("id") or bid,
+        f"https://weibo.com/{uid}/{bid}" if bid else f"https://weibo.com/u/{uid}",
+        base.clean_html(mblog.get("text_raw") or mblog.get("text") or ""),
+        images,
+        base.parse_weibo_time(mblog.get("created_at")),
+    )
+
+
+def _reader_weibo(uid, limit=20):
+    errors = []
+    for target in (f"weibo.com/u/{uid}", f"m.weibo.cn/u/{uid}"):
+        try:
+            response = SESSION.get(f"https://r.jina.ai/http://{target}", timeout=25, headers={"Accept": "text/plain"})
+            response.raise_for_status()
+            body = response.text
+            status_re = re.compile(
+                rf"https?://(?:www\.)?weibo\.com/(?:u/)?{re.escape(str(uid))}/([A-Za-z0-9]+)",
+                re.I,
+            )
+            matches = list(status_re.finditer(body))
+            posts = []
+            for index, match in enumerate(matches[:limit]):
+                start = max(0, match.start() - 900)
+                end = matches[index + 1].start() if index + 1 < len(matches) else min(len(body), match.end() + 1600)
+                chunk = body[start:end]
+                images = re.findall(r"https?://[^\s)]+(?:sinaimg\.cn|sinaimg\.com)[^\s)]*", chunk)
+                posts.append(_post(match.group(1), match.group(0), chunk, images, None))
+            if posts:
+                return posts
+            errors.append(f"reader:{target}:empty")
+        except Exception as exc:
+            errors.append(f"reader:{target}:{type(exc).__name__}")
+    raise RuntimeError(";".join(errors))
+
+
+def fetch_weibo_robust(uid, limit=20):
+    errors = []
+    try:
+        SESSION.get(
+            f"https://m.weibo.cn/u/{uid}",
+            timeout=10,
+            headers={"Referer": f"https://m.weibo.cn/u/{uid}"},
+        )
+    except Exception:
+        pass
+
+    routes = [
+        (
+            "mobile",
+            f"https://m.weibo.cn/api/container/getIndex?type=uid&value={uid}&containerid=107603{uid}",
+            {"Referer": f"https://m.weibo.cn/u/{uid}", "X-Requested-With": "XMLHttpRequest"},
+        ),
+        (
+            "desktop",
+            f"https://weibo.com/ajax/statuses/mymblog?uid={uid}&page=1&feature=0",
+            {"Referer": f"https://weibo.com/u/{uid}", "X-Requested-With": "XMLHttpRequest"},
+        ),
+    ]
+    for label, url, headers in routes:
+        try:
+            response = SESSION.get(url, timeout=15, headers=headers)
+            response.raise_for_status()
+            content_type = (response.headers.get("content-type") or "").lower()
+            body = response.text.lstrip()
+            if "json" not in content_type and not body.startswith(("{", "[")):
+                errors.append(f"{label}:non_json:{response.status_code}:{content_type[:32]}")
+                continue
+            data = response.json()
+            if label == "mobile":
+                rows = []
+                for card in ((data.get("data") or {}).get("cards") or []):
+                    mblog = card.get("mblog") or {}
+                    if mblog:
+                        rows.append(mblog)
+            else:
+                rows = ((data.get("data") or {}).get("list") or [])
+            posts = [_weibo_post(uid, row) for row in rows[:limit] if row]
+            if posts:
+                return posts
+            errors.append(f"{label}:empty")
+        except Exception as exc:
+            errors.append(f"{label}:{type(exc).__name__}:{exc}")
+
+    try:
+        return _reader_weibo(uid, limit)
+    except Exception as exc:
+        errors.append(f"reader:{exc}")
+    raise RuntimeError("weibo_all_routes_failed[" + " | ".join(errors) + "]")
+
+
+base.fetch_weibo_posts = fetch_weibo_robust
+
+
+# ---- X transport -------------------------------------------------------------
+
+def _reader_x(handle: str, limit: int = 20):
+    handle = handle.lstrip("@")
+    errors = []
+    for host in ("x.com", "twitter.com"):
+        try:
+            response = SESSION.get(
+                f"https://r.jina.ai/http://{host}/{handle}",
+                timeout=25,
+                headers={"Accept": "text/plain"},
+            )
+            response.raise_for_status()
+            body = response.text
+            status_re = re.compile(
+                rf"https?://(?:x\.com|twitter\.com)/{re.escape(handle)}/status/(\d+)",
+                re.I,
+            )
+            matches = list(status_re.finditer(body))
+            posts = []
+            for index, match in enumerate(matches[:limit]):
+                start = max(0, match.start() - 1000)
+                end = matches[index + 1].start() if index + 1 < len(matches) else min(len(body), match.end() + 1800)
+                chunk = body[start:end]
+                images = re.findall(r"https?://pbs\.twimg\.com/media/[^\s)]+", chunk)
+                posts.append(_post(match.group(1), f"https://x.com/{handle}/status/{match.group(1)}", chunk, images, None))
+            if posts:
+                return posts
+            errors.append(f"{host}:empty")
+        except Exception as exc:
+            errors.append(f"{host}:{type(exc).__name__}")
+    raise RuntimeError("x_reader_failed:" + ",".join(errors))
+
+
 def fetch_x_syndication(handle: str, limit: int = 20):
-    # Public embed endpoint. No login/token is required; if X blocks it the
-    # caller records a source-specific diagnostic and other official sources continue.
-    url = f"https://syndication.twitter.com/srv/timeline-profile/screen-name/{handle.lstrip('@')}"
-    r = SESSION.get(url, timeout=20)
-    r.raise_for_status()
-    soup = BeautifulSoup(r.text, "html.parser")
-    posts = []
-    nodes = soup.select("article, .timeline-Tweet, [data-tweet-id]")
-    for node in nodes[:limit]:
-        text = node.get_text(" ", strip=True)
-        link = node.find("a", href=re.compile(r"/status/\d+"))
-        href = urljoin("https://x.com", link.get("href")) if link else f"https://x.com/{handle.lstrip('@')}"
-        pidm = re.search(r"/status/(\d+)", href)
-        imgs = []
-        for img in node.find_all("img"):
-            src = img.get("src") or img.get("data-src")
-            if src and ("pbs.twimg.com" in src or "twimg.com" in src):
-                imgs.append(src)
-        t = node.find("time")
-        posts.append(_post(pidm.group(1) if pidm else href, href, text, imgs, parse_time(t.get("datetime") if t else None)))
-    if not posts:
-        raise RuntimeError("x_syndication_empty_or_blocked")
-    return posts
+    handle = handle.lstrip("@")
+    url = f"https://syndication.twitter.com/srv/timeline-profile/screen-name/{handle}"
+    errors = []
+    for attempt in range(3):
+        try:
+            response = SESSION.get(url, timeout=20)
+            if response.status_code == 429:
+                retry_after = response.headers.get("retry-after")
+                try:
+                    wait = min(5.0, max(1.0, float(retry_after))) if retry_after else 1.5 * (attempt + 1)
+                except Exception:
+                    wait = 1.5 * (attempt + 1)
+                errors.append(f"syndication:429:{wait:.1f}s")
+                time.sleep(wait)
+                continue
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
+            posts = []
+            nodes = soup.select("article, .timeline-Tweet, [data-tweet-id]")
+            for node in nodes[:limit]:
+                text = node.get_text(" ", strip=True)
+                link = node.find("a", href=re.compile(r"/status/\d+"))
+                href = urljoin("https://x.com", link.get("href")) if link else f"https://x.com/{handle}"
+                pidm = re.search(r"/status/(\d+)", href)
+                images = []
+                for img in node.find_all("img"):
+                    src = img.get("src") or img.get("data-src")
+                    if src and ("pbs.twimg.com" in src or "twimg.com" in src):
+                        images.append(src)
+                time_node = node.find("time")
+                posts.append(_post(
+                    pidm.group(1) if pidm else href,
+                    href,
+                    text,
+                    images,
+                    parse_time(time_node.get("datetime") if time_node else None),
+                ))
+            if posts:
+                return posts
+            errors.append("syndication:empty")
+            break
+        except Exception as exc:
+            errors.append(f"syndication:{type(exc).__name__}:{exc}")
+            break
+
+    try:
+        return _reader_x(handle, limit)
+    except Exception as exc:
+        errors.append(str(exc))
+    raise RuntimeError("x_all_routes_failed[" + " | ".join(errors) + "]")
 
 
 def fetch_youtube_atom(channel_id: str, limit: int = 20):
     url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-    r = SESSION.get(url, timeout=20)
-    r.raise_for_status()
-    root = ET.fromstring(r.text)
+    response = SESSION.get(url, timeout=20)
+    response.raise_for_status()
+    root = ET.fromstring(response.text)
     ns = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
     posts = []
     for entry in root.findall("a:entry", ns)[:limit]:
@@ -95,26 +336,20 @@ def fetch_youtube_atom(channel_id: str, limit: int = 20):
 
 
 def fetch_official_html(source: dict, limit: int = 20):
-    """Best-effort official-site scanner.
-
-    It scans recent links whose text/url mentions roster keywords, then fetches the
-    detail page so the common OCR/parser can inspect text and images. A site-specific
-    selector can be added in JSON without changing the Android client.
-    """
     url = source.get("url") or source.get("profileUrl")
     if not url:
         return []
-    r = SESSION.get(url, timeout=20)
-    r.raise_for_status()
-    soup = BeautifulSoup(r.text, "html.parser")
-    keys = [k.lower() for k in source.get("keywords", [])]
+    response = SESSION.get(url, timeout=20)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+    keys = [key.lower() for key in source.get("keywords", [])]
     if not keys:
         keys = ["starting", "lineup", "roster", "首发", "선발", "先発"]
     links = []
-    for a in soup.find_all("a", href=True):
-        label = (a.get_text(" ", strip=True) + " " + a["href"]).lower()
-        if any(k in label for k in keys):
-            href = urljoin(url, a["href"])
+    for anchor in soup.find_all("a", href=True):
+        label = (anchor.get_text(" ", strip=True) + " " + anchor["href"]).lower()
+        if any(key in label for key in keys):
+            href = urljoin(url, anchor["href"])
             if href not in links:
                 links.append(href)
         if len(links) >= limit:
@@ -122,22 +357,23 @@ def fetch_official_html(source: dict, limit: int = 20):
     posts = []
     for href in links:
         try:
-            rr = SESSION.get(href, timeout=20)
-            rr.raise_for_status()
-            ss = BeautifulSoup(rr.text, "html.parser")
-            text = ss.get_text(" ", strip=True)
-            imgs = []
-            for img in ss.find_all("img"):
+            detail = SESSION.get(href, timeout=20)
+            detail.raise_for_status()
+            detail_soup = BeautifulSoup(detail.text, "html.parser")
+            text = detail_soup.get_text(" ", strip=True)
+            images = []
+            for img in detail_soup.find_all("img"):
                 src = img.get("src") or img.get("data-src")
                 if src:
-                    imgs.append(urljoin(href, src))
-            posts.append(_post(href, href, text, imgs[:8], None))
+                    images.append(urljoin(href, src))
+            posts.append(_post(href, href, text, images[:8], None))
         except Exception:
             continue
     return posts
 
 
 _original_process = base.process_source
+_robust_weibo_fetch = base.fetch_weibo_posts
 
 
 def process_source(source, cfg):
@@ -154,12 +390,9 @@ def process_source(source, cfg):
             posts = fetch_official_html(source)
         else:
             return [], [f"{source.get('account')}: unsupported_kind {kind}"]
-    except Exception as e:
-        return [], [f"{source.get('account')}: {kind} {type(e).__name__}: {e}"]
+    except Exception as exc:
+        return [], [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]
 
-    # Reuse the proven normalization/OCR path by supplying the already-fetched
-    # official posts through the base collector's fetch hook.
-    original_fetch = base.fetch_weibo_posts
     try:
         base.fetch_weibo_posts = lambda _uid, limit=20: posts[:limit]
         shim = dict(source)
@@ -167,7 +400,7 @@ def process_source(source, cfg):
         shim["uid"] = "adapter"
         return _original_process(shim, cfg)
     finally:
-        base.fetch_weibo_posts = original_fetch
+        base.fetch_weibo_posts = _robust_weibo_fetch
 
 
 base.process_source = process_source
