@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 80
-        versionName = "1.0.0-dev.80"
+        versionCode = 81
+        versionName = "1.0.0-dev.81"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -191,3 +191,5 @@ dependencies {
 // dev.70: separate annual Championship Points from tournament standings and model reverse-queryable qualification routes with explicit official/provider/derived evidence.
 
 // dev.80: shared Cito realtime bus + broadcast-safe Global/Fight HUD phone simulator.
+
+// dev.81: full BLG vs AL BP-to-match simulation and full-width Chinese event-xray tactical layer.
