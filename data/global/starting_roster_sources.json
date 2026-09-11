@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "lookbackHours": 36,
+  "keywords": ["首发", "首发名单", "先发", "starting roster", "starting lineup", "lineup"],
+  "leagues": [
+    {
+      "league": "LPL",
+      "timezone": "Asia/Shanghai",
+      "platform": "WEIBO",
+      "account": "英雄联盟赛事",
+      "source": "LEAGUE_SOCIAL",
+      "kind": "WEIBO_MOBILE",
+      "uid": "5756404150",
+      "profileUrl": "https://weibo.com/u/5756404150"
+    }
+  ],
+  "teams": [
+    {"league":"LPL","team":"IG","account":"iG电子竞技俱乐部","source":"TEAM_SOCIAL","kind":"WEIBO_MOBILE","uid":"2099708877","profileUrl":"https://weibo.com/igaming"},
+    {"league":"LPL","team":"BLG","account":"BLG电子竞技俱乐部","source":"TEAM_SOCIAL","kind":"WEIBO_MOBILE","uid":"5926660141","profileUrl":"https://weibo.com/u/5926660141"},
+    {"league":"LPL","team":"JDG","account":"JDG京东电子竞技俱乐部","source":"TEAM_SOCIAL","kind":"WEIBO_MOBILE","uid":"6174976862","profileUrl":"https://weibo.com/jdgaming"},
+    {"league":"LPL","team":"NIP","account":"NIP电子竞技俱乐部","source":"TEAM_SOCIAL","kind":"WEIBO_MOBILE","uid":"6420953344","profileUrl":"https://weibo.com/u/6420953344"},
+    {"league":"LPL","team":"WE","account":"WE电子竞技俱乐部","source":"TEAM_SOCIAL","kind":"WEIBO_MOBILE","uid":"1869429662","profileUrl":"https://weibo.com/teamwe"}
+  ],
+  "teamAliases": {
+    "IG": ["IG", "iG", "Invictus Gaming"],
+    "AL": ["AL", "Anyone's Legend", "Anyones Legend"],
+    "BLG": ["BLG", "Bilibili Gaming"],
+    "TES": ["TES", "Top Esports"],
+    "JDG": ["JDG", "JD Gaming"],
+    "WE": ["WE", "Team WE"],
+    "NIP": ["NIP", "Ninjas in Pyjamas"],
+    "WBG": ["WBG", "Weibo Gaming"],
+    "LNG": ["LNG", "LNG Esports"],
+    "EDG": ["EDG", "EDward Gaming"],
+    "LGD": ["LGD", "LGD Gaming"],
+    "TT": ["TT", "ThunderTalk Gaming"]
+  }
+}
