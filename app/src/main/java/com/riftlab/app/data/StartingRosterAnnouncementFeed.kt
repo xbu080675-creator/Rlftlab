@@ -19,6 +19,7 @@ data class StartingRosterAnnouncement(
     val sourceUrl: String,
     val textSnippet: String,
     val imageCount: Int,
+    val imageUrls: List<String>,
     val parsed: Boolean
 )
 
@@ -74,6 +75,14 @@ internal class StartingRosterAnnouncementFeed(
                 if (!leagueMatch) continue
                 val teamMatch = rowTeam.isBlank() || rowTeam in aliases || aliases.any { it.length >= 2 && textToken.contains(it) }
                 if (!teamMatch) continue
+                val imageUrlsJson = row.optJSONArray("imageUrls")
+                val imageUrls = buildList {
+                    if (imageUrlsJson != null) {
+                        for (j in 0 until imageUrlsJson.length()) {
+                            imageUrlsJson.optString(j).takeIf { it.startsWith("http") }?.let(::add)
+                        }
+                    }
+                }
                 out += StartingRosterAnnouncement(
                     id = row.optString("id"),
                     league = row.optString("league"),
@@ -85,7 +94,8 @@ internal class StartingRosterAnnouncementFeed(
                     observedAt = row.optString("observedAt"),
                     sourceUrl = row.optString("sourceUrl"),
                     textSnippet = text,
-                    imageCount = row.optInt("imageCount", 0),
+                    imageCount = row.optInt("imageCount", imageUrls.size),
+                    imageUrls = imageUrls,
                     parsed = row.optString("parseStatus").equals("PARSED", ignoreCase = true)
                 )
             }
