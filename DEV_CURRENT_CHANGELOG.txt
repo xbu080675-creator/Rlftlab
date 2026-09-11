@@ -1,9 +1,7 @@
-dev.88：把 dev.87 的 LPL 专用首发通道升级为全球官方首发情报中心，并解决中国大陆客户端无法稳定直连海外社交网站的问题。
+dev.89：重做本地 AI 真机基准。取消“一次短推理 > 2500ms 就判失败”的粗暴逻辑。
 
-新增 StartingRosterFeed / StartingRosterCenter，首发逻辑不再绑定 LPL。统一支持 TEAM_SOCIAL、LEAGUE_SOCIAL、OFFICIAL_SITE、OTHER_OFFICIAL 四类官方证据；俱乐部官方社媒、赛事官方社媒与官网属于同级高可信来源，官网不再是显示门槛。若同级官方来源给出不同五人名单，不静默覆盖，直接标记冲突等待确认。
+真实 LiteRT-LM 基准现在拆成：模型冷启动加载时间、1 次 warm-up、3 次稳态短推理、稳态 median、P90 与热状态前后值。冷启动和 warm-up 只记录，不参与 READY 判定；READY 只看稳态 median <= 2500ms、P90 <= 3500ms 且热状态未达到 severe。
 
-Android 客户端不直接抓 X / Instagram / YouTube / 微博页面。海外与区域官方源由云端采集/OCR 后归一化成 data/global/starting_rosters.json，APP 只拉取小型结构化证据。下载顺序优先中国大陆友好的 Gitee 只读镜像，其次 jsDelivr，最后 GitHub raw；GitHub 仍然是唯一代码/数据源真相，Gitee 仅作为分发镜像。这样国内用户无需 VPN 也能收到国际赛区首发。
+基准失败不删除模型，仍保持 VERIFIED，可在降温、切换性能模式或系统负载降低后重新测试。页面会显示 COLD / WARM-UP / MEDIAN / P90 / SAMPLES / THERMAL，便于判断到底是首轮初始化慢、持续推理慢还是热降频。
 
-全球首发证据使用赛事本地时区匹配比赛日，支持 LPL/LCK/LCP/PCS/LJL/LEC/LCS/LTA 等默认时区，并允许每条证据显式覆盖 timezone，避免用户手机时区影响 tomorrow/比赛日匹配。角色归一化支持 TOP/JUG/JGL/JUNGLE/MID/BOT/ADC/BOTTOM/SUP/SUPPORT 以及中文位置名。
-
-首发 UI 已切换到 StartingRosterCenter，显示来源账号、平台与证据类型。旧 LplStartingRosterFeed / LplStartingRosterCenter 保留为兼容壳但不再承载实现。版本目标 1.0.0-dev.88 / versionCode 88。
+这次修改针对红魔 9 Pro+ 实测 Qwen3 0.6B INT4 单次 5350ms 被旧逻辑直接判死的问题；不再让冷启动或首次生成代表整台设备的持续推理能力。
