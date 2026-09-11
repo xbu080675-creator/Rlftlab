@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-11T15:04:00Z",
+  "policy": "team/LPL official social may publish before website; website confirms but never gates first visibility",
+  "evidence": [
+    {
+      "matchDateChina": "2026-09-12",
+      "team": "IG",
+      "opponent": "AL",
+      "source": "TEAM_WEIBO",
+      "account": "iG电子竞技俱乐部",
+      "publishedAt": "2026-09-11T15:00:00Z",
+      "observedAt": "2026-09-11T15:04:00Z",
+      "evidenceType": "TEXT",
+      "confidence": 1.0,
+      "starters": [
+        {"role": "TOP", "id": "TheShy"},
+        {"role": "JUG", "id": "Wei"},
+        {"role": "MID", "id": "Rookie"},
+        {"role": "BOT", "id": "JiaQi"},
+        {"role": "SUP", "id": "Meiko"}
+      ]
+    }
+  ]
+}
