@@ -125,7 +125,7 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
             val blue = state.blueAlive
             val red = state.redAlive
             alive.visibility = if (blue != null && red != null) View.VISIBLE else View.GONE
-            alive.text = if (blue != null && red != null) "BLG  $blue  :  $red  AL" else ""
+            alive.text = if (blue != null && red != null) "${state.blueTeam}  $blue  :  $red  ${state.redTeam}" else ""
             renderObjective(state)
         } else {
             alive.visibility = View.GONE
