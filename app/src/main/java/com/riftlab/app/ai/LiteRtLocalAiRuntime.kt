@@ -23,10 +23,18 @@ import java.io.Closeable
  * choose a side and rank fact keys that already exist in the input frame.
  */
 object LiteRtLocalAiRuntime {
+    enum class RuntimeGrade(val label: String) {
+        EXCELLENT("优秀"),
+        RECOMMENDED("推荐"),
+        USABLE("可用"),
+        FALLBACK("规则回退")
+    }
+
     data class RuntimeState(
         val busy: Boolean = false,
         val modelId: String? = null,
-        val backendLabel: String = "CPU",
+        val backendLabel: String = "未选择",
+        val grade: RuntimeGrade = RuntimeGrade.FALLBACK,
         val loadMs: Long? = null,
         val warmupMs: Long? = null,
         val sampleMs: List<Long> = emptyList(),
@@ -37,15 +45,25 @@ object LiteRtLocalAiRuntime {
         val message: String = "等待已验证模型"
     )
 
-    // Readiness is based on warmed steady-state latency, never the first cold generation.
-    private const val MAX_MEDIAN_MS = 2500L
-    private const val MAX_P90_MS = 3500L
+    // RiftLab is an event-level scene recognizer/ranker, not a chat loop. A warmed model around 3 s
+    // is still useful for objective setup and macro-state ranking, so readiness is graded instead of
+    // hard-failing everything above 2.5 s. Only sustained >4 s or severe thermal pressure falls back.
+    private const val EXCELLENT_MEDIAN_MS = 1500L
+    private const val RECOMMENDED_MEDIAN_MS = 2500L
+    private const val MAX_USABLE_MEDIAN_MS = 4000L
+    private const val MAX_USABLE_P90_MS = 4500L
     private const val STEADY_SAMPLES = 3
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutableState = MutableStateFlow(RuntimeState())
     val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
 
     @Volatile private var active: LiteRtTrendBackend? = null
+
+    private data class EngineCandidate(
+        val label: String,
+        val create: (String, String) -> Engine
+    )
 
     fun benchmarkVerifiedModel(context: Context, descriptor: LocalModelDescriptor) {
         val install = LocalModelManager.state.value
@@ -63,24 +81,67 @@ object LiteRtLocalAiRuntime {
                 busy = true,
                 modelId = descriptor.id,
                 thermalBefore = thermalBefore,
-                message = "正在加载真实 LiteRT-LM 模型…"
+                message = "正在探测 LiteRT-LM 加速后端…"
             )
             runCatching {
                 ensureThermalAcceptable(app)
                 active?.close()
                 active = null
 
-                val loadStarted = System.currentTimeMillis()
-                val engine = withContext(Dispatchers.IO) {
-                    Engine(
-                        EngineConfig(
-                            modelPath = path,
-                            backend = Backend.CPU(),
-                            cacheDir = app.cacheDir.resolve("litertlm_runtime").apply { mkdirs() }.absolutePath
+                val cachePath = app.cacheDir.resolve("litertlm_runtime").apply { mkdirs() }.absolutePath
+                val candidates = listOf(
+                    EngineCandidate("GPU / OpenCL") { modelPath, cacheDir ->
+                        Engine(
+                            EngineConfig(
+                                modelPath = modelPath,
+                                backend = Backend.GPU(),
+                                cacheDir = cacheDir
+                            )
                         )
-                    ).also { it.initialize() }
+                    },
+                    EngineCandidate("CPU fallback") { modelPath, cacheDir ->
+                        Engine(
+                            EngineConfig(
+                                modelPath = modelPath,
+                                backend = Backend.CPU(),
+                                cacheDir = cacheDir
+                            )
+                        )
+                    }
+                )
+
+                var selectedLabel: String? = null
+                var selectedEngine: Engine? = null
+                var loadMs = 0L
+                val backendErrors = mutableListOf<String>()
+
+                for (candidate in candidates) {
+                    mutableState.value = mutableState.value.copy(
+                        backendLabel = candidate.label,
+                        message = "正在尝试 ${candidate.label}…"
+                    )
+                    val started = System.currentTimeMillis()
+                    val attempt = runCatching {
+                        candidate.create(path, cachePath).also { engine ->
+                            try {
+                                engine.initialize()
+                            } catch (t: Throwable) {
+                                runCatching { engine.close() }
+                                throw t
+                            }
+                        }
+                    }
+                    if (attempt.isSuccess) {
+                        selectedLabel = candidate.label
+                        selectedEngine = attempt.getOrThrow()
+                        loadMs = System.currentTimeMillis() - started
+                        break
+                    }
+                    backendErrors += "${candidate.label}: ${attempt.exceptionOrNull()?.message?.take(80) ?: "初始化失败"}"
                 }
-                val loadMs = System.currentTimeMillis() - loadStarted
+
+                val engine = selectedEngine ?: error("没有可用推理后端 · ${backendErrors.joinToString(" | ")}")
+                val backendLabel = selectedLabel ?: "UNKNOWN"
                 val backend = LiteRtTrendBackend(descriptor.id, engine)
                 val benchFrame = benchmarkFrame()
 
@@ -102,12 +163,13 @@ object LiteRtLocalAiRuntime {
                 val medianMs = sorted[sorted.size / 2]
                 val p90Ms = sorted[((sorted.size * 9 + 9) / 10 - 1).coerceIn(0, sorted.lastIndex)]
                 val thermalAfter = thermalStatus(app)
+                val grade = gradeFor(medianMs, p90Ms)
 
-                if (medianMs > MAX_MEDIAN_MS || p90Ms > MAX_P90_MS) {
+                if (grade == RuntimeGrade.FALLBACK) {
                     backend.close()
                     error(
-                        "稳态推理未过门槛 · median ${medianMs}ms / P90 ${p90Ms}ms · " +
-                            "门槛 ${MAX_MEDIAN_MS}/${MAX_P90_MS}ms；冷启动 ${loadMs}ms、warm-up ${warmupMs}ms 不参与判定"
+                        "稳态推理过慢 · $backendLabel · median ${medianMs}ms / P90 ${p90Ms}ms · " +
+                            "可用门槛 ${MAX_USABLE_MEDIAN_MS}/${MAX_USABLE_P90_MS}ms；冷启动 ${loadMs}ms、warm-up ${warmupMs}ms 不参与判定"
                     )
                 }
 
@@ -117,7 +179,8 @@ object LiteRtLocalAiRuntime {
                 mutableState.value = RuntimeState(
                     busy = false,
                     modelId = descriptor.id,
-                    backendLabel = "CPU",
+                    backendLabel = backendLabel,
+                    grade = grade,
                     loadMs = loadMs,
                     warmupMs = warmupMs,
                     sampleMs = samples,
@@ -125,7 +188,7 @@ object LiteRtLocalAiRuntime {
                     p90Ms = p90Ms,
                     thermalBefore = thermalBefore,
                     thermalAfter = thermalAfter,
-                    message = "稳态基准通过 · median ${medianMs}ms · P90 ${p90Ms}ms"
+                    message = "${grade.label} · $backendLabel · median ${medianMs}ms · P90 ${p90Ms}ms"
                 )
             }.onFailure { error ->
                 active?.close()
@@ -133,6 +196,7 @@ object LiteRtLocalAiRuntime {
                 LocalAiCore.disableModel()
                 mutableState.value = mutableState.value.copy(
                     busy = false,
+                    grade = RuntimeGrade.FALLBACK,
                     thermalAfter = thermalStatus(app),
                     message = "基准测试未通过 · ${error.message ?: error::class.java.simpleName}"
                 )
@@ -144,6 +208,13 @@ object LiteRtLocalAiRuntime {
         active?.close()
         active = null
         LocalAiCore.disableModel()
+    }
+
+    private fun gradeFor(medianMs: Long, p90Ms: Long): RuntimeGrade = when {
+        medianMs <= EXCELLENT_MEDIAN_MS && p90Ms <= RECOMMENDED_MEDIAN_MS -> RuntimeGrade.EXCELLENT
+        medianMs <= RECOMMENDED_MEDIAN_MS && p90Ms <= 3500L -> RuntimeGrade.RECOMMENDED
+        medianMs <= MAX_USABLE_MEDIAN_MS && p90Ms <= MAX_USABLE_P90_MS -> RuntimeGrade.USABLE
+        else -> RuntimeGrade.FALLBACK
     }
 
     private fun benchmarkFrame(): TrendFrame = TrendFrame(
