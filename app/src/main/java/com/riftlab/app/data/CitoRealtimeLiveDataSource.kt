@@ -29,8 +29,8 @@ import org.json.JSONObject
  *
  * WebSocket is the live clock. REST is used only to discover the current Cito match/game and to
  * periodically reconcile state after reconnects or when the account does not have the WSS add-on.
- * No undocumented room/subscription message is invented here: the LoL public docs currently only
- * publish the authenticated WSS endpoint, so RiftLab consumes provider push frames exactly as sent.
+ * No undocumented room/subscription message is invented here: RiftLab consumes provider push
+ * frames exactly as sent and keeps REST as the authoritative reconnect/catch-up path.
  */
 internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
     private val _status = MutableStateFlow(
@@ -47,6 +47,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         var gameId = ""
         var gameNumber = 1
         var lastEmission = ""
+        var lastArchivedSocketAt = 0L
         var nextSeriesRefreshAt = 0L
         var nextRestReconcileAt = 0L
 
@@ -64,7 +65,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 wsJob = wsScope.launch {
                     runCatching {
                         CitoRealtimeSocket().messages().collect { message ->
-                            inbox.updateAndGet { current -> current.accept(message) }
+                            inbox.updateAndGet { current -> current.acceptSocket(message) }
                         }
                     }
                 }
@@ -88,6 +89,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 gameId = ""
                 gameNumber = 1
                 lastEmission = ""
+                lastArchivedSocketAt = 0L
                 nextSeriesRefreshAt = 0L
                 nextRestReconcileAt = 0L
                 inbox.set(CitoRealtimeBundle())
@@ -122,6 +124,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                             inbox.set(CitoRealtimeBundle())
                             nextRestReconcileAt = 0L
                             lastEmission = ""
+                            lastArchivedSocketAt = 0L
                         }
                         if (context.gameNumber > 0) gameNumber = context.gameNumber
                     }
@@ -129,6 +132,16 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                 }
 
                 var bundle = inbox.get()
+                bundle.latestSocketPayloadFor(gameId)?.takeIf { it.receivedAtEpochMs > lastArchivedSocketAt }?.let { pushed ->
+                    lastArchivedSocketAt = pushed.receivedAtEpochMs
+                    CitoRawArchive.append(
+                        matchKey,
+                        pushed.gameId.ifBlank { gameId },
+                        "realtime-websocket-${pushed.kind.name.lowercase()}",
+                        pushed.payload
+                    )
+                }
+
                 var transport = "WebSocket"
                 var snapshot = bundle.bestBoardFor(gameId)?.let { payload ->
                     CitoJson.parseLiveBoard(payload, target, gameNumber)
@@ -137,11 +150,12 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                     snapshot = CitoLiveFusion.enrichSnapshot(
                         snapshot = snapshot,
                         payloads = bundle.supplementsFor(gameId),
-                        capturedAtEpochMs = bundle.lastMessageAtEpochMs
+                        capturedAtEpochMs = bundle.lastDataAtEpochMs
                     )
                 }
 
-                val wsFresh = bundle.lastMessageAtEpochMs > 0L && now - bundle.lastMessageAtEpochMs <= WS_FRESH_MS
+                val wsFresh = bundle.lastSocketMessageAtEpochMs > 0L &&
+                    now - bundle.lastSocketMessageAtEpochMs <= WS_FRESH_MS
                 val needsRest = gameId.isNotBlank() && (
                     snapshot == null || !CitoJson.meaningful(snapshot) || !wsFresh || now >= nextRestReconcileAt
                 )
@@ -156,7 +170,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                             snapshot = CitoLiveFusion.enrichSnapshot(
                                 snapshot = snapshot,
                                 payloads = bundle.supplementsFor(gameId),
-                                capturedAtEpochMs = bundle.lastMessageAtEpochMs
+                                capturedAtEpochMs = bundle.lastDataAtEpochMs
                             )
                         }
                     }
@@ -197,7 +211,6 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
                     )
                 }
 
-                // WSS is event-driven; this loop only performs target/health/reconcile work.
                 delay(if (wsFresh) WS_LOOP_MS else REST_LOOP_MS)
             } catch (t: Throwable) {
                 _status.value = LiveSourceStatus(
@@ -225,22 +238,26 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         val payloads = buildList {
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveBoardUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-board", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.BOARD, gameId, it, capturedAt))
+                add(CitoRealtimePayload(CitoRealtimeKind.BOARD, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveMapUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-map", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.MAP, gameId, it, capturedAt))
+                add(CitoRealtimePayload(CitoRealtimeKind.MAP, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveDetailsUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-details", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.DETAILS, gameId, it, capturedAt))
+                add(CitoRealtimePayload(CitoRealtimeKind.DETAILS, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
             }
             runCatching { CitoHttpClient.getJson(CitoApiConfig.liveEventsUrl(gameId)) }.getOrNull()?.let {
                 CitoRawArchive.append(matchKey, gameId, "realtime-rest-events", it)
-                add(CitoRealtimePayload(CitoRealtimeKind.EVENTS, gameId, it, capturedAt))
+                add(CitoRealtimePayload(CitoRealtimeKind.EVENTS, gameId, it, capturedAt, CitoRealtimeOrigin.REST))
             }
         }
-        return CitoRealtimeBundle(payloads = payloads, lastMessageAtEpochMs = capturedAt)
+        return CitoRealtimeBundle(
+            payloads = payloads,
+            lastSocketMessageAtEpochMs = 0L,
+            lastDataAtEpochMs = capturedAt
+        )
     }
 
     private suspend fun resolveCitoMatchId(target: ScheduledEsportsMatch): String {
@@ -275,6 +292,7 @@ internal class CitoRealtimeLiveDataSource : LiveMatchDataSource {
         append(snapshot.gameId).append('|').append(snapshot.elapsedSeconds)
         append('|').append(snapshot.blueGold).append('|').append(snapshot.redGold)
         append('|').append(snapshot.blueKills).append('|').append(snapshot.redKills)
+        append('|').append(snapshot.supplementUpdatedAtEpochMs)
         (snapshot.bluePlayers + snapshot.redPlayers).forEach { player ->
             append('|').append(player.participantId)
             append(':').append(player.alive)
@@ -305,38 +323,35 @@ internal enum class CitoRealtimeKind {
     UNKNOWN
 }
 
+internal enum class CitoRealtimeOrigin { WEBSOCKET, REST }
+
 internal data class CitoRealtimePayload(
     val kind: CitoRealtimeKind,
     val gameId: String,
     val payload: JSONObject,
-    val receivedAtEpochMs: Long
+    val receivedAtEpochMs: Long,
+    val origin: CitoRealtimeOrigin
 )
 
 internal data class CitoRealtimeBundle(
     val payloads: List<CitoRealtimePayload> = emptyList(),
-    val lastMessageAtEpochMs: Long = 0L
+    val lastSocketMessageAtEpochMs: Long = 0L,
+    val lastDataAtEpochMs: Long = 0L
 ) {
-    fun accept(message: JSONObject): CitoRealtimeBundle {
-        val payload = CitoRealtimeClassifier.classify(message)
-        val next = (payloads + payload)
-            .groupBy { it.kind to it.gameId }
-            .mapNotNull { (_, rows) -> rows.maxByOrNull { it.receivedAtEpochMs } }
-            .takeLast(24)
-        return copy(payloads = next, lastMessageAtEpochMs = payload.receivedAtEpochMs)
+    fun acceptSocket(message: JSONObject): CitoRealtimeBundle {
+        val payload = CitoRealtimeClassifier.classify(message, CitoRealtimeOrigin.WEBSOCKET)
+        return copy(
+            payloads = mergePayloads(payloads + payload),
+            lastSocketMessageAtEpochMs = payload.receivedAtEpochMs,
+            lastDataAtEpochMs = maxOf(lastDataAtEpochMs, payload.receivedAtEpochMs)
+        )
     }
 
-    fun merge(other: CitoRealtimeBundle): CitoRealtimeBundle {
-        var next = this
-        other.payloads.forEach { payload ->
-            val synthetic = payload.payload
-            next = next.accept(synthetic)
-            // accept() reclassifies REST payloads; keep the caller's known kind if detection was vague.
-            if (next.payloads.none { it.kind == payload.kind && it.gameId == payload.gameId }) {
-                next = next.copy(payloads = (next.payloads + payload).takeLast(24))
-            }
-        }
-        return next.copy(lastMessageAtEpochMs = maxOf(lastMessageAtEpochMs, other.lastMessageAtEpochMs))
-    }
+    fun merge(other: CitoRealtimeBundle): CitoRealtimeBundle = copy(
+        payloads = mergePayloads(payloads + other.payloads),
+        lastSocketMessageAtEpochMs = maxOf(lastSocketMessageAtEpochMs, other.lastSocketMessageAtEpochMs),
+        lastDataAtEpochMs = maxOf(lastDataAtEpochMs, other.lastDataAtEpochMs)
+    )
 
     fun bestBoardFor(gameId: String): JSONObject? = payloads
         .asSequence()
@@ -352,10 +367,22 @@ internal data class CitoRealtimeBundle(
         .sortedBy { it.receivedAtEpochMs }
         .map { it.payload }
         .toList()
+
+    fun latestSocketPayloadFor(gameId: String): CitoRealtimePayload? = payloads
+        .asSequence()
+        .filter { it.origin == CitoRealtimeOrigin.WEBSOCKET }
+        .filter { gameId.isBlank() || it.gameId.isBlank() || it.gameId == gameId }
+        .maxByOrNull { it.receivedAtEpochMs }
+
+    private fun mergePayloads(rows: List<CitoRealtimePayload>): List<CitoRealtimePayload> = rows
+        .groupBy { Triple(it.kind, it.gameId, it.origin) }
+        .mapNotNull { (_, grouped) -> grouped.maxByOrNull { it.receivedAtEpochMs } }
+        .sortedBy { it.receivedAtEpochMs }
+        .takeLast(32)
 }
 
 internal object CitoRealtimeClassifier {
-    fun classify(message: JSONObject): CitoRealtimePayload {
+    fun classify(message: JSONObject, origin: CitoRealtimeOrigin): CitoRealtimePayload {
         val now = System.currentTimeMillis()
         val type = firstString(message, "type", "event", "kind", "channel").lowercase()
         val data = unwrap(message)
@@ -372,7 +399,7 @@ internal object CitoRealtimeClassifier {
             hasBoardPayload(data) -> CitoRealtimeKind.BOARD
             else -> CitoRealtimeKind.UNKNOWN
         }
-        return CitoRealtimePayload(kind, gameId, message, now)
+        return CitoRealtimePayload(kind, gameId, message, now, origin)
     }
 
     private fun unwrap(root: JSONObject): JSONObject =
@@ -440,16 +467,11 @@ internal class CitoRealtimeSocket {
             }
         }
         val socket = client.newWebSocket(request, listener)
-        awaitClose {
-            socket.cancel()
-            client.dispatcher.executorService.shutdown()
-        }
+        awaitClose { socket.cancel() }
     }
 }
 
-/**
- * Adds Cito-only combat context without replacing canonical scoreboard truth from Riot/Tencent.
- */
+/** Adds Cito-only combat context without replacing canonical scoreboard truth from Riot/Tencent. */
 internal object CitoLiveFusion {
     fun enrichSnapshot(
         snapshot: LiveSnapshot,
