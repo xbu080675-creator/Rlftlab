@@ -1,0 +1,48 @@
+name: Apply RiftLab dev88 global roster wiring
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev88-global-roster-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire global roster center and version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt')
+          s = p.read_text()
+          s = s.replace('import com.riftlab.app.data.LplStartingRosterCenter', 'import com.riftlab.app.data.StartingRosterCenter')
+          s = s.replace('LplStartingRosterCenter.state.collectAsState()', 'StartingRosterCenter.state.collectAsState()')
+          s = s.replace('let(LplStartingRosterCenter::evidenceFor)', 'let(StartingRosterCenter::evidenceFor)')
+          s = s.replace('OFFICIAL SOCIAL $socialCount/2 · 官网不再作为首发显示门槛', 'OFFICIAL ROSTER $socialCount/2 · 官网不再作为首发显示门槛')
+          s = s.replace('"${evidence.account} ${evidence.source.name}"', '"${evidence.account} · ${evidence.platform} · ${evidence.source.name}"')
+          p.write_text(s)
+
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          s = s.replace('versionCode = 87', 'versionCode = 88', 1)
+          s = s.replace('versionName = "1.0.0-dev.87"', 'versionName = "1.0.0-dev.88"', 1)
+          p.write_text(s)
+
+          p = Path('DEV_CURRENT_CHANGELOG.txt')
+          p.write_text('''dev.88：把 dev.87 的 LPL 专用首发通道升级为全球官方首发情报中心，并解决中国大陆客户端无法稳定直连海外社交网站的问题。\n\n新增 StartingRosterFeed / StartingRosterCenter，首发逻辑不再绑定 LPL。统一支持 TEAM_SOCIAL、LEAGUE_SOCIAL、OFFICIAL_SITE、OTHER_OFFICIAL 四类官方证据；俱乐部官方社媒、赛事官方社媒与官网属于同级高可信来源，官网不再是显示门槛。若同级官方来源给出不同五人名单，不静默覆盖，直接标记冲突等待确认。\n\nAndroid 客户端不直接抓 X / Instagram / YouTube / 微博页面。海外与区域官方源由云端采集/OCR 后归一化成 data/global/starting_rosters.json，APP 只拉取小型结构化证据。下载顺序优先中国大陆友好的 Gitee 只读镜像，其次 jsDelivr，最后 GitHub raw；GitHub 仍然是唯一代码/数据源真相，Gitee 仅作为分发镜像。这样国内用户无需 VPN 也能收到国际赛区首发。\n\n全球首发证据使用赛事本地时区匹配比赛日，支持 LPL/LCK/LCP/PCS/LJL/LEC/LCS/LTA 等默认时区，并允许每条证据显式覆盖 timezone，避免用户手机时区影响 tomorrow/比赛日匹配。角色归一化支持 TOP/JUG/JGL/JUNGLE/MID/BOT/ADC/BOTTOM/SUP/SUPPORT 以及中文位置名。\n\n首发 UI 已切换到 StartingRosterCenter，显示来源账号、平台与证据类型。旧 LplStartingRosterFeed / LplStartingRosterCenter 保留为兼容壳但不再承载实现。版本目标 1.0.0-dev.88 / versionCode 88。\n''')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/ui/RiftLabApp.kt app/build.gradle.kts DEV_CURRENT_CHANGELOG.txt
+          git commit -m "dev.88: wire global starter center and mainland delivery path"
+          git pull --rebase origin main
+          git push origin HEAD:main
