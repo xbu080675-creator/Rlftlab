@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-11T20:09:06Z",
+  "updatedAt": "2026-09-11T20:12:34Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -40,7 +40,7 @@
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=1",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_nonpost_shells=15",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: browser_posts=1 cached_media=2",
-    "BLG电子竞技俱乐部: ocr_budget posts=1/1 images_per_post<=2 timeout=10s basis=LOW_CONFIDENCE",
+    "BLG电子竞技俱乐部: ocr_budget posts=1/1 images_per_post<=2 timeout=10s",
     "BLG电子竞技俱乐部: trace ocr lang=eng+chi_sim psm=11 size=1600x1600->1600x1600 words=7 text='fe pip ah CAC (durex 杜 斯'",
     "BLG电子竞技俱乐部: trace ocr lang=eng+chi_sim psm=11 size=1920x1080->1920x1080 words=19 text='Dees erL ee fk inal SL an + Ble aa yer NG + bgp = 4g 起 Ml pay'",
     "BLG电子竞技俱乐部: transport=browser:posts=1",

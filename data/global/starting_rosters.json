@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "updatedAt": "2026-09-11T20:09:06Z",
+  "updatedAt": "2026-09-11T20:12:34Z",
   "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
   "delivery": {
     "canonical": "GitHub",
@@ -47,7 +47,7 @@
   ],
   "collector": {
     "mode": "official-social-text-plus-image-ocr",
-    "lastRunAt": "2026-09-11T20:09:06Z",
+    "lastRunAt": "2026-09-11T20:12:34Z",
     "freshEvidence": 0,
     "sourceCount": 10
   },
@@ -60,7 +60,7 @@
       "platform": "OFFICIAL",
       "account": "BLG电子竞技俱乐部",
       "publishedAt": "",
-      "observedAt": "2026-09-11T20:09:06Z",
+      "observedAt": "2026-09-11T20:12:35Z",
       "sourceUrl": "https://weibo.com/5926660141/L5dQFtmAt",
       "textSnippet": "返回 BLG电子竞技俱乐部 345.6万粉丝 435关注 1019.1万转评赞 关注 客服 白银超话 电竞周榜No.57 LPL 战力值 76.05 BLG电子竞技俱乐部官方微博 微博 视频 相册 超话 全部微博 前方有点拥堵，请登录后使用",
       "imageCount": 2,
