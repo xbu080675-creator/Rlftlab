@@ -1,6 +1,8 @@
 package com.riftlab.app.data
 
 import android.graphics.BitmapFactory
+import com.riftlab.app.ai.RosterOcrResult
+import com.riftlab.app.ai.RosterOcrToken
 import com.riftlab.app.ai.RosterVisionPipeline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,6 +17,9 @@ data class RosterDeviceOcrTrace(
     val engines: List<String>,
     val lineCount: Int,
     val roleCandidates: Map<String, List<String>>,
+    val leftRoleCandidates: Map<String, List<String>> = emptyMap(),
+    val rightRoleCandidates: Map<String, List<String>> = emptyMap(),
+    val layoutMode: String = "TEXT_ONLY",
     val textPreview: String,
     val error: String = ""
 )
@@ -68,13 +73,18 @@ internal class RosterDeviceOcrResolver(
                         } finally {
                             bitmap.recycle()
                         }
+                        val flat = extractRoleCandidates(ocr.text)
+                        val spatial = extractSpatialRoleCandidates(ocr)
                         RosterDeviceOcrTrace(
                             announcementId = announcement.id,
                             account = announcement.account,
                             imageUrl = imageUrl,
                             engines = ocr.engines,
                             lineCount = ocr.lineCount,
-                            roleCandidates = extractRoleCandidates(ocr.text),
+                            roleCandidates = mergeCandidates(flat, spatial.left, spatial.right),
+                            leftRoleCandidates = spatial.left,
+                            rightRoleCandidates = spatial.right,
+                            layoutMode = spatial.mode,
                             textPreview = ocr.text.replace("\n", " | ").take(520)
                         )
                     }.getOrElse { error ->
@@ -95,28 +105,102 @@ internal class RosterDeviceOcrResolver(
         traces
     }
 
+    private data class SpatialCandidates(
+        val left: Map<String, List<String>>,
+        val right: Map<String, List<String>>,
+        val mode: String
+    )
+
+    private fun extractSpatialRoleCandidates(ocr: RosterOcrResult): SpatialCandidates {
+        if (ocr.tokens.isEmpty() || ocr.imageWidth <= 0 || ocr.imageHeight <= 0) {
+            return SpatialCandidates(emptyRoleMap(), emptyRoleMap(), "TEXT_ONLY")
+        }
+        val left = mutableRoleMap()
+        val right = mutableRoleMap()
+        val roleAnchors = ocr.tokens.mapNotNull { token -> roleFor(token.text)?.let { it to token } }
+        if (roleAnchors.isEmpty()) {
+            return SpatialCandidates(emptyRoleMap(), emptyRoleMap(), "GEOMETRY_NO_ROLE_ANCHOR")
+        }
+
+        // Latin OCR is the primary player-ID channel. Other scripts remain useful
+        // for role labels but must not create fake Latin-looking player names.
+        val playerTokens = ocr.tokens.filter { token ->
+            token.engine == "latin" && playerIdOrNull(token.text) != null && roleFor(token.text) == null
+        }
+        roleAnchors.forEach { (role, anchor) ->
+            val anchorHeight = (anchor.bottom - anchor.top).coerceAtLeast(12)
+            val yTolerance = maxOf(30f, anchorHeight * 2.8f)
+            val nearby = playerTokens
+                .filter { token -> kotlin.math.abs(token.centerY - anchor.centerY) <= yTolerance }
+                .sortedBy { kotlin.math.abs(it.centerY - anchor.centerY) }
+                .take(10)
+            nearby.forEach { token ->
+                val player = playerIdOrNull(token.text) ?: return@forEach
+                when {
+                    token.normalizedCenterX < 0.47f -> left.getValue(role).add(player)
+                    token.normalizedCenterX > 0.53f -> right.getValue(role).add(player)
+                    // A centered token is not safe to assign to either team.
+                }
+            }
+        }
+
+        val normalizedLeft = normalizeRoleMap(left)
+        val normalizedRight = normalizeRoleMap(right)
+        val leftCount = normalizedLeft.count { it.value.isNotEmpty() }
+        val rightCount = normalizedRight.count { it.value.isNotEmpty() }
+        val mode = when {
+            leftCount >= 3 && rightCount >= 3 -> "TWO_COLUMN"
+            leftCount >= 3 -> "LEFT_COLUMN"
+            rightCount >= 3 -> "RIGHT_COLUMN"
+            else -> "GEOMETRY_PARTIAL"
+        }
+        return SpatialCandidates(normalizedLeft, normalizedRight, mode)
+    }
+
     private fun extractRoleCandidates(text: String): Map<String, List<String>> {
-        val result = linkedMapOf(
-            "TOP" to mutableListOf<String>(),
-            "JUG" to mutableListOf(),
-            "MID" to mutableListOf(),
-            "BOT" to mutableListOf(),
-            "SUP" to mutableListOf()
-        )
+        val result = mutableRoleMap()
         text.lineSequence().forEach { rawLine ->
             val line = rawLine.trim()
             if (line.isBlank()) return@forEach
             val role = roleFor(line) ?: return@forEach
-            val candidates = Regex("[A-Za-z][A-Za-z0-9._-]{1,23}")
+            Regex("[A-Za-z][A-Za-z0-9._-]{1,23}")
                 .findAll(line)
-                .map { it.value }
+                .mapNotNull { playerIdOrNull(it.value) }
                 .filterNot { roleFor(it) != null }
-                .filterNot { token -> token.uppercase() in NOISE_TOKENS }
-                .distinctBy { it.lowercase() }
-                .toList()
-            result.getValue(role).addAll(candidates)
+                .forEach { result.getValue(role).add(it) }
         }
-        return result.mapValues { (_, values) -> values.distinctBy { it.lowercase() }.take(4) }
+        return normalizeRoleMap(result)
+    }
+
+    private fun mergeCandidates(vararg maps: Map<String, List<String>>): Map<String, List<String>> =
+        ROLES.associateWith { role ->
+            maps.flatMap { it[role].orEmpty() }
+                .distinctBy { it.lowercase() }
+                .take(6)
+        }
+
+    private fun mutableRoleMap(): LinkedHashMap<String, MutableList<String>> = linkedMapOf(
+        "TOP" to mutableListOf(),
+        "JUG" to mutableListOf(),
+        "MID" to mutableListOf(),
+        "BOT" to mutableListOf(),
+        "SUP" to mutableListOf()
+    )
+
+    private fun emptyRoleMap(): Map<String, List<String>> = ROLES.associateWith { emptyList() }
+
+    private fun normalizeRoleMap(map: Map<String, List<String>>): Map<String, List<String>> =
+        ROLES.associateWith { role ->
+            map[role].orEmpty().distinctBy { it.lowercase() }.take(4)
+        }
+
+    private fun playerIdOrNull(raw: String): String? {
+        val value = raw.trim().trim('(', ')', '[', ']', '{', '}', ':', ';', ',', '.')
+        if (!value.matches(Regex("[A-Za-z][A-Za-z0-9._-]{1,23}"))) return null
+        val upper = value.uppercase()
+        if (upper in NOISE_TOKENS) return null
+        if (value.length < 2) return null
+        return value
     }
 
     private fun roleFor(value: String): String? {
@@ -132,6 +216,7 @@ internal class RosterDeviceOcrResolver(
     }
 
     companion object {
+        private val ROLES = listOf("TOP", "JUG", "MID", "BOT", "SUP")
         private val ROLE_ALIASES = mapOf(
             "TOP" to listOf("TOP", "上单", "탑", "トップ"),
             "JUG" to listOf("JUG", "JGL", "JUNGLE", "打野", "정글", "ジャングル"),
@@ -141,7 +226,8 @@ internal class RosterDeviceOcrResolver(
         )
         private val NOISE_TOKENS = setOf(
             "TOP", "JUG", "JGL", "JUNGLE", "MID", "BOT", "ADC", "BOTTOM", "SUP", "SUPPORT",
-            "LPL", "LCK", "LEC", "LCS", "LCP", "LOL", "ROSTER", "STARTING", "LINEUP"
+            "LPL", "LCK", "LEC", "LCS", "LCP", "LOL", "ROSTER", "STARTING", "LINEUP",
+            "ESPORTS", "GAMING", "GAME", "MATCH", "VS", "BO3", "BO5"
         )
     }
 }
