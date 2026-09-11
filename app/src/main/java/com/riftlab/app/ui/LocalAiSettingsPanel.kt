@@ -3,7 +3,6 @@ package com.riftlab.app.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +13,7 @@ import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,13 +25,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.ai.LocalAiCore
 import com.riftlab.app.ai.LocalAiTier
+import com.riftlab.app.ai.LocalModelInstallStatus
+import com.riftlab.app.ai.LocalModelManager
 import com.riftlab.app.ai.LocalModelRecommendation
 
 @Composable
 internal fun LocalAiSettingsPanel() {
     val context = LocalContext.current
     val state by LocalAiCore.state.collectAsState()
+    val installState by LocalModelManager.state.collectAsState()
     val profile = state.profile
+    val selectedRecommendation = state.recommendations.firstOrNull { it.model.id == state.selectedModelId }
+    val selectedModel = selectedRecommendation?.model
+    val downloadMetadataReady = selectedModel?.downloadUrl?.isNotBlank() == true &&
+        selectedModel.sha256?.length == 64
 
     Column {
         Text(
@@ -132,8 +139,62 @@ internal fun LocalAiSettingsPanel() {
             }
         }
 
+        if (selectedModel != null) {
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(RiftPanelAlt.copy(alpha = 0.65f), CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+                    .border(1.dp, RiftLine.copy(alpha = 0.55f), CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+                    .padding(12.dp)
+            ) {
+                Text("MODEL MANAGER / 模型管理", color = RiftText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.height(5.dp))
+                val statusForSelected = installState.modelId == selectedModel.id
+                val statusText = if (statusForSelected) {
+                    when (installState.status) {
+                        LocalModelInstallStatus.IDLE -> "未安装"
+                        LocalModelInstallStatus.DOWNLOADING -> "下载中 ${progressLabel(installState.downloadedBytes, installState.totalBytes)}"
+                        LocalModelInstallStatus.VERIFYING -> "正在校验 SHA-256"
+                        LocalModelInstallStatus.VERIFIED -> "文件校验通过 · 等待本机基准测试"
+                        LocalModelInstallStatus.READY -> "基准测试通过 · 可启用"
+                        LocalModelInstallStatus.FAILED -> "安装失败"
+                    }
+                } else {
+                    "未安装"
+                }
+                Text(statusText, color = if (statusForSelected && installState.status != LocalModelInstallStatus.FAILED) RiftCyan else RiftMuted, fontSize = 11.sp)
+                if (statusForSelected && installState.message.isNotBlank()) {
+                    Text(installState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val busy = statusForSelected && (
+                        installState.status == LocalModelInstallStatus.DOWNLOADING ||
+                            installState.status == LocalModelInstallStatus.VERIFYING
+                        )
+                    Button(
+                        enabled = downloadMetadataReady && !busy && !(statusForSelected && installState.status == LocalModelInstallStatus.READY),
+                        onClick = { LocalModelManager.installSelected(context, selectedModel) }
+                    ) {
+                        Text(if (busy) "处理中" else if (statusForSelected && installState.status == LocalModelInstallStatus.VERIFIED) "重新校验下载" else "下载并校验")
+                    }
+                    if (statusForSelected && installState.localPath != null) {
+                        TextButton(onClick = { LocalModelManager.removeInstalled(context) }) { Text("删除模型") }
+                    }
+                }
+                if (!downloadMetadataReady) {
+                    Text(
+                        "当前目录还没有发布经过验证的 Android 运行时模型包与 SHA-256，因此下载按钮保持锁定；不会拿普通权重文件冒充可运行包。",
+                        color = RiftMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+        }
+
         Text(
-            "下载策略：只展示适合本机的模型；下载后必须经过 SHA 校验和本机短基准测试，达不到实时延迟/持续温控要求就降级到规则模式。模型资产与普通缓存分离，清理缓存不会删除模型。",
+            "下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，完成 SHA-256 校验后仍不会直接启用，必须再通过真实运行时加载、短延迟基准和热状态检查。失败或不达标立即回到规则模式。模型资产与普通缓存分离，清理缓存不会删除模型。",
             color = RiftMuted,
             fontSize = 11.sp,
             lineHeight = 17.sp
@@ -178,11 +239,6 @@ private fun ModelRecommendationCard(
         Spacer(Modifier.height(6.dp))
         Text(recommendation.reason, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
         Text("模型体积约 ${formatMiB(model.approximateBytes)}", color = RiftMuted, fontSize = 11.sp)
-        if (selected && !model.downloadUrl.isNullOrBlank()) {
-            Text("下载源已就绪", color = RiftCyan, fontSize = 11.sp)
-        } else if (selected) {
-            Text("等待模型目录提供兼容下载包；不会下载错误格式的权重。", color = RiftMuted, fontSize = 11.sp)
-        }
     }
 }
 
@@ -192,6 +248,12 @@ private fun LocalAiTier.label(): String = when (this) {
     LocalAiTier.TIER_2_SLM -> "TIER 2 · SMALL LOCAL MODEL"
     LocalAiTier.TIER_3_HIGH -> "TIER 3 · HIGH PERFORMANCE"
     LocalAiTier.TIER_4_EXPERIMENTAL -> "TIER 4 · EXPERIMENTAL"
+}
+
+private fun progressLabel(downloaded: Long, total: Long?): String {
+    if (total == null || total <= 0L) return formatMiB(downloaded)
+    val percent = (downloaded * 100L / total).coerceIn(0L, 100L)
+    return "$percent% · ${formatMiB(downloaded)} / ${formatMiB(total)}"
 }
 
 private fun formatGiB(bytes: Long): String = "%.1f GB".format(bytes.toDouble() / (1024.0 * 1024.0 * 1024.0))
