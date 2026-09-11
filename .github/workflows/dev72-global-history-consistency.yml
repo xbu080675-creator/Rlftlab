@@ -24,6 +24,7 @@ jobs:
           set -euo pipefail
           FILE=app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt
           ARCHIVE=app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt
+          OPGG=app/src/main/java/com/riftlab/app/data/OpggHistoricalFrameResolver.kt
           grep -q 'match.eventId.startsWith("provider:")' "$FILE"
           grep -q 'parsePlayers(blueMeta, blueFrame, blueId, "BLUE")' "$FILE"
           grep -q 'parsePlayers(redMeta, redFrame, redId, "RED")' "$FILE"
@@ -35,6 +36,7 @@ jobs:
           grep -q '.put("targetKey", snapshot.targetKey)' "$ARCHIVE"
           grep -q '.put("teamId", player.teamId)' "$ARCHIVE"
           grep -q '.put("side", player.side)' "$ARCHIVE"
+          grep -q 'targetKey = LiveMatchTargetRegistry.key(match)' "$OPGG"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -51,7 +53,8 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt \
-                  app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt
+                  app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt \
+                  app/src/main/java/com/riftlab/app/data/OpggHistoricalFrameResolver.kt
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'dev72: align global Riot history and archive identity'
+          git commit -m 'dev72: align global historical frame identity'
           git push
