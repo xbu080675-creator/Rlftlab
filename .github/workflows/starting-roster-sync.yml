@@ -10,6 +10,7 @@ on:
       - 'scripts/starting_roster_collector.py'
       - 'scripts/starting_roster_global_collector.py'
       - 'scripts/starting_roster_fast_global_collector.py'
+      - 'scripts/starting_roster_four_lane_collector.py'
       - 'scripts/starting_roster_browser_collector.py'
       - 'data/global/starting_roster_sources.json'
 
@@ -54,7 +55,7 @@ jobs:
       - name: Collect official starting rosters globally
         timeout-minutes: 5
         run: |
-          python3 scripts/starting_roster_fast_global_collector.py
+          python3 scripts/starting_roster_four_lane_collector.py
 
       - name: Commit normalized evidence safely
         run: |
