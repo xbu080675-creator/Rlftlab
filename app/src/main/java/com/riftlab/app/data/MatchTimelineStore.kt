@@ -116,12 +116,17 @@ object MatchTimelineStore {
             }
 
             val derived = if (previous == null) {
+                val nearOpening = snapshot.elapsedSeconds in 0..30
                 listOf(
                     MatchTimelineEvent(
-                        seconds = 0,
+                        seconds = if (nearOpening) 0 else snapshot.elapsedSeconds,
                         type = TimelineEventType.GAME_START,
-                        title = "GAME START",
-                        detail = "G${snapshot.game} · ${snapshot.blue} vs ${snapshot.red}",
+                        title = if (nearOpening) "GAME START" else "CAPTURE START",
+                        detail = if (nearOpening) {
+                            "G${snapshot.game} · ${snapshot.blue} vs ${snapshot.red} · RiftLab 在开局窗口接入"
+                        } else {
+                            "RiftLab 于 ${formatClock(snapshot.elapsedSeconds)} 接入本局实时流；这是本机采集起点，不代表比赛在此刻开始。"
+                        },
                         evidence = TimelineEventEvidence.LOCAL_CAPTURE,
                         source = snapshot.source
                     )
@@ -428,9 +433,11 @@ object MatchTimelineStore {
         player.participantId.takeIf { it > 0 }?.toString()
             ?: token(player.summonerName).ifBlank { player.role.uppercase() }
 
-    private fun timelineKey(snapshot: LiveSnapshot): String = snapshot.gameId.trim().ifBlank {
-        "${token(snapshot.blue)}_${token(snapshot.red)}_G${snapshot.game}"
-    }
+    private fun timelineKey(snapshot: LiveSnapshot): String =
+        snapshot.targetKey.trim().takeIf { it.isNotBlank() }?.let { "$it:G${snapshot.game}" }
+            ?: snapshot.gameId.trim().ifBlank {
+                "${token(snapshot.blue)}_${token(snapshot.red)}_G${snapshot.game}"
+            }
 
     private fun token(value: String): String = value.uppercase().replace(Regex("[^A-Z0-9]+"), "")
 
@@ -564,6 +571,7 @@ object MatchTimelineStore {
         .put("latestEvent", snapshot.latestEvent)
         .put("source", snapshot.source)
         .put("gameId", snapshot.gameId)
+        .put("targetKey", snapshot.targetKey)
         .put("bluePlayers", playersToJson(snapshot.bluePlayers))
         .put("redPlayers", playersToJson(snapshot.redPlayers))
 
@@ -586,7 +594,8 @@ object MatchTimelineStore {
         bluePlayers = playersFromJson(root.optJSONArray("bluePlayers") ?: JSONArray()),
         redPlayers = playersFromJson(root.optJSONArray("redPlayers") ?: JSONArray()),
         source = root.optString("source"),
-        gameId = root.optString("gameId")
+        gameId = root.optString("gameId"),
+        targetKey = root.optString("targetKey")
     )
 
     private fun playersToJson(players: List<LivePlayerSnapshot>): JSONArray = JSONArray().apply {
@@ -603,6 +612,8 @@ object MatchTimelineStore {
                     .put("assists", player.assists)
                     .put("creepScore", player.creepScore)
                     .put("gold", player.gold)
+                    .put("teamId", player.teamId)
+                    .put("side", player.side)
             )
         }
     }
@@ -621,7 +632,9 @@ object MatchTimelineStore {
                     deaths = player.optInt("deaths"),
                     assists = player.optInt("assists"),
                     creepScore = player.optInt("creepScore"),
-                    gold = player.optInt("gold")
+                    gold = player.optInt("gold"),
+                    teamId = player.optString("teamId"),
+                    side = player.optString("side")
                 )
             )
         }

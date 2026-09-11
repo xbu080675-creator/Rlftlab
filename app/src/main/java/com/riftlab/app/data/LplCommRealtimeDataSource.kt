@@ -395,7 +395,9 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                 deaths = intAnyDeep(p, "deaths", "death"),
                 assists = intAnyDeep(p, "assists", "assist"),
                 creepScore = intAnyDeep(p, "minionKilled", "creepScore", "cs", "creepsKilled"),
-                gold = intAnyDeep(p, "golds", "gold", "totalGold")
+                gold = intAnyDeep(p, "golds", "gold", "totalGold"),
+                teamId = intAny(p, "teamId", "teamID", "team_id").takeIf { it > 0 }?.toString().orEmpty(),
+                side = normalizeSide(stringAny(p, "side", "camp", "teamSide", "color"))
             )
         }
     }
@@ -423,11 +425,8 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
         }
     }
 
-    // Player-team metadata is not part of LivePlayerSnapshot yet. These helpers intentionally
-    // return neutral values; once a player model carries team/side, the router can split exactly.
-    // Until then, playerInfo is optional and team-level realtime is still authoritative.
-    private fun playerTeamId(player: LivePlayerSnapshot): Int = 0
-    private fun playerSide(player: LivePlayerSnapshot): String = ""
+    private fun playerTeamId(player: LivePlayerSnapshot): Int = player.teamId.toIntOrNull() ?: 0
+    private fun playerSide(player: LivePlayerSnapshot): String = player.side
 
     private fun detectEvent(previous: LiveSnapshot?, blue: TeamRealtime, red: TeamRealtime): String {
         if (previous == null) return "LPL Comm Realtime 已接入当前小局"
