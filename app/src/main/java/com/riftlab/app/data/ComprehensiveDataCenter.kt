@@ -20,6 +20,7 @@ import java.time.LocalDate
  * dev.79 joins verified completed-Series depth and persisted timeline events into the same graph.
  */
 object ComprehensiveDataCenter {
+    // Keep graph assembly and history joins off Compose's main thread; coverage can become large.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
 
