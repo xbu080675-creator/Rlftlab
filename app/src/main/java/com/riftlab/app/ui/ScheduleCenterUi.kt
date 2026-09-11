@@ -1502,6 +1502,9 @@ private class ScheduleMatchIndex(matches: List<ScheduledEsportsMatch>) {
     private val noLeagueIdBySlug = indexed
         .filter { it.match.leagueId.isBlank() && it.match.leagueSlug.isNotBlank() }
         .groupBy { normalizeLeagueToken(it.match.leagueSlug) }
+    private val noLeagueIdByName = indexed
+        .filter { it.match.leagueId.isBlank() && it.match.league.isNotBlank() }
+        .groupBy { normalizeLeagueToken(it.match.league) }
     private val noLeagueIdNoSlugByName = indexed
         .filter { it.match.leagueId.isBlank() && it.match.leagueSlug.isBlank() && it.match.league.isNotBlank() }
         .groupBy { normalizeLeagueToken(it.match.league) }
@@ -1516,8 +1519,14 @@ private class ScheduleMatchIndex(matches: List<ScheduledEsportsMatch>) {
         val candidates = when {
             leagueId.isNotBlank() -> buildList {
                 addAll(byLeagueId[leagueId].orEmpty())
-                if (leagueSlug.isNotBlank()) addAll(noLeagueIdBySlug[leagueSlug].orEmpty())
-                if (leagueName.isNotBlank()) addAll(noLeagueIdNoSlugByName[leagueName].orEmpty())
+                if (leagueSlug.isNotBlank()) {
+                    addAll(noLeagueIdBySlug[leagueSlug].orEmpty())
+                    if (leagueName.isNotBlank()) addAll(noLeagueIdNoSlugByName[leagueName].orEmpty())
+                } else if (leagueName.isNotBlank()) {
+                    // Preserve sameLeague(): if the tournament has no slug, a match without a leagueId
+                    // is allowed to fall back to the league name even when the match itself has a slug.
+                    addAll(noLeagueIdByName[leagueName].orEmpty())
+                }
             }
             leagueSlug.isNotBlank() -> buildList {
                 addAll(byLeagueSlug[leagueSlug].orEmpty())
