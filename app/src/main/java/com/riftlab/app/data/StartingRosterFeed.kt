@@ -325,11 +325,34 @@ internal class StartingRosterFeed(
     private fun lineupKey(evidence: StartingRosterEvidence): String =
         evidence.starters.joinToString("|") { "${it.role}:${token(it.id)}" }
 
-    private fun aliases(team: EsportsTeamRef): Set<String> =
-        listOf(team.code, team.name, team.slug, team.id).map(::token).filter(String::isNotBlank).toSet()
+    private fun aliases(team: EsportsTeamRef): Set<String> {
+        val raw = listOf(team.code, team.name, team.slug, team.id).filter(String::isNotBlank)
+        val base = raw.map(::token).filter(String::isNotBlank).toMutableSet()
+        raw.mapNotNull(::initialism).filter { it.length in 2..5 }.forEach(base::add)
+        val expanded = base.toMutableSet()
+        TEAM_ALIAS_GROUPS.forEach { group ->
+            if (base.any(group::contains)) expanded.addAll(group)
+        }
+        return expanded
+    }
+
+    private fun initialism(value: String): String? {
+        val cleaned = value
+            .replace(Regex("['’]s\b", RegexOption.IGNORE_CASE), "")
+            .trim()
+        val words = cleaned.split(Regex("[^\p{L}\p{N}]+"))
+            .filter(String::isNotBlank)
+        if (words.size < 2) return null
+        return token(words.joinToString("") { it.take(1) })
+    }
+
+    private val TEAM_ALIAS_GROUPS = listOf(
+        setOf("IG", "INVICTUSGAMING"),
+        setOf("AL", "ANYONESLEGEND", "ANYONELEGEND")
+    )
 
     private fun token(value: String): String =
-        value.uppercase().replace(Regex("[^A-Z0-9\\p{L}\\p{N}]+"), "")
+        value.uppercase().replace(Regex("[^A-Z0-9\p{L}\p{N}]+"), "")
 
     private fun sameLeague(rowLeague: String, target: ScheduledEsportsMatch): Boolean {
         val row = token(rowLeague)

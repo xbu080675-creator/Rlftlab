@@ -292,11 +292,20 @@ private fun PreScreen() {
                     Spacer(Modifier.height(4.dp))
                 }
                 Text(
-                    if (socialCount > 0) officialRosterState.message else data.rosterNote,
+                    officialRosterState.message,
                     color = RiftMuted,
                     fontSize = 11.sp,
                     lineHeight = 17.sp
                 )
+                if (officialRosterState.diagnostics.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "ROSTER FEED · ${officialRosterState.diagnostics}",
+                        color = RiftMuted,
+                        fontSize = 10.sp,
+                        lineHeight = 15.sp
+                    )
+                }
             }
         }
 
