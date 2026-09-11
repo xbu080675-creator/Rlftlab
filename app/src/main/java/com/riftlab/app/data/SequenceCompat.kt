@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+// dev.80 release gate: keep final compile diagnostics on the realtime-isolation head.
 /**
  * Kotlin Sequence does not expose takeLast on the toolchain used by RiftLab.
  * Keep the call-site lazy until the final bounded tail is requested.
