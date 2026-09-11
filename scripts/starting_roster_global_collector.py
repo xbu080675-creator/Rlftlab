@@ -131,6 +131,54 @@ def multilingual_ocr(img):
 base.ocr_image = multilingual_ocr
 
 
+def robust_download_image(url):
+    """Read browser-cached media first; otherwise retry protected CDN URLs with provenance-safe headers."""
+    value = str(url or "")
+    local = Path(value)
+    if value and local.exists() and local.is_file():
+        return base.Image.open(local).convert("RGB")
+
+    candidates = [value]
+    if "sinaimg" in value:
+        # Weibo frequently emits thumbnail variants that reject anonymous hotlinks.
+        candidates.extend([
+            re.sub(r"/(?:thumb\d+|mw\d+|orj\d+|bmiddle|small|square)/", "/large/", value),
+            value.replace("http://", "https://", 1),
+        ])
+    if "pbs.twimg.com/media/" in value and "name=" not in value:
+        sep = "&" if "?" in value else "?"
+        candidates.append(value + sep + "name=orig")
+
+    errors = []
+    for candidate in dict.fromkeys(c for c in candidates if c.startswith("http")):
+        host = candidate.lower()
+        if "sinaimg" in host:
+            referer = "https://weibo.com/"
+        elif "twimg.com" in host:
+            referer = "https://x.com/"
+        elif "cdninstagram.com" in host or "fbcdn.net" in host:
+            referer = "https://www.instagram.com/"
+        else:
+            referer = candidate
+        try:
+            response = SESSION.get(
+                candidate,
+                timeout=25,
+                headers={
+                    "Referer": referer,
+                    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+                },
+            )
+            response.raise_for_status()
+            return base.Image.open(base.io.BytesIO(response.content)).convert("RGB")
+        except Exception as exc:
+            errors.append(f"{type(exc).__name__}:{getattr(getattr(exc, 'response', None), 'status_code', '')}")
+    raise RuntimeError("media_download_failed[" + "|".join(errors[-4:]) + "]")
+
+
+base.download_image = robust_download_image
+
+
 def global_infer_date(text, published, timezone_name):
     match = re.search(r"(?<!\d)(\d{1,2})\s*[月/.-]\s*(\d{1,2})\s*日?", text or "")
     source_time = published or base.utc_now()
@@ -411,10 +459,27 @@ def _process_posts(source, cfg, posts, transport_label):
         base.fetch_weibo_posts = _robust_weibo_fetch
 
 
+def _browser_source_diagnostics(source):
+    if not BROWSER_SPOOL.exists():
+        return []
+    try:
+        payload = json.loads(BROWSER_SPOOL.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    account = str(source.get("account") or "")
+    return [
+        f"{account}: browser_stage={row}"
+        for row in (payload.get("diagnostics") or [])
+        if account and str(row).startswith(account + ":")
+    ]
+
+
 def process_source(source, cfg):
+    browser_diag = _browser_source_diagnostics(source)
     browser_posts = _browser_posts(source)
     if browser_posts:
-        return _process_posts(source, cfg, browser_posts, "browser")
+        evidence, diagnostics = _process_posts(source, cfg, browser_posts, "browser")
+        return evidence, browser_diag + diagnostics
 
     kind = source.get("kind")
     if kind == "WEIBO_MOBILE":
@@ -430,9 +495,10 @@ def process_source(source, cfg):
         else:
             return [], [f"{source.get('account')}: unsupported_kind {kind}"]
     except Exception as exc:
-        return [], [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]
+        return [], browser_diag + [f"{source.get('account')}: {kind} {type(exc).__name__}: {exc}"]
 
-    return _process_posts(source, cfg, posts, kind.lower())
+    evidence, diagnostics = _process_posts(source, cfg, posts, kind.lower())
+    return evidence, browser_diag + diagnostics
 
 
 base.process_source = process_source
