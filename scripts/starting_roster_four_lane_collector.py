@@ -65,17 +65,18 @@ def add_announcements() -> None:
                 continue
             text = str(post.get("text") or "").strip()
             images = list(post.get("images") or [])
+            original_images = [str(x) for x in (post.get("originalImages") or []) if str(x).startswith("http")]
             score = 0
             lowered = text.lower()
             if any(k in lowered for k in keywords):
                 score += 100
-            if images:
+            if images or original_images:
                 score += 20
             if published:
                 score += 5
-            ranked.append((score, -index, post, text, images, published))
+            ranked.append((score, -index, post, text, images, original_images, published))
         ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
-        for _, _, post, text, images, published in ranked[:3]:
+        for _, _, post, text, images, original_images, published in ranked[:3]:
             url = str(post.get("url") or "")
             if not url:
                 continue
@@ -90,7 +91,8 @@ def add_announcements() -> None:
                 "observedAt": now_iso(),
                 "sourceUrl": url,
                 "textSnippet": text[:360],
-                "imageCount": len(images),
+                "imageCount": len(original_images) or len(images),
+                "imageUrls": list(dict.fromkeys(original_images))[:4],
                 "parseStatus": "PARSED" if url in evidence_urls else "UNPARSED",
             })
 
