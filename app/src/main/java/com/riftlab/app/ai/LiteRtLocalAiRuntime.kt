@@ -17,7 +17,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.Closeable
-import java.io.File
 
 /**
  * Real on-device LiteRT-LM runner. Rules still own facts; this backend may only classify the scene,
@@ -29,11 +28,19 @@ object LiteRtLocalAiRuntime {
         val modelId: String? = null,
         val backendLabel: String = "CPU",
         val loadMs: Long? = null,
-        val benchmarkMs: Long? = null,
+        val warmupMs: Long? = null,
+        val sampleMs: List<Long> = emptyList(),
+        val medianMs: Long? = null,
+        val p90Ms: Long? = null,
+        val thermalBefore: Int? = null,
+        val thermalAfter: Int? = null,
         val message: String = "等待已验证模型"
     )
 
-    private const val MAX_BENCHMARK_MS = 2500L
+    // Readiness is based on warmed steady-state latency, never the first cold generation.
+    private const val MAX_MEDIAN_MS = 2500L
+    private const val MAX_P90_MS = 3500L
+    private const val STEADY_SAMPLES = 3
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutableState = MutableStateFlow(RuntimeState())
     val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
@@ -51,13 +58,19 @@ object LiteRtLocalAiRuntime {
 
         val app = context.applicationContext
         scope.launch {
-            mutableState.value = RuntimeState(busy = true, modelId = descriptor.id, message = "正在加载真实 LiteRT-LM 模型…")
+            val thermalBefore = thermalStatus(app)
+            mutableState.value = RuntimeState(
+                busy = true,
+                modelId = descriptor.id,
+                thermalBefore = thermalBefore,
+                message = "正在加载真实 LiteRT-LM 模型…"
+            )
             runCatching {
                 ensureThermalAcceptable(app)
                 active?.close()
                 active = null
 
-                val started = System.currentTimeMillis()
+                val loadStarted = System.currentTimeMillis()
                 val engine = withContext(Dispatchers.IO) {
                     Engine(
                         EngineConfig(
@@ -67,47 +80,60 @@ object LiteRtLocalAiRuntime {
                         )
                     ).also { it.initialize() }
                 }
-                val loadMs = System.currentTimeMillis() - started
+                val loadMs = System.currentTimeMillis() - loadStarted
                 val backend = LiteRtTrendBackend(descriptor.id, engine)
+                val benchFrame = benchmarkFrame()
 
-                // The benchmark is deliberately a real generation, not a file-load stopwatch.
-                val benchFrame = TrendFrame(
-                    gameId = "riftlab-benchmark",
-                    gameTimeSeconds = 720,
-                    facts = listOf(
-                        TrendFact("objective_spawn_soon", TrendSide.BLUE, textValue = "dragon 38s", observedAtEpochMs = System.currentTimeMillis()),
-                        TrendFact("river_first_move", TrendSide.BLUE, actor = "SUP", observedAtEpochMs = System.currentTimeMillis()),
-                        TrendFact("jungle_exposed", TrendSide.RED, actor = "JUG", observedAtEpochMs = System.currentTimeMillis()),
-                        TrendFact("flash_unavailable", TrendSide.RED, actor = "MID", observedAtEpochMs = System.currentTimeMillis())
-                    )
-                )
-                val benchmarkStarted = System.currentTimeMillis()
+                // Cold load and first generation are measured separately. The first generation is a
+                // warm-up only and can never fail the device by itself.
+                val warmupStarted = System.currentTimeMillis()
                 backend.infer(benchFrame)
-                val benchmarkMs = System.currentTimeMillis() - benchmarkStarted
+                val warmupMs = System.currentTimeMillis() - warmupStarted
                 ensureThermalAcceptable(app)
-                if (benchmarkMs > MAX_BENCHMARK_MS) {
+
+                val samples = mutableListOf<Long>()
+                repeat(STEADY_SAMPLES) {
+                    val started = System.currentTimeMillis()
+                    backend.infer(benchFrame)
+                    samples += System.currentTimeMillis() - started
+                    ensureThermalAcceptable(app)
+                }
+                val sorted = samples.sorted()
+                val medianMs = sorted[sorted.size / 2]
+                val p90Ms = sorted[((sorted.size * 9 + 9) / 10 - 1).coerceIn(0, sorted.lastIndex)]
+                val thermalAfter = thermalStatus(app)
+
+                if (medianMs > MAX_MEDIAN_MS || p90Ms > MAX_P90_MS) {
                     backend.close()
-                    error("真实短推理 ${benchmarkMs}ms，超过当前实时门槛 ${MAX_BENCHMARK_MS}ms")
+                    error(
+                        "稳态推理未过门槛 · median ${medianMs}ms / P90 ${p90Ms}ms · " +
+                            "门槛 ${MAX_MEDIAN_MS}/${MAX_P90_MS}ms；冷启动 ${loadMs}ms、warm-up ${warmupMs}ms 不参与判定"
+                    )
                 }
 
                 active = backend
-                LocalModelManager.markReady(descriptor.id, path, benchmarkMs)
+                LocalModelManager.markReady(descriptor.id, path, medianMs)
                 LocalAiCore.installBackend(descriptor.id, backend)
                 mutableState.value = RuntimeState(
                     busy = false,
                     modelId = descriptor.id,
                     backendLabel = "CPU",
                     loadMs = loadMs,
-                    benchmarkMs = benchmarkMs,
-                    message = "真实模型加载/推理通过 · ${benchmarkMs}ms"
+                    warmupMs = warmupMs,
+                    sampleMs = samples,
+                    medianMs = medianMs,
+                    p90Ms = p90Ms,
+                    thermalBefore = thermalBefore,
+                    thermalAfter = thermalAfter,
+                    message = "稳态基准通过 · median ${medianMs}ms · P90 ${p90Ms}ms"
                 )
             }.onFailure { error ->
                 active?.close()
                 active = null
                 LocalAiCore.disableModel()
-                mutableState.value = RuntimeState(
+                mutableState.value = mutableState.value.copy(
                     busy = false,
-                    modelId = descriptor.id,
+                    thermalAfter = thermalStatus(app),
                     message = "基准测试未通过 · ${error.message ?: error::class.java.simpleName}"
                 )
             }
@@ -120,9 +146,24 @@ object LiteRtLocalAiRuntime {
         LocalAiCore.disableModel()
     }
 
+    private fun benchmarkFrame(): TrendFrame = TrendFrame(
+        gameId = "riftlab-benchmark",
+        gameTimeSeconds = 720,
+        facts = listOf(
+            TrendFact("objective_spawn_soon", TrendSide.BLUE, textValue = "dragon 38s", observedAtEpochMs = System.currentTimeMillis()),
+            TrendFact("river_first_move", TrendSide.BLUE, actor = "SUP", observedAtEpochMs = System.currentTimeMillis()),
+            TrendFact("jungle_exposed", TrendSide.RED, actor = "JUG", observedAtEpochMs = System.currentTimeMillis()),
+            TrendFact("flash_unavailable", TrendSide.RED, actor = "MID", observedAtEpochMs = System.currentTimeMillis())
+        )
+    )
+
+    private fun thermalStatus(context: Context): Int? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.currentThermalStatus
+    }
+
     private fun ensureThermalAcceptable(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val thermal = (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.currentThermalStatus ?: return
+        val thermal = thermalStatus(context) ?: return
         if (thermal >= PowerManager.THERMAL_STATUS_SEVERE) error("设备当前热状态过高，保持规则模式")
     }
 }
