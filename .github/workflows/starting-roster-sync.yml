@@ -1,0 +1,45 @@
+name: Starting Roster Sync
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: starting-roster-sync
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install OCR runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng
+          python3 -m pip install --disable-pip-version-check --quiet requests beautifulsoup4 pillow pytesseract
+
+      - name: Collect official starting rosters
+        run: |
+          python3 scripts/starting_roster_collector.py
+
+      - name: Commit normalized evidence
+        run: |
+          if git diff --quiet -- data/global/starting_rosters.json data/global/starting_roster_collector_status.json; then
+            echo 'No roster data change.'
+            exit 0
+          fi
+          git config user.name 'riftlab-roster-bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/global/starting_rosters.json data/global/starting_roster_collector_status.json
+          git commit -m 'data: sync official starting rosters'
+          git pull --rebase origin main
+          git push origin HEAD:main
