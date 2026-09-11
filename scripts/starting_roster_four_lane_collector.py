@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Run bounded roster OCR and preserve trustworthy official announcement metadata.
 
-Candidate selection is matchup-first: prefer posts that name both sides of the
-scheduled matchup and also contain lineup intent. Official source validation is
-still mandatory; search semantics only rank candidates and never create facts.
+Candidate selection is matchup-first. League publishing policies decide which
+lineup words and OCR scripts are plausible, while source provenance remains the
+final trust boundary. Search semantics only rank candidates and never create facts.
 """
 from __future__ import annotations
 
@@ -49,6 +49,11 @@ def parse_time(value):
         return None
 
 
+def policy_for(cfg: dict, source: dict) -> dict:
+    league = str(source.get("league") or "").upper()
+    return dict(((cfg.get("leaguePolicies") or {}).get(league)) or {})
+
+
 def alias_hit(text: str, alias: str) -> bool:
     alias = str(alias or "").strip()
     if not alias:
@@ -64,12 +69,15 @@ def detect_team_codes(text: str, aliases: dict) -> list[str]:
         candidates = [code, *(names or [])]
         if any(alias_hit(text, candidate) for candidate in candidates):
             hits.append(str(code).upper())
-    return hits
+    return list(dict.fromkeys(hits))
 
 
 def candidate_score(source: dict, text: str, has_media: bool, published, cfg: dict):
+    policy = policy_for(cfg, source)
+    adapter = str(policy.get("adapter") or "MATCH_TARGET_LINEUP")
     lowered = text.lower()
-    keywords = [str(x).lower() for x in (cfg.get("keywords") or []) if str(x).strip()]
+    configured_keywords = policy.get("lineupKeywords") or cfg.get("keywords") or []
+    keywords = [str(x).lower() for x in configured_keywords if str(x).strip()]
     keyword_hit = any(keyword in lowered for keyword in keywords)
     team_hits = detect_team_codes(text, cfg.get("teamAliases") or {})
     own_team = str(source.get("team") or "").upper()
@@ -83,35 +91,26 @@ def candidate_score(source: dict, text: str, has_media: bool, published, cfg: di
         matchup_hit = len(set(team_hits)) >= 2
         matchup_teams = list(dict.fromkeys(team_hits))[:3]
 
-    score = 0
-    if keyword_hit and matchup_hit:
-        score += 500
-    elif matchup_hit:
-        score += 260
-    elif keyword_hit:
-        score += 140
-    if has_media:
-        score += 30
-    if published:
-        score += 10
-
     shell_hits = sum(1 for marker in SHELL_MARKERS if marker in text)
     if shell_hits >= 2:
         return None
 
-    # Primary path mirrors the human search query: Team A + Team B + lineup.
-    # Fallbacks stay available for image-only club posts, but rank far below it.
     if keyword_hit and matchup_hit:
-        basis = "MATCHUP_PLUS_LINEUP"
+        score, basis = 700, "MATCH_TARGET_PLUS_LINEUP"
     elif matchup_hit and has_media:
-        basis = "MATCHUP_MEDIA"
+        score, basis = 360, "MATCH_TARGET_MEDIA"
     elif keyword_hit and has_media:
-        basis = "LINEUP_MEDIA_FALLBACK"
-    elif is_team_source and has_media:
-        basis = "TEAM_IMAGE_ONLY_FALLBACK"
-        score = min(score, 35)
+        score, basis = 220, "LINEUP_MEDIA_FALLBACK"
+    elif is_team_source and has_media and policy.get("allowImageOnlyTeamFallback", True):
+        score, basis = 35, "TEAM_IMAGE_ONLY_FALLBACK"
     else:
         return None
+
+    if published:
+        score += 10
+    if adapter == "LPL_DAILY_ROSTER" and "首发名单" in text and matchup_hit:
+        score += 500
+        basis = "LEAGUE_TEMPLATE_MATCHUP"
 
     return {
         "score": score,
@@ -119,6 +118,7 @@ def candidate_score(source: dict, text: str, has_media: bool, published, cfg: di
         "matchupHit": matchup_hit,
         "teams": matchup_teams,
         "basis": basis,
+        "adapter": adapter,
     }
 
 
@@ -152,8 +152,8 @@ def add_announcements() -> None:
             ranked.append((meta["score"], -index, post, text, images, original_images, published, meta))
 
         ranked.sort(reverse=True, key=lambda item: (item[0], item[1]))
-        primary = [item for item in ranked if item[-1]["basis"] == "MATCHUP_PLUS_LINEUP"]
-        chosen = (primary or ranked)[:3]
+        strong = [item for item in ranked if item[-1]["score"] >= 700]
+        chosen = (strong or ranked)[:3]
         for _, _, post, text, images, original_images, published, meta in chosen:
             url = str(post.get("url") or "")
             if not url:
@@ -175,6 +175,7 @@ def add_announcements() -> None:
                 "candidateBasis": meta["basis"],
                 "candidateTeams": meta["teams"],
                 "candidateScore": meta["score"],
+                "adapter": meta["adapter"],
             })
 
     deduped = {}
