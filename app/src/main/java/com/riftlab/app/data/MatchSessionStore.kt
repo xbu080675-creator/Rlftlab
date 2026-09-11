@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
 
 object MatchSessionStore {
     private val coreRoles = listOf("TOP", "JUG", "MID", "BOT", "SUP")
-    @Volatile private var subscribedLeagueKeys: Set<String> = setOf("LPL")
+    @Volatile private var subscribedLeagueKeys: Set<String> = setOf("GLOBAL")
 
     private val emptyPreMatch = PreMatchInfo(
         league = "LoL Esports",
@@ -164,7 +164,7 @@ object MatchSessionStore {
     }
 
     fun updateLeagueSubscriptions(keys: Set<String>) {
-        val normalized = keys.map(::subscriptionLeagueToken).filter { it.isNotBlank() }.toSet().ifEmpty { setOf("LPL") }
+        val normalized = keys.map(::subscriptionLeagueToken).filter { it.isNotBlank() }.toSet().ifEmpty { setOf("GLOBAL") }
         if (normalized == subscribedLeagueKeys) return
         subscribedLeagueKeys = normalized
         scope.launch { applySubscribedHomepageTarget() }
@@ -508,6 +508,7 @@ object MatchSessionStore {
         }
 
     private fun matchesHomepageSubscription(match: ScheduledEsportsMatch): Boolean {
+        if ("GLOBAL" in subscribedLeagueKeys) return true
         val key = canonicalLeagueKey(match)
         return key.isNotBlank() && key in subscribedLeagueKeys
     }

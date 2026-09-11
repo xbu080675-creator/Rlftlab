@@ -35,6 +35,7 @@ internal data class LeagueSubscriptionOption(
 )
 
 internal val LeagueSubscriptionOptions = listOf(
+    LeagueSubscriptionOption("GLOBAL", "全球赛事"),
     LeagueSubscriptionOption("LPL", "LPL"),
     LeagueSubscriptionOption("LCK", "LCK"),
     LeagueSubscriptionOption("LEC", "LEC"),
@@ -58,7 +59,7 @@ internal fun leagueSubscriptionKey(value: String): String =
 internal object LeagueSubscriptionStore {
     private const val PREFS = "riftlab_league_subscriptions"
     private const val KEY = "subscribed"
-    private val _subscribed = MutableStateFlow(setOf("LPL"))
+    private val _subscribed = MutableStateFlow(setOf("GLOBAL"))
     val subscribed: StateFlow<Set<String>> = _subscribed.asStateFlow()
     private var loaded = false
 
@@ -71,7 +72,7 @@ internal object LeagueSubscriptionStore {
             ?.filter { it.isNotBlank() && it in allowed }
             ?.toSet()
             .orEmpty()
-        _subscribed.value = stored.ifEmpty { setOf("LPL") }
+        _subscribed.value = stored.ifEmpty { setOf("GLOBAL") }
         loaded = true
     }
 
@@ -102,7 +103,7 @@ internal fun LeagueSubscriptionBar() {
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth()) {
-            Text("赛区订阅", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("赛事订阅", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 8.sp)
         }
