@@ -14,6 +14,11 @@ collector = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
 spec.loader.exec_module(collector)
 
+query_spec = importlib.util.spec_from_file_location("rift_match_query", ROOT / "starting_roster_match_query.py")
+match_query = importlib.util.module_from_spec(query_spec)
+assert query_spec and query_spec.loader
+query_spec.loader.exec_module(match_query)
+
 cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
 policies = cfg.get("leaguePolicies") or {}
 required = {"LPL", "LCK", "LEC", "LCS", "LCP"}
@@ -64,6 +69,18 @@ for source, text, expected_basis, expected_teams in cases:
     assert meta is not None, f"{source['league']}: candidate unexpectedly rejected"
     assert meta["basis"] == expected_basis, (source["league"], meta)
     assert expected_teams.issubset(set(meta["teams"])), (source["league"], meta)
+
+# Multi-match day search must start with date + both teams + lineup intent.
+lpl_queries = match_query.build_match_search_queries("2026-09-12", "AL", "IG", "LPL")
+assert lpl_queries, "LPL search query builder returned nothing"
+assert "9月12日" in lpl_queries[0]
+assert "AL" in lpl_queries[0] and "IG" in lpl_queries[0]
+assert "首发" in lpl_queries[0]
+
+lck_queries = match_query.build_match_search_queries("2026-09-12", "T1", "HLE", "LCK")
+assert "2026-09-12" in lck_queries[0]
+assert "T1" in lck_queries[0] and "HLE" in lck_queries[0]
+assert "lineup" in lck_queries[0].lower() or "선발" in lck_queries[0]
 
 # Team-owned image-only posts remain fallback candidates, never primary facts.
 image_only = collector.candidate_score(
