@@ -103,9 +103,9 @@ internal fun LeagueSubscriptionBar() {
 
     Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp)) {
         Row(Modifier.fillMaxWidth()) {
-            Text("赛事订阅", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("赛事订阅", color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 8.sp)
+            Text("常驻首页 · 至少保留 1 个", color = RiftMuted, fontSize = 10.sp)
         }
         Spacer(Modifier.height(6.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -115,7 +115,7 @@ internal fun LeagueSubscriptionBar() {
                 Text(
                     if (selected) "★ ${option.label}" else option.label,
                     color = if (selected) RiftCyan else RiftMuted,
-                    fontSize = 9.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                     modifier = Modifier
                         .clickable { LeagueSubscriptionStore.toggle(context, option.key) }

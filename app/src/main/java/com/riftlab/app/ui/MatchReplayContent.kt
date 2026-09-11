@@ -183,7 +183,7 @@ internal fun MatchReplayContent() {
                 Text(
                     "EVENT TIMELINE / 点击事件直接跳转录像",
                     color = RiftMuted,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 9.dp)
                 )
@@ -200,7 +200,7 @@ internal fun MatchReplayContent() {
                         Text(
                             "录像仍可播放，但上游没有公开章节且本机没有连续实时事件。RiftLab 不会根据终局比分虚构时间轴。",
                             color = RiftMuted,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             modifier = Modifier.padding(top = 5.dp)
                         )
                     }
@@ -228,10 +228,10 @@ private fun ReplayHeader(game: Int, sourceText: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text("MATCH REPLAY", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("MATCH REPLAY", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             Text("G$game · 官方录像 + 时间轴", color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        Text(sourceText, color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.End)
+        Text(sourceText, color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.End)
     }
 }
 
@@ -272,12 +272,12 @@ private fun ReplaySourceCard(vod: BilibiliMatchVod) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(vod.title, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text("官方来源 · ${vod.ownerName} · ${vod.bvid}", color = RiftMuted, fontSize = 8.sp)
+            Text("官方来源 · ${vod.ownerName} · ${vod.bvid}", color = RiftMuted, fontSize = 10.sp)
         }
         Text(
             "原稿 ›",
             color = RiftCyan,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.clickable {
                 runCatching {
@@ -325,22 +325,22 @@ private fun ReplayAnchorRow(anchor: ReplayAnchor, onSeek: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
             if (anchor.team.isNotBlank()) {
-                Text(anchor.team, color = RiftMuted, fontSize = 9.sp, modifier = Modifier.padding(top = 3.dp))
+                Text(anchor.team, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
             }
             if (anchor.detail.isNotBlank()) {
-                Text(anchor.detail, color = RiftMuted, fontSize = 8.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 2)
+                Text(anchor.detail, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp), maxLines = 2)
             }
             if (anchor.source.isNotBlank()) {
                 Text(
                     "SOURCE · ${anchor.source}",
                     color = RiftMuted,
-                    fontSize = 7.sp,
+                    fontSize = 10.sp,
                     modifier = Modifier.padding(top = 3.dp),
                     maxLines = 2
                 )
             }
         }
-        Text("跳转 ›", color = RiftMuted, fontSize = 8.sp)
+        Text("跳转 ›", color = RiftMuted, fontSize = 10.sp)
     }
 }
 
@@ -398,11 +398,11 @@ private fun StickyNativeReplayPlayer(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text("原生播放源暂不可用", color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(error?.take(150) ?: "B站没有返回可用播放描述。", color = RiftMuted, fontSize = 8.sp, modifier = Modifier.padding(top = 5.dp))
+                Text(error?.take(150) ?: "B站没有返回可用播放描述。", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 5.dp))
                 Text(
                     "重新获取 ›",
                     color = RiftCyan,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 10.dp).clickable { refreshNonce += 1 }
                 )
@@ -505,11 +505,11 @@ private fun ReplayPlayerSurface(
                 Modifier.fillMaxWidth().padding(top = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("播放失败 · $playbackError", color = RiftMuted, fontSize = 8.sp, modifier = Modifier.weight(1f))
+                Text("播放失败 · $playbackError", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.weight(1f))
                 Text(
                     "刷新播放源 ›",
                     color = RiftCyan,
-                    fontSize = 8.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(onClick = onRefreshSource)
                 )
@@ -573,7 +573,7 @@ private fun ReplayPlayerView(
         Text(
             if (fullscreen) "退出全屏" else "全屏 ⛶",
             color = Color.White,
-            fontSize = if (fullscreen) 11.sp else 9.sp,
+            fontSize = if (fullscreen) 11.sp else 10.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.TopEnd)
                 .padding(10.dp)
@@ -604,7 +604,7 @@ private fun ReplayPlayerView(
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 activeAnchor?.team?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = Color.White.copy(alpha = 0.72f), fontSize = 9.sp, modifier = Modifier.padding(top = 2.dp))
+                    Text(it, color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
         }

@@ -56,7 +56,7 @@ import com.riftlab.app.data.LiveSourcePhase
 import com.riftlab.app.data.MatchSessionStore
 import com.riftlab.app.data.MatchTimelineStore
 import com.riftlab.app.data.TimelineEventEvidence
-import com.riftlab.app.data.MockAiInsightEngine
+import com.riftlab.app.data.LocalLiveInsightEngine
 import com.riftlab.app.data.EsportsStaffRef
 import com.riftlab.app.data.PlayerCard
 import com.riftlab.app.data.PreRecentSeries
@@ -132,7 +132,7 @@ private fun Header(onVersionClick: () -> Unit, onSourceSettingsClick: () -> Unit
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("RIFTLAB", fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = 1.4.sp)
-            Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 9.sp, letterSpacing = 1.1.sp)
+            Text("LEAGUE ESPORTS COMPANION", color = RiftMuted, fontSize = 10.sp, letterSpacing = 1.1.sp)
         }
         Box(
             Modifier.size(34.dp).clickable(onClick = onSourceSettingsClick),
@@ -209,7 +209,7 @@ private fun PreScreen() {
                     Text(MatchSessionStore.scheduleDateTimeLabel(match), color = RiftMuted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -245,8 +245,8 @@ private fun PreScreen() {
             item {
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(rosterPoolLabel(data.blue, data.blueRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
-                        Text(rosterPoolLabel(data.red, data.redRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                        Text(rosterPoolLabel(data.blue, data.blueRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                        Text(rosterPoolLabel(data.red, data.redRosterPool), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
                     }
                 }
             }
@@ -257,8 +257,8 @@ private fun PreScreen() {
             item {
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(staffLabel(data.blue, data.blueStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
-                        Text(staffLabel(data.red, data.redStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                        Text(staffLabel(data.blue, data.blueStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                        Text(staffLabel(data.red, data.redStaff), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
                     }
                 }
             }
@@ -268,11 +268,11 @@ private fun PreScreen() {
         item {
             Panel {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(recentSeriesLabel(data.blue, data.blueRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
-                    Text(recentSeriesLabel(data.red, data.redRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 9.sp, lineHeight = 14.sp)
+                    Text(recentSeriesLabel(data.blue, data.blueRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
+                    Text(recentSeriesLabel(data.red, data.redRecentSeries), modifier = Modifier.weight(1f), color = RiftText, fontSize = 10.sp, lineHeight = 14.sp)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("仅统计当前 Unified Schedule 历史窗口中已验证结束的 Series；不是全历史数据库。", color = RiftMuted, fontSize = 8.sp)
+                Text("仅统计当前 Unified Schedule 历史窗口中已验证结束的 Series；不是全历史数据库。", color = RiftMuted, fontSize = 10.sp)
             }
         }
 
@@ -289,7 +289,7 @@ private fun PreScreen() {
                     fontSize = 11.sp,
                     lineHeight = 17.sp
                 )
-                Text("SOURCE  Unified Schedule · Riot/Cito/International Mirror · 结果视角已标明", color = RiftMuted, fontSize = 9.sp)
+                Text("SOURCE  Unified Schedule · Riot/Cito/International Mirror · 结果视角已标明", color = RiftMuted, fontSize = 10.sp)
             }
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -330,7 +330,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
         MatchTimelineStore.find(snapshot, timelines)?.events
             ?.lastOrNull { it.seconds <= snapshot.elapsedSeconds }
     } else null
-    val ai = remember { MockAiInsightEngine() }
+    val ai = remember { LocalLiveInsightEngine() }
     var insight by remember { androidx.compose.runtime.mutableStateOf("等待实时 Provider 有效帧；暂不生成局势判断。") }
 
     LaunchedEffect(snapshot, status.phase) {
@@ -405,7 +405,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.weight(1f))
-                    Text("POLL 3s", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                    Text("POLL 3s", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                 }
                 Spacer(Modifier.height(7.dp))
                 Text(status.message, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 18.sp)
@@ -413,7 +413,7 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                 Text("SOURCE  ${snapshot.source}", color = RiftMuted, fontSize = 10.sp)
                 Text("EVENT   ${status.eventId.ifBlank { "—" }}", color = RiftMuted, fontSize = 10.sp)
                 Text("GAME    ${status.gameId.ifBlank { snapshot.gameId.ifBlank { "—" } }}", color = RiftMuted, fontSize = 10.sp)
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -435,17 +435,17 @@ private fun LiveScreen(startOverlay: () -> Unit, watchBili: () -> Unit, watchHuy
                         fontWeight = FontWeight.SemiBold
                     )
                     if (unifiedEvent.detail.isNotBlank()) {
-                        Text(unifiedEvent.detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                        Text(unifiedEvent.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
                     }
                     Text(
                         "EVIDENCE  ${liveEventEvidenceLabel(unifiedEvent.evidence)}",
                         color = if (unifiedEvent.evidence == TimelineEventEvidence.DERIVED_WINDOW) RiftMuted else RiftCyan,
-                        fontSize = 8.sp
+                        fontSize = 10.sp
                     )
                     Text(
                         "SOURCE  ${unifiedEvent.source.ifBlank { "统一事件模型" }}",
                         color = RiftMuted,
-                        fontSize = 8.sp
+                        fontSize = 10.sp
                     )
                 } else {
                     Text(
@@ -514,7 +514,7 @@ private fun PostScreen() {
                     Spacer(Modifier.height(8.dp))
                     Text("正在同步赛后数据", fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "赛后数据会从 LPL/TJStats 终局记录重新构建，不要求比赛时一直打开 RiftLab。",
+                        "赛后数据会从对应赛事的可核实终局源重新构建；LPL 可使用 TJStats，其他赛事使用明确标注来源的全球补充源，缺失就保持未知。",
                         color = RiftMuted,
                         fontSize = 11.sp,
                         lineHeight = 17.sp
@@ -647,20 +647,20 @@ private fun RosterRow(left: PlayerCard?, right: PlayerCard?) {
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left?.role ?: right?.role ?: "—", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.role ?: right?.role ?: "—", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 Text(left?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 if (left != null) {
                     Text(left.rank, color = RiftMuted, fontSize = 10.sp)
-                    Text(left.recent, color = RiftMuted, fontSize = 9.sp)
+                    Text(left.recent, color = RiftMuted, fontSize = 10.sp)
                 }
             }
             Text("↔", color = RiftLine, fontSize = 18.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right?.role ?: left?.role ?: "—", color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.role ?: left?.role ?: "—", color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 Text(right?.id ?: "未确认", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 if (right != null) {
                     Text(right.rank, color = RiftMuted, fontSize = 10.sp)
-                    Text(right.recent, color = RiftMuted, fontSize = 9.sp)
+                    Text(right.recent, color = RiftMuted, fontSize = 10.sp)
                 }
             }
         }
@@ -703,22 +703,22 @@ private fun LivePlayerRow(left: LivePlayerSnapshot?, right: LivePlayerSnapshot?)
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(left?.role?.uppercase().orEmpty(), color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 Text(left?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     left?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
-                    fontSize = 9.sp
+                    fontSize = 10.sp
                 )
             }
             Text("↔", color = RiftLine, fontSize = 16.sp)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(right?.role?.uppercase().orEmpty(), color = RiftRed, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 Text(right?.summonerName ?: "—", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     right?.let { "${it.kills}/${it.deaths}/${it.assists} · CS ${it.creepScore} · G ${it.gold}" } ?: "—",
                     color = RiftMuted,
-                    fontSize = 9.sp
+                    fontSize = 10.sp
                 )
             }
         }

@@ -100,10 +100,10 @@ internal fun TeamDetailContent(
                     Column(Modifier.weight(1f)) {
                         Text(displayTeam.code.ifBlank { displayTeam.name }, color = RiftText, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         if (displayTeam.name.isNotBlank() && displayTeam.name != displayTeam.code) {
-                            Text(displayTeam.name, color = RiftMuted, fontSize = 9.sp)
+                            Text(displayTeam.name, color = RiftMuted, fontSize = 10.sp)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text(state.status, color = RiftMuted, fontSize = 9.sp)
+                        Text(state.status, color = RiftMuted, fontSize = 10.sp)
                     }
                 }
             }
@@ -273,7 +273,7 @@ private fun TeamPlayerRow(
                 player?.firstName?.takeIf { it.isNotBlank() },
                 player?.lastName?.takeIf { it.isNotBlank() }
             ).joinToString(" ")
-            if (realName.isNotBlank()) Text(realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            if (realName.isNotBlank()) Text(realName, color = RiftMuted, fontSize = 10.sp, maxLines = 1)
             if (!player?.socialLinks.isNullOrEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 SocialLinkRow(player!!.socialLinks, compact = true)
@@ -283,7 +283,7 @@ private fun TeamPlayerRow(
             Text(
                 badge,
                 color = if (badge == "首发") RiftCyan else RiftMuted,
-                fontSize = 8.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .background(RiftPanelAlt, CutCornerShape(topEnd = 5.dp, bottomStart = 4.dp))
@@ -377,13 +377,13 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(staff.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            if (staff.realName.isNotBlank()) Text(staff.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            if (staff.realName.isNotBlank()) Text(staff.realName, color = RiftMuted, fontSize = 10.sp, maxLines = 1)
             val former = staff.careerHistory.filterNot { it.current }.takeLast(2)
             if (former.isNotEmpty()) {
                 Text(
                     "履历 · " + former.joinToString(" · ") { "${it.team} ${it.displayRole.ifBlank { staffRoleLabel(it.role) }}" },
                     color = RiftMuted,
-                    fontSize = 7.sp,
+                    fontSize = 10.sp,
                     maxLines = 1
                 )
             }
@@ -393,9 +393,9 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(staff.displayRole.ifBlank { staffRoleLabel(staff.role) }, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-            if (staff.avatarSource.isNotBlank()) Text("头像 · ${staff.avatarSource}", color = RiftMuted, fontSize = 6.sp)
-            Text(staff.source, color = RiftMuted, fontSize = 7.sp)
+            Text(staff.displayRole.ifBlank { staffRoleLabel(staff.role) }, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            if (staff.avatarSource.isNotBlank()) Text("头像 · ${staff.avatarSource}", color = RiftMuted, fontSize = 10.sp)
+            Text(staff.source, color = RiftMuted, fontSize = 10.sp)
         }
     }
 }
@@ -418,21 +418,21 @@ private fun TeamHistoryRow(history: TeamHistoryRef) {
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(history.name, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            if (history.realName.isNotBlank()) Text(history.realName, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
-            if (history.note.isNotBlank()) Text(history.note, color = RiftMuted, fontSize = 8.sp, maxLines = 2)
+            if (history.realName.isNotBlank()) Text(history.realName, color = RiftMuted, fontSize = 10.sp, maxLines = 1)
+            if (history.note.isNotBlank()) Text(history.note, color = RiftMuted, fontSize = 10.sp, maxLines = 2)
             val timeline = history.careerHistory.takeLast(2)
             if (timeline.isNotEmpty()) {
                 Text(
                     "履历 · " + timeline.joinToString(" · ") { "${it.team} ${it.displayRole.ifBlank { staffRoleLabel(it.role) }}" },
                     color = RiftMuted,
-                    fontSize = 7.sp,
+                    fontSize = 10.sp,
                     maxLines = 1
                 )
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(history.honoraryTitle, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-            Text("曾任${staffRoleLabel(history.formerRole)}", color = RiftMuted, fontSize = 8.sp)
+            Text(history.honoraryTitle, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text("曾任${staffRoleLabel(history.formerRole)}", color = RiftMuted, fontSize = 10.sp)
         }
     }
 }
@@ -447,8 +447,8 @@ private fun TeamArchiveCard(foundedAt: String, lolFoundedAt: String, region: Str
         if (foundedAt.isNotBlank()) Text("俱乐部 / 当前品牌成立 · $foundedAt", color = RiftText, fontSize = 10.sp)
         if (lolFoundedAt.isNotBlank()) Text("英雄联盟谱系起点 · $lolFoundedAt", color = RiftText, fontSize = 10.sp)
         val place = listOf(region, city).filter { it.isNotBlank() }.joinToString(" · ")
-        if (place.isNotBlank()) Text("地区 · $place", color = RiftMuted, fontSize = 9.sp)
-        if (updatedAt.isNotBlank()) Text("档案核验 · $updatedAt", color = RiftMuted, fontSize = 8.sp)
+        if (place.isNotBlank()) Text("地区 · $place", color = RiftMuted, fontSize = 10.sp)
+        if (updatedAt.isNotBlank()) Text("档案核验 · $updatedAt", color = RiftMuted, fontSize = 10.sp)
     }
 }
 
@@ -461,9 +461,9 @@ private fun TeamOrganizationRow(org: TeamOrganizationRef) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(org.name, color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            if (org.source.isNotBlank()) Text(org.source, color = RiftMuted, fontSize = 7.sp, maxLines = 2)
+            if (org.source.isNotBlank()) Text(org.source, color = RiftMuted, fontSize = 10.sp, maxLines = 2)
         }
-        Text(org.displayRole.ifBlank { organizationRoleLabel(org.role) }, color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        Text(org.displayRole.ifBlank { organizationRoleLabel(org.role) }, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -477,7 +477,7 @@ private fun TeamHonorRow(honor: TeamHonorRef) {
         Text(honor.year, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(46.dp))
         Column(Modifier.weight(1f)) {
             Text(honor.event, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            if (honor.tier.isNotBlank()) Text(honor.tier, color = RiftMuted, fontSize = 7.sp)
+            if (honor.tier.isNotBlank()) Text(honor.tier, color = RiftMuted, fontSize = 10.sp)
         }
         Text(honor.placement, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
@@ -494,7 +494,7 @@ private fun TeamResultRow(result: TeamResultRef) {
         Column(Modifier.weight(1f)) {
             Text(result.event, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             val meta = listOf(result.stage, result.tier).filter { it.isNotBlank() }.joinToString(" · ")
-            if (meta.isNotBlank()) Text(meta, color = RiftMuted, fontSize = 7.sp)
+            if (meta.isNotBlank()) Text(meta, color = RiftMuted, fontSize = 10.sp)
         }
         Text(
             result.placement,
@@ -513,13 +513,13 @@ private fun TeamLineageRow(lineage: TeamLineageRef) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(lineage.name, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text(lineageRelationLabel(lineage.relation), color = RiftCyan, fontSize = 8.sp)
+            Text(lineageRelationLabel(lineage.relation), color = RiftCyan, fontSize = 10.sp)
         }
         val range = listOf(lineage.from, lineage.to.ifBlank { "至今" }).filter { it.isNotBlank() }.joinToString(" → ")
-        if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 8.sp)
-        if (lineage.operator.isNotBlank()) Text("所属 / 运营 · ${lineage.operator}", color = RiftMuted, fontSize = 8.sp)
-        if (lineage.note.isNotBlank()) Text(lineage.note, color = RiftMuted, fontSize = 8.sp)
-        if (lineage.scope.isNotBlank()) Text("范围 · ${lineage.scope}", color = RiftMuted, fontSize = 7.sp)
+        if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 10.sp)
+        if (lineage.operator.isNotBlank()) Text("所属 / 运营 · ${lineage.operator}", color = RiftMuted, fontSize = 10.sp)
+        if (lineage.note.isNotBlank()) Text(lineage.note, color = RiftMuted, fontSize = 10.sp)
+        if (lineage.scope.isNotBlank()) Text("范围 · ${lineage.scope}", color = RiftMuted, fontSize = 10.sp)
     }
 }
 
@@ -532,11 +532,11 @@ private fun TeamAlumniRow(alumni: TeamAlumniRef) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(alumni.name, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            if (alumni.realName.isNotBlank()) Text(alumni.realName, color = RiftMuted, fontSize = 8.sp)
+            if (alumni.realName.isNotBlank()) Text(alumni.realName, color = RiftMuted, fontSize = 10.sp)
             val range = listOf(alumni.joinedAt, alumni.leftAt).filter { it.isNotBlank() }.joinToString(" → ")
-            if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 8.sp)
+            if (range.isNotBlank()) Text(range, color = RiftMuted, fontSize = 10.sp)
         }
-        Text(staffRoleLabel(alumni.role), color = RiftCyan, fontSize = 9.sp)
+        Text(staffRoleLabel(alumni.role), color = RiftCyan, fontSize = 10.sp)
     }
 }
 
@@ -568,7 +568,7 @@ private fun SocialLinkRow(links: List<EsportsSocialLink>, compact: Boolean = fal
             Text(
                 link.label.ifBlank { link.platform },
                 color = RiftCyan,
-                fontSize = if (compact) 7.sp else 9.sp,
+                fontSize = if (compact) 10.sp else 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .background(RiftPanelAlt, CutCornerShape(topEnd = 5.dp, bottomStart = 4.dp))
@@ -588,7 +588,7 @@ private fun SocialLinkRow(links: List<EsportsSocialLink>, compact: Boolean = fal
 @Composable
 private fun TeamSourceNote(value: String) {
     if (value.isBlank()) return
-    Text(value, color = RiftMuted, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
+    Text(value, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 2.dp))
 }
 
 @Composable
@@ -606,7 +606,7 @@ private fun TeamMatchRow(team: EsportsTeamRef, match: ScheduledEsportsMatch, onC
         Text(
             "${MatchSessionStore.scheduleDateKey(match)} · ${match.blockName.ifBlank { match.league }} · BO${match.bestOf}",
             color = RiftMuted,
-            fontSize = 8.sp,
+            fontSize = 10.sp,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
@@ -623,7 +623,7 @@ private fun TeamMatchRow(team: EsportsTeamRef, match: ScheduledEsportsMatch, onC
             },
             logoSize = 38.dp,
             centerFontSize = 15.sp,
-            teamNameFontSize = 9.sp
+            teamNameFontSize = 10.sp
         )
     }
 }

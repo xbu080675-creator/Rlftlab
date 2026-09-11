@@ -26,11 +26,11 @@ class DraftHudOverlayView(
     private val onModuleSelected: (DraftHudModule) -> Unit
 ) : FrameLayout(context) {
     private val topStatus = pill("RIFTSCREEN · DRAFT SIM", 10f, 0xFF8CEBFF.toInt())
-    private val progress = pill("0 / 10", 9f, Color.WHITE)
+    private val progress = pill("0 / 10", 10f, Color.WHITE)
     private val blueCard = pickCard(blue = true)
     private val redCard = pickCard(blue = false)
     private val matchupCard = matchupCard()
-    private val watermark = text("SIMULATION · TEST FIXTURE · 非真实赛事统计", 9f, 0xAAFFFFFF.toInt(), bold = true)
+    private val watermark = text("SIMULATION · TEST FIXTURE · 非真实赛事统计", 10f, 0xAAFFFFFF.toInt(), bold = true)
     private val safeZoneGuide = text("LPL BROADCAST SAFE ZONE · 默认避让，可手动覆盖", 10f, 0x99FFFFFF.toInt(), bold = true).apply {
         gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         setPadding(0, dp(10), 0, 0)
@@ -316,7 +316,7 @@ class DraftHudOverlayView(
         val player = text("—", 10f, 0xFFB9C3D3.toInt())
         val version = text("SIM WR —", 10f, 0xFFE6EBF2.toInt())
         val comfort = text("PLAYER —", 10f, 0xFFE6EBF2.toInt())
-        val hint = text("ROLE —", 9f, 0xFF8E9AAE.toInt())
+        val hint = text("ROLE —", 10f, 0xFF8E9AAE.toInt())
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(9), dp(12), dp(10))
@@ -337,7 +337,7 @@ class DraftHudOverlayView(
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.END
         }
-        val detail = text("CSD@15 — · SAMPLE —", 9f, 0xFFB9C3D3.toInt()).apply {
+        val detail = text("CSD@15 — · SAMPLE —", 10f, 0xFFB9C3D3.toInt()).apply {
             gravity = Gravity.CENTER
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.END
@@ -435,12 +435,12 @@ class DraftHudControlView(
 ) : LinearLayout(context) {
     private var collapsed = true
     private val header = button("RIFT") { collapsed = !collapsed; applyCollapsedState() }
-    private val stateText = text("0/10", 8f, 0xFF8CEBFF.toInt(), true)
+    private val stateText = text("0/10", 10f, 0xFF8CEBFF.toInt(), true)
     private val normalPanel = LinearLayout(context).apply { orientation = VERTICAL }
     private val editPanel = LinearLayout(context).apply { orientation = VERTICAL; visibility = View.GONE }
     private val play = button("▶") { onToggleAuto() }
     private val edit = button("EDIT") { onToggleEdit() }
-    private val selected = text("蓝方 Pick", 8f, Color.WHITE, true)
+    private val selected = text("蓝方 Pick", 10f, Color.WHITE, true)
     private val visibility = button("SHOW") { onToggleVisibility() }
 
     init {
@@ -511,7 +511,7 @@ class DraftHudControlView(
 
     private fun button(value: String, action: () -> Unit) = TextView(context).apply {
         text = value
-        textSize = if (value.length > 2) 9f else 16f
+        textSize = if (value.length > 2) 10f else 16f
         setTextColor(Color.WHITE)
         gravity = Gravity.CENTER
         includeFontPadding = false

@@ -45,7 +45,7 @@ class RiftOverlayView(
 
     private val title = text("等待数据", 11f, 0xFF94A0B2.toInt(), bold = true)
     private val timer = text("--:--", 11f, 0xFF94A0B2.toInt())
-    private val modeChip = text("COMPACT ›", 9f, 0xFF6CEBFF.toInt(), bold = true)
+    private val modeChip = text("COMPACT ›", 10f, 0xFF6CEBFF.toInt(), bold = true)
     private val close = text("×", 20f, 0xFF8C98AA.toInt(), bold = true).apply {
         setPadding(dp(12), 0, 0, 0)
         setOnClickListener { onClose() }
@@ -53,8 +53,8 @@ class RiftOverlayView(
 
     private val blueLogo = logoView(38)
     private val redLogo = logoView(38)
-    private val blue = text("—", 9f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
-    private val red = text("—", 9f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
+    private val blue = text("—", 10f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
+    private val red = text("—", 10f, Color.WHITE, bold = true).apply { gravity = Gravity.CENTER }
     private val blueTeam = teamIdentity(blueLogo, blue)
     private val redTeam = teamIdentity(redLogo, red)
 
@@ -80,7 +80,7 @@ class RiftOverlayView(
     private val metrics = text("K —   T —   D —", 12f, 0xFFD1D7E2.toInt())
     private val goldLine = text("GOLD — : —   LEAD —", 11f, 0xFFD1D7E2.toInt())
     private val event = text("STATUS · 等待实时 Provider", 10f, 0xFF8C98AA.toInt())
-    private val hint = text("轻点切换尺寸 · 拖动可移动", 9f, 0xFF667386.toInt())
+    private val hint = text("轻点切换尺寸 · 拖动可移动", 10f, 0xFF667386.toInt())
     private val accent = View(context)
     private val teams = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL

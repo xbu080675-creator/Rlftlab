@@ -1,9 +1,15 @@
 package com.riftlab.app.data
 
-class MockAiInsightEngine : AiInsightEngine {
+/**
+ * Deterministic local interpretation of an already verified live snapshot.
+ *
+ * This class is not a match-data provider and never fills missing fields. It only turns the
+ * current gold differential into short explanatory copy after a real provider frame is present.
+ */
+class LocalLiveInsightEngine : AiInsightEngine {
     override suspend fun analyze(snapshot: LiveSnapshot, previous: LiveSnapshot?): String {
         if (snapshot.gameId.isBlank()) {
-            return "等待 Riot LoL Esports 实时 Feed；未接入前不生成局势判断。"
+            return "等待实时 Provider 有效帧；未接入前不生成局势判断。"
         }
 
         val diff = snapshot.goldDiff

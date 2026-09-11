@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 72
-        versionName = "1.0.0-dev.72"
+        versionCode = 73
+        versionName = "1.0.0-dev.73"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",

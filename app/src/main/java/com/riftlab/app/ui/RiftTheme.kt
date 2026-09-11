@@ -4,6 +4,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -12,6 +13,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.MatchDetailRepository
 import com.riftlab.app.data.TeamDetailRepository
 
@@ -33,11 +39,36 @@ val RiftText: Color
 val RiftMuted: Color
     @Composable get() = LocalRiftTeamSkin.current.palette(LocalRiftDarkMode.current).muted
 
+/**
+ * RiftLab previously mixed Material defaults with many 8–11sp labels. On a high-density phone that
+ * made important metadata look like footnotes. Keep the layout density unchanged, but guarantee a
+ * modest app-level minimum font scale while still honoring any larger accessibility font scale the
+ * user selected in Android settings. Explicit UI labels should also stay at 10sp or above in source.
+ */
+private const val RIFT_MIN_FONT_SCALE = 1.12f
+
+private val RiftTypography = Typography(
+    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, lineHeight = 26.sp),
+    titleMedium = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp),
+    titleSmall = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Medium, lineHeight = 21.sp),
+    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 18.sp),
+    labelLarge = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, lineHeight = 18.sp),
+    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, lineHeight = 17.sp),
+    labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium, lineHeight = 16.sp)
+)
+
 @Composable
 fun RiftTheme(content: @Composable () -> Unit) {
     val teamState by TeamDetailRepository.state.collectAsState()
     val matchState by MatchDetailRepository.state.collectAsState()
     val dark = isSystemInDarkTheme()
+    val systemDensity = LocalDensity.current
+    val readableDensity = Density(
+        density = systemDensity.density,
+        fontScale = maxOf(systemDensity.fontScale, RIFT_MIN_FONT_SCALE)
+    )
 
     val teamSkin = RiftTeamSkins.resolve(teamState.team)
     val matchSkin = RiftTeamSkins.resolve(matchState.match)
@@ -78,10 +109,11 @@ fun RiftTheme(content: @Composable () -> Unit) {
     }
 
     CompositionLocalProvider(
+        LocalDensity provides readableDensity,
         LocalRiftTeamSkin provides skin,
         LocalRiftDarkMode provides dark
     ) {
-        MaterialTheme(colorScheme = scheme) {
+        MaterialTheme(colorScheme = scheme, typography = RiftTypography) {
             Box(Modifier.fillMaxSize()) {
                 RiftTeamSkinBackdrop(skin, dark, Modifier.fillMaxSize())
                 content()

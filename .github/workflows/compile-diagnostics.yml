@@ -1,15 +1,11 @@
 name: Compile Diagnostics
 on:
+  workflow_dispatch:
   push:
     paths:
       - '.github/workflows/compile-diagnostics.yml'
-      - 'app/src/main/java/com/riftlab/app/RiftLabApplication.kt'
-      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt'
-      - 'app/src/main/java/com/riftlab/app/data/MatchLifecycleCapture.kt'
-      - 'app/src/main/java/com/riftlab/app/ui/MatchOperationsContent.kt'
-      - 'app/src/main/java/com/riftlab/app/ui/MatchReplayContent.kt'
-      - 'app/src/main/java/com/riftlab/app/ui/EntityDetailActivity.kt'
-      - 'app/src/main/java/com/riftlab/app/ui/MatchCenterDetailSurface.kt'
+      - 'app/build.gradle.kts'
+      - 'app/src/main/java/**/*.kt'
 
 jobs:
   compile:
@@ -35,8 +31,15 @@ jobs:
           echo "$code" > compile.exit
           exit 0
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: compile-diagnostics
           path: |
             compile.log
             compile.exit
+      - name: Fail when compile failed
+        if: always()
+        shell: bash
+        run: |
+          test -f compile.exit
+          test "$(cat compile.exit)" = "0"

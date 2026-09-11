@@ -76,9 +76,9 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                     lineHeight = 17.sp
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("REST  ${CitoApiConfig.REST_BASE_URL}", color = RiftMuted, fontSize = 9.sp)
-                Text("WSS   ${CitoApiConfig.LIVE_WEBSOCKET_URL}", color = RiftMuted, fontSize = 9.sp)
-                Text("AUTH  ${CitoApiConfig.API_KEY_HEADER}", color = RiftMuted, fontSize = 9.sp)
+                Text("REST  ${CitoApiConfig.REST_BASE_URL}", color = RiftMuted, fontSize = 10.sp)
+                Text("WSS   ${CitoApiConfig.LIVE_WEBSOCKET_URL}", color = RiftMuted, fontSize = 10.sp)
+                Text("AUTH  ${CitoApiConfig.API_KEY_HEADER}", color = RiftMuted, fontSize = 10.sp)
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = citoDraft,

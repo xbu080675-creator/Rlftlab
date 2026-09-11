@@ -344,7 +344,7 @@ private fun EventSummaryCard(
         }
         if (bucket.tournamentId != null) {
             Spacer(Modifier.height(5.dp))
-            Text(standingsStatus, color = RiftMuted, fontSize = 9.sp)
+            Text(standingsStatus, color = RiftMuted, fontSize = 10.sp)
         }
     }
 }
@@ -446,7 +446,7 @@ private fun CompetitionDirectory(
                     Text(
                         if (subscribedLeague) "★ $league" else league,
                         color = if (selected) RiftCyan else RiftMuted,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         modifier = Modifier.clickable { selectedLeague = league }
                             .background(if (selected) RiftPanel else RiftPanelAlt, shape)
@@ -470,7 +470,7 @@ private fun CompetitionDirectory(
                     Text(
                         menu.label,
                         color = if (selected) RiftCyan else RiftMuted,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         modifier = Modifier.clickable { selectedInternational = menu }
                             .background(if (selected) RiftPanel else RiftPanelAlt, shape)
@@ -529,13 +529,13 @@ private fun InternationalEventPlaceholder(menu: InternationalCompetitionMenu) {
             .border(1.dp, if (menu == InternationalCompetitionMenu.WORLDS) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
             .padding(14.dp)
     ) {
-        Text(if (menu == InternationalCompetitionMenu.WORLDS) "SEASON FINALE · MAIN EVENT" else "INTERNATIONAL EVENT", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(if (menu == InternationalCompetitionMenu.WORLDS) "SEASON FINALE · MAIN EVENT" else "INTERNATIONAL EVENT", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(5.dp))
         Text(title, color = RiftText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(meta, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
-        Text(detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+        Text(detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
     }
 }
 
@@ -595,7 +595,7 @@ private fun CompetitionDirectoryCard(
                     )
                     hasNext -> Text("NEXT", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Text(if (bucket.researchOnly) "VERSION · RULES · DRAW · SCHEDULE" else "${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 9.sp)
+                Text(if (bucket.researchOnly) "VERSION · RULES · DRAW · SCHEDULE" else "${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 10.sp)
             }
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, null, tint = RiftMuted)
@@ -774,7 +774,7 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.weight(1f))
-            Text("BO${match.bestOf}", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            Text("BO${match.bestOf}", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
         }
         Spacer(Modifier.height(8.dp))
         TeamMatchupVisual(
@@ -786,14 +786,14 @@ private fun ScheduleMatchCard(match: ScheduledEsportsMatch, selected: Boolean, o
             centerSubtext = MatchSessionStore.scheduleTimingNote(match),
             logoSize = 44.dp,
             centerFontSize = 18.sp,
-            teamNameFontSize = 8.sp
+            teamNameFontSize = 10.sp
         )
         if (match.blockName.isNotBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
                 translateStageName(match.blockName),
                 color = RiftMuted,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -932,11 +932,11 @@ private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
             Text(
                 LplChampionshipPoints2026.note,
                 color = RiftMuted,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 lineHeight = 14.sp
             )
             Spacer(Modifier.height(4.dp))
-            Text(LplChampionshipPoints2026.sourceLabel, color = RiftMuted, fontSize = 8.sp)
+            Text(LplChampionshipPoints2026.sourceLabel, color = RiftMuted, fontSize = 10.sp)
         }
 
         Spacer(Modifier.height(10.dp))
@@ -978,7 +978,7 @@ private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
                     Text(
                         row.status.label,
                         color = statusColor,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(start = 34.dp)
                     )
@@ -988,7 +988,7 @@ private fun ChampionshipPointsView(bucket: ScheduleCompetitionBucket) {
                 Text(
                     "注：本页为年度 Championship Points；“排名”页中的组内积分属于当前 Tournament Standings，两者不是同一个积分体系。",
                     color = RiftMuted,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     lineHeight = 14.sp,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
                 )
@@ -1063,7 +1063,7 @@ private fun BracketMatchCard(
             .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .padding(10.dp)
     ) {
-        Text(bracketState(bracketMatch.state), color = RiftMuted, fontSize = 9.sp)
+        Text(bracketState(bracketMatch.state), color = RiftMuted, fontSize = 10.sp)
         Spacer(Modifier.height(7.dp))
         TeamMatchupVisual(
             leftCode = leftCode,
@@ -1073,19 +1073,19 @@ private fun BracketMatchCard(
             centerText = if (leftScore != "—" || rightScore != "—") "$leftScore : $rightScore" else "VS",
             logoSize = 30.dp,
             centerFontSize = 14.sp,
-            teamNameFontSize = 8.sp
+            teamNameFontSize = 10.sp
         )
         if (verifiedOverride != null) {
             Spacer(Modifier.height(6.dp))
             Text(
                 "官方确认 · ${verifiedOverride.scheduledAt.ifBlank { verifiedOverride.status }}",
                 color = RiftCyan,
-                fontSize = 8.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold
             )
         } else if (bracketMatch.previousMatchIds.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Text("承接上一轮", color = RiftMuted, fontSize = 8.sp)
+            Text("承接上一轮", color = RiftMuted, fontSize = 10.sp)
         }
     }
 }
@@ -1130,15 +1130,15 @@ private fun ResearchView(
                     .border(1.dp, RiftCyan.copy(alpha = 0.45f), CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
                     .padding(14.dp)
             ) {
-                Text("TOURNAMENT RESEARCH / 赛事研究档案", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("TOURNAMENT RESEARCH / 赛事研究档案", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(research.title, color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text("${research.year} · ${research.scope} · ${research.family}", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(5.dp))
-                Text("同一赛事按年份独立归档。版本、赛事更新、规则、抽签、赛程、排名和运营历史都挂在这一年度 Edition 下，不用跨页面找。", color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                Text("同一赛事按年份独立归档。版本、赛事更新、规则、抽签、赛程、排名和运营历史都挂在这一年度 Edition 下，不用跨页面找。", color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
                 Spacer(Modifier.height(5.dp))
-                Text("SOURCE · ${research.sourceSummary}", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE · ${research.sourceSummary}", color = RiftMuted, fontSize = 10.sp)
             }
         }
 
@@ -1150,16 +1150,16 @@ private fun ResearchView(
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("VERSION / 赛事版本", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("VERSION / 赛事版本", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    Text(researchEvidenceLabel(research.version.evidence), color = researchEvidenceColor(research.version.evidence), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(researchEvidenceLabel(research.version.evidence), color = researchEvidenceColor(research.version.evidence), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(research.version.versionLabel, color = RiftText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
-                Text(research.version.detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                Text(research.version.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("SOURCE · ${research.version.source}", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE · ${research.version.source}", color = RiftMuted, fontSize = 10.sp)
             }
         }
 
@@ -1169,14 +1169,14 @@ private fun ResearchView(
                     .background(RiftPanel, CutCornerShape(topEnd = 11.dp, bottomStart = 7.dp))
                     .padding(12.dp)
             ) {
-                Text("ARCHIVE COVERAGE / 年度档案覆盖", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("ARCHIVE COVERAGE / 年度档案覆盖", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(7.dp))
                 research.coverage.forEachIndexed { index, item ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(item.label, color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        Text(item.state, color = if (item.state.contains("待")) RiftMuted else RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(item.state, color = if (item.state.contains("待")) RiftMuted else RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
-                    Text(item.detail, color = RiftMuted, fontSize = 8.sp)
+                    Text(item.detail, color = RiftMuted, fontSize = 10.sp)
                     if (index != research.coverage.lastIndex) Spacer(Modifier.height(7.dp))
                 }
             }
@@ -1193,20 +1193,20 @@ private fun ResearchView(
                     .padding(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(update.category, color = RiftCyan, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(update.category, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    Text(researchEvidenceLabel(update.evidence), color = researchEvidenceColor(update.evidence), fontSize = 8.sp)
+                    Text(researchEvidenceLabel(update.evidence), color = researchEvidenceColor(update.evidence), fontSize = 10.sp)
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(update.title, color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
-                Text(update.detail, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                Text(update.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
                 if (update.effectiveAt.isNotBlank()) {
                     Spacer(Modifier.height(3.dp))
-                    Text(update.effectiveAt, color = RiftMuted, fontSize = 8.sp)
+                    Text(update.effectiveAt, color = RiftMuted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.height(4.dp))
-                Text("SOURCE · ${update.source}", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE · ${update.source}", color = RiftMuted, fontSize = 10.sp)
             }
         }
 
@@ -1220,11 +1220,11 @@ private fun ResearchView(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("SCHEDULE / 年度赛程", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("SCHEDULE / 年度赛程", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text(if (bucket.matches.isEmpty()) "赛程待可信源发布" else "${bucket.matches.size} 场 · ${competitionRange(bucket.matches)}", color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(3.dp))
-                        Text("进入该年度赛事的完整赛程；后续比赛详情、运营历史和回放仍沿用同一个赛事 Edition。", color = RiftMuted, fontSize = 8.sp, lineHeight = 13.sp)
+                        Text("进入该年度赛事的完整赛程；后续比赛详情、运营历史和回放仍沿用同一个赛事 Edition。", color = RiftMuted, fontSize = 10.sp, lineHeight = 13.sp)
                     }
                     Icon(Icons.Default.ChevronRight, null, tint = RiftCyan)
                 }
@@ -1267,11 +1267,11 @@ private fun RulesView(
                     .border(1.dp, RiftCyan.copy(alpha = 0.35f), CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
                     .padding(14.dp)
             ) {
-                Text("TOURNAMENT RULEBOOK / 赛事规则", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("TOURNAMENT RULEBOOK / 赛事规则", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(snapshot.title, color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text(snapshot.sourceSummary, color = RiftMuted, fontSize = 9.sp)
+                Text(snapshot.sourceSummary, color = RiftMuted, fontSize = 10.sp)
             }
         }
         items(snapshot.items, key = { "${it.title}-${it.source}" }) { rule ->
@@ -1283,12 +1283,12 @@ private fun RulesView(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(rule.title, color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    Text(if (rule.verified) "已核实" else "结构推导", color = if (rule.verified) RiftCyan else RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(if (rule.verified) "已核实" else "结构推导", color = if (rule.verified) RiftCyan else RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(5.dp))
                 Text(rule.detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
                 Spacer(Modifier.height(5.dp))
-                Text("SOURCE · ${rule.source}", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE · ${rule.source}", color = RiftMuted, fontSize = 10.sp)
             }
         }
     }
@@ -1315,13 +1315,13 @@ private fun DrawView(
                     .border(1.dp, RiftCyan.copy(alpha = 0.35f), CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
                     .padding(14.dp)
             ) {
-                Text("DRAW / SLOT ASSIGNMENT · 抽签与签位", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("DRAW / SLOT ASSIGNMENT · 抽签与签位", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(5.dp))
                 Text(snapshot.title, color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text(snapshot.note, color = RiftMuted, fontSize = 9.sp, lineHeight = 14.sp)
+                Text(snapshot.note, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("SOURCE · ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 8.sp)
+                Text("SOURCE · ${snapshot.sourceSummary}", color = RiftMuted, fontSize = 10.sp)
             }
         }
         if (snapshot.slots.isEmpty()) {
@@ -1337,20 +1337,20 @@ private fun DrawView(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(slot.label, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.weight(1f))
-                        Text(if (slot.verified) "已确认" else "待确认", color = if (slot.verified) RiftCyan else RiftMuted, fontSize = 8.sp)
+                        Text(if (slot.verified) "已确认" else "待确认", color = if (slot.verified) RiftCyan else RiftMuted, fontSize = 10.sp)
                     }
                     Spacer(Modifier.height(8.dp))
                     Text("${slot.left}  VS  ${slot.right}", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     if (slot.scheduledAt.isNotBlank()) {
                         Spacer(Modifier.height(4.dp))
-                        Text(slot.scheduledAt, color = RiftMuted, fontSize = 9.sp)
+                        Text(slot.scheduledAt, color = RiftMuted, fontSize = 10.sp)
                     }
                     if (slot.status.isNotBlank()) {
                         Spacer(Modifier.height(3.dp))
-                        Text(slot.status, color = RiftMuted, fontSize = 9.sp)
+                        Text(slot.status, color = RiftMuted, fontSize = 10.sp)
                     }
                     Spacer(Modifier.height(5.dp))
-                    Text("SOURCE · ${slot.source}", color = RiftMuted, fontSize = 8.sp)
+                    Text("SOURCE · ${slot.source}", color = RiftMuted, fontSize = 10.sp)
                 }
             }
         }
@@ -1424,7 +1424,7 @@ private fun TeamTile(team: EsportsTeamRef, modifier: Modifier, onClick: () -> Un
         Text(teamCode(team), color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         if (team.name.isNotBlank() && team.name != teamCode(team)) {
             Spacer(Modifier.height(3.dp))
-            Text(team.name, color = RiftMuted, fontSize = 8.sp, maxLines = 1)
+            Text(team.name, color = RiftMuted, fontSize = 10.sp, maxLines = 1)
         }
     }
 }
