@@ -2,11 +2,13 @@ package com.riftlab.app.data
 
 import android.graphics.BitmapFactory
 import com.riftlab.app.ai.RosterOcrResult
+import com.riftlab.app.ai.RosterSystemAiResolver
 import com.riftlab.app.ai.RosterVisionPipeline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONObject
 import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
 
@@ -20,21 +22,27 @@ data class RosterDeviceOcrTrace(
     val leftRoleCandidates: Map<String, List<String>> = emptyMap(),
     val rightRoleCandidates: Map<String, List<String>> = emptyMap(),
     val layoutMode: String = "TEXT_ONLY",
+    val systemAiStatus: String = "SKIPPED",
+    val systemAiLeftCandidates: Map<String, List<String>> = emptyMap(),
+    val systemAiRightCandidates: Map<String, List<String>> = emptyMap(),
+    val systemAiPreview: String = "",
     val textPreview: String,
     val error: String = "",
     val cached: Boolean = false
 )
 
 /**
- * Runs the universal on-device OCR lane only for official announcements that
- * the server could not normalize. Results are diagnostic/candidate data first;
- * they are never promoted to confirmed starters unless a later validator can
- * prove all five roles against an official source.
+ * Runs device-side roster recovery only for official announcements that the
+ * server could not normalize.
  *
- * StartingRosterCenter polls every minute, so the expensive image download/OCR
- * path is memory-cached by image URL + league hint. Successful OCR is reused for
- * six hours; failures are retried after ten minutes instead of hammering the
- * same protected CDN or running ML Kit every minute.
+ * Lane order is deliberate: bundled OCR first on every supported Android
+ * device; AICore/Gemini Nano only when OCR is incomplete and only when the
+ * system reports the feature already AVAILABLE. System AI never downloads a
+ * model here and never promotes itself to confirmed evidence.
+ *
+ * StartingRosterCenter polls every minute, so image/OCR/system-AI results are
+ * cached by image URL + league hint. Successful work is reused for six hours;
+ * failures retry after ten minutes.
  */
 internal class RosterDeviceOcrResolver(
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -57,6 +65,9 @@ internal class RosterDeviceOcrResolver(
     ): List<RosterDeviceOcrTrace> = withContext(Dispatchers.IO) {
         val leagueHint = listOf(target.league, target.leagueSlug, target.leagueId)
             .joinToString(" ")
+        val teamHints = target.teams.take(2).flatMap { team ->
+            listOf(team.code, team.name).filter(String::isNotBlank)
+        }.distinct()
         val traces = mutableListOf<RosterDeviceOcrTrace>()
 
         announcements.asSequence()
@@ -92,25 +103,44 @@ internal class RosterDeviceOcrResolver(
                         }
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                             ?: error("bitmap decode failed")
-                        val ocr = try {
-                            RosterVisionPipeline.recognizeWithBundledOcr(bitmap, leagueHint)
+                        try {
+                            val ocr = RosterVisionPipeline.recognizeWithBundledOcr(bitmap, leagueHint)
+                            val flat = extractRoleCandidates(ocr.text)
+                            val spatial = extractSpatialRoleCandidates(ocr)
+                            val merged = mergeCandidates(flat, spatial.left, spatial.right)
+                            val bundledStrong = isComplete(spatial.left) ||
+                                isComplete(spatial.right) ||
+                                isComplete(merged)
+
+                            val systemAi = if (!bundledStrong) {
+                                RosterSystemAiResolver.analyze(bitmap, leagueHint, teamHints)
+                            } else {
+                                null
+                            }
+                            val systemParsed = systemAi?.text
+                                ?.takeIf { systemAi.status == "AVAILABLE" }
+                                ?.let(::parseSystemAiCandidates)
+                                ?: SystemAiCandidates()
+
+                            RosterDeviceOcrTrace(
+                                announcementId = announcement.id,
+                                account = announcement.account,
+                                imageUrl = imageUrl,
+                                engines = ocr.engines,
+                                lineCount = ocr.lineCount,
+                                roleCandidates = merged,
+                                leftRoleCandidates = spatial.left,
+                                rightRoleCandidates = spatial.right,
+                                layoutMode = spatial.mode,
+                                systemAiStatus = systemAi?.status ?: "SKIPPED_BUNDLED_COMPLETE",
+                                systemAiLeftCandidates = systemParsed.left,
+                                systemAiRightCandidates = systemParsed.right,
+                                systemAiPreview = systemAi?.text.orEmpty().replace("\n", " ").take(500),
+                                textPreview = ocr.text.replace("\n", " | ").take(520)
+                            )
                         } finally {
                             bitmap.recycle()
                         }
-                        val flat = extractRoleCandidates(ocr.text)
-                        val spatial = extractSpatialRoleCandidates(ocr)
-                        RosterDeviceOcrTrace(
-                            announcementId = announcement.id,
-                            account = announcement.account,
-                            imageUrl = imageUrl,
-                            engines = ocr.engines,
-                            lineCount = ocr.lineCount,
-                            roleCandidates = mergeCandidates(flat, spatial.left, spatial.right),
-                            leftRoleCandidates = spatial.left,
-                            rightRoleCandidates = spatial.right,
-                            layoutMode = spatial.mode,
-                            textPreview = ocr.text.replace("\n", " | ").take(520)
-                        )
                     }.getOrElse { error ->
                         RosterDeviceOcrTrace(
                             announcementId = announcement.id,
@@ -152,6 +182,11 @@ internal class RosterDeviceOcrResolver(
         val mode: String
     )
 
+    private data class SystemAiCandidates(
+        val left: Map<String, List<String>> = emptyRoleMapStatic(),
+        val right: Map<String, List<String>> = emptyRoleMapStatic()
+    )
+
     private fun extractSpatialRoleCandidates(ocr: RosterOcrResult): SpatialCandidates {
         if (ocr.tokens.isEmpty() || ocr.imageWidth <= 0 || ocr.imageHeight <= 0) {
             return SpatialCandidates(emptyRoleMap(), emptyRoleMap(), "TEXT_ONLY")
@@ -163,8 +198,6 @@ internal class RosterDeviceOcrResolver(
             return SpatialCandidates(emptyRoleMap(), emptyRoleMap(), "GEOMETRY_NO_ROLE_ANCHOR")
         }
 
-        // Latin OCR is the primary player-ID channel. Other scripts remain useful
-        // for role labels but must not create fake Latin-looking player names.
         val playerTokens = ocr.tokens.filter { token ->
             token.engine == "latin" && playerIdOrNull(token.text) != null && roleFor(token.text) == null
         }
@@ -180,7 +213,6 @@ internal class RosterDeviceOcrResolver(
                 when {
                     token.normalizedCenterX < 0.47f -> left.getValue(role).add(player)
                     token.normalizedCenterX > 0.53f -> right.getValue(role).add(player)
-                    // A centered token is not safe to assign to either team.
                 }
             }
         }
@@ -198,6 +230,23 @@ internal class RosterDeviceOcrResolver(
         return SpatialCandidates(normalizedLeft, normalizedRight, mode)
     }
 
+    private fun parseSystemAiCandidates(raw: String): SystemAiCandidates {
+        val cleaned = raw.trim()
+            .removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+        val root = runCatching { JSONObject(cleaned) }.getOrNull() ?: return SystemAiCandidates()
+        fun side(name: String): Map<String, List<String>> {
+            val obj = root.optJSONObject(name) ?: return emptyRoleMap()
+            return ROLES.associateWith { role ->
+                val value = playerIdOrNull(obj.optString(role))
+                if (value == null) emptyList() else listOf(value)
+            }
+        }
+        return SystemAiCandidates(left = side("left"), right = side("right"))
+    }
+
     private fun extractRoleCandidates(text: String): Map<String, List<String>> {
         val result = mutableRoleMap()
         text.lineSequence().forEach { rawLine ->
@@ -212,6 +261,10 @@ internal class RosterDeviceOcrResolver(
         }
         return normalizeRoleMap(result)
     }
+
+    private fun isComplete(map: Map<String, List<String>>): Boolean =
+        ROLES.all { role -> map[role]?.size == 1 } &&
+            ROLES.mapNotNull { role -> map[role]?.singleOrNull()?.lowercase() }.distinct().size == ROLES.size
 
     private fun mergeCandidates(vararg maps: Map<String, List<String>>): Map<String, List<String>> =
         ROLES.associateWith { role ->
@@ -228,7 +281,7 @@ internal class RosterDeviceOcrResolver(
         "SUP" to mutableListOf()
     )
 
-    private fun emptyRoleMap(): Map<String, List<String>> = ROLES.associateWith { emptyList() }
+    private fun emptyRoleMap(): Map<String, List<String>> = emptyRoleMapStatic()
 
     private fun normalizeRoleMap(map: Map<String, List<String>>): Map<String, List<String>> =
         ROLES.associateWith { role ->
@@ -271,7 +324,10 @@ internal class RosterDeviceOcrResolver(
         private val NOISE_TOKENS = setOf(
             "TOP", "JUG", "JGL", "JUNGLE", "MID", "BOT", "ADC", "BOTTOM", "SUP", "SUPPORT",
             "LPL", "LCK", "LEC", "LCS", "LCP", "LOL", "ROSTER", "STARTING", "LINEUP",
-            "ESPORTS", "GAMING", "GAME", "MATCH", "VS", "BO3", "BO5"
+            "ESPORTS", "GAMING", "GAME", "MATCH", "VS", "BO3", "BO5", "NULL"
         )
+
+        private fun emptyRoleMapStatic(): Map<String, List<String>> =
+            ROLES.associateWith { emptyList() }
     }
 }
