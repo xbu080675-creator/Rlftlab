@@ -30,22 +30,45 @@ jobs:
       - name: Install OCR runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng tesseract-ocr-kor tesseract-ocr-jpn
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-eng tesseract-ocr-kor tesseract-ocr-jpn
           python3 -m pip install --disable-pip-version-check --quiet requests beautifulsoup4 pillow pytesseract
 
       - name: Collect official starting rosters globally
         run: |
           python3 scripts/starting_roster_global_collector.py
 
-      - name: Commit normalized evidence
+      - name: Commit normalized evidence safely
         run: |
-          if git diff --quiet -- data/global/starting_rosters.json data/global/starting_roster_collector_status.json; then
-            echo 'No roster data change.'
-            exit 0
-          fi
+          set -euo pipefail
+          OUT=/tmp/starting_rosters.json
+          STATUS=/tmp/starting_roster_collector_status.json
+          cp data/global/starting_rosters.json "$OUT"
+          cp data/global/starting_roster_collector_status.json "$STATUS"
+
           git config user.name 'riftlab-roster-bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/global/starting_rosters.json data/global/starting_roster_collector_status.json
-          git commit -m 'data: sync official starting rosters'
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          for attempt in 1 2 3; do
+            echo "publish attempt $attempt"
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$OUT" data/global/starting_rosters.json
+            cp "$STATUS" data/global/starting_roster_collector_status.json
+
+            if git diff --quiet -- data/global/starting_rosters.json data/global/starting_roster_collector_status.json; then
+              echo 'No roster data change.'
+              exit 0
+            fi
+
+            git add data/global/starting_rosters.json data/global/starting_roster_collector_status.json
+            git commit -m 'data: sync official starting rosters'
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+
+            echo 'main moved while publishing; retrying on fresh head'
+          done
+
+          echo 'failed to publish roster data after 3 attempts' >&2
+          exit 1
