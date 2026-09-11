@@ -715,24 +715,12 @@ private fun CompactStatusPanel(message: String) {
 
 @Composable
 private fun DetailSectionTitle(text: String) {
-    Text(
-        text,
-        color = RiftMuted,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.7.sp,
-        modifier = Modifier.padding(top = 4.dp)
-    )
+    RiftSectionLabel(text)
 }
 
 @Composable
 private fun DetailPanel(accent: Boolean = false, content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .border(1.dp, if (accent) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .padding(13.dp)
-    ) {
+    RiftHudPanel(accent = accent) {
         content()
     }
 }

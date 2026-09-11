@@ -158,21 +158,35 @@ private fun Header(onVersionClick: () -> Unit, onSourceSettingsClick: () -> Unit
 
 @Composable
 private fun PhaseTabs(selected: Int, onSelect: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+    Row(
+        Modifier.fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 2.dp)
+            .background(RiftPanelAlt.copy(alpha = 0.72f), CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
+            .padding(4.dp)
+    ) {
         Phase.entries.forEachIndexed { index, phase ->
+            val active = index == selected
             Column(
-                Modifier.weight(1f).clickable { onSelect(index) }.padding(vertical = 10.dp),
+                Modifier.weight(1f)
+                    .clickable { onSelect(index) }
+                    .background(
+                        if (active) RiftPanel else Color.Transparent,
+                        CutCornerShape(topEnd = 11.dp, bottomStart = 7.dp)
+                    )
+                    .padding(vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     phase.label,
-                    color = if (index == selected) RiftText else RiftMuted,
-                    fontWeight = if (index == selected) FontWeight.SemiBold else FontWeight.Medium
+                    color = if (active) RiftText else RiftMuted,
+                    fontSize = 12.sp,
+                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(5.dp))
                 Box(
-                    Modifier.height(2.dp).fillMaxWidth(0.55f)
-                        .background(if (index == selected) RiftCyan else Color.Transparent)
+                    Modifier.width(if (active) 30.dp else 12.dp)
+                        .height(if (active) 3.dp else 1.dp)
+                        .background(if (active) RiftCyan else RiftLine.copy(alpha = 0.55f))
                 )
             }
         }
@@ -191,25 +205,42 @@ private fun PreScreen() {
     ) {
         item { MatchHero(data.blue, data.red, data.startTime, "${data.league} · ${data.stage}", target) }
 
-        item { SectionTitle("REAL DATA SOURCE / 赛程源") }
+        item { SectionTitle("MATCH FEED / 赛程状态") }
         item {
             Panel(accent = target != null) {
-                Text("UNIFIED SCHEDULE · RIOT / CITO / INTERNATIONAL", color = if (target != null) RiftCyan else RiftMuted, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
-                Spacer(Modifier.height(6.dp))
-                Text(scheduleStatus, fontWeight = FontWeight.Medium, fontSize = 12.sp)
-                target?.let { match ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "${match.teams.joinToString(" VS ") { it.code }} · BO${match.bestOf} · ${match.state.uppercase()}",
-                        color = RiftText,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp
-                    )
-                    Text("EVENT ${match.eventId}", color = RiftMuted, fontSize = 10.sp)
-                    Text(MatchSessionStore.scheduleDateTimeLabel(match), color = RiftMuted, fontSize = 10.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (target != null) "赛程已锁定" else "等待可核实赛程",
+                            color = RiftText,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(scheduleStatus, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                    }
+                    RiftStatusBadge(if (target != null) "READY" else "SYNC")
                 }
-                Spacer(Modifier.height(6.dp))
-                Text("NO MOCK FALLBACK", color = RiftRed.copy(alpha = 0.85f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                target?.let { match ->
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        match.teams.take(2).joinToString("  VS  ") { it.code.ifBlank { it.name } },
+                        color = RiftCyan,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "${match.league} · ${match.blockName.ifBlank { "赛程" }} · BO${match.bestOf} · ${MatchSessionStore.scheduleDateTimeLabel(match)}",
+                        color = RiftMuted,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "数据来源 · Riot / Cito / International · 缺失字段保持未知",
+                    color = RiftMuted,
+                    fontSize = 10.sp
+                )
             }
         }
 
@@ -739,24 +770,12 @@ private fun Panel(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val base = Modifier.fillMaxWidth()
-    val interactive = if (onClick != null) base.clickable(onClick = onClick) else base
-    Column(
-        interactive
-            .background(RiftPanel, CutCornerShape(topEnd = 18.dp, bottomStart = 10.dp))
-            .border(
-                1.dp,
-                if (accent) RiftCyan.copy(alpha = 0.38f) else RiftLine,
-                CutCornerShape(topEnd = 18.dp, bottomStart = 10.dp)
-            )
-            .padding(16.dp),
-        content = content
-    )
+    RiftHudPanel(accent = accent, onClick = onClick, content = content)
 }
 
 @Composable
 private fun SectionTitle(value: String) {
-    Text(value, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+    RiftSectionLabel(value)
 }
 
 @Composable

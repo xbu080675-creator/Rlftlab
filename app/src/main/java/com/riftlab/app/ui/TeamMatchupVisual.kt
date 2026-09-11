@@ -38,7 +38,7 @@ internal fun TeamMatchupVisual(
     centerSubtext: String? = null,
     logoSize: Dp = 54.dp,
     centerFontSize: TextUnit = 24.sp,
-    teamNameFontSize: TextUnit = 10.sp,
+    teamNameFontSize: TextUnit = 12.sp,
     centerAccent: Boolean = true
 ) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -63,7 +63,7 @@ internal fun TeamMatchupVisual(
             )
             centerSubtext?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(3.dp))
-                Text(it, color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                Text(it, color = RiftMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center)
             }
         }
         TeamIdentityVisual(
