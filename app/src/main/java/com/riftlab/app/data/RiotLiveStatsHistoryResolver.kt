@@ -58,6 +58,18 @@ object RiotLiveStatsHistoryResolver {
 
     fun ensure(match: ScheduledEsportsMatch, game: Int) {
         if (game <= 0 || match.eventId.isBlank()) return
+        if (match.eventId.startsWith("provider:") || match.leagueId.startsWith("rft-event:")) {
+            val key = stateKey(match, game)
+            publish(
+                RiotHistoryBackfillState(
+                    key = key,
+                    game = game,
+                    phase = RiotHistoryPhase.UNAVAILABLE,
+                    message = "该国际赛事使用非 Riot Event ID；RiftLab 不伪绑定 Riot LiveStats 历史流"
+                )
+            )
+            return
+        }
         val phase = MatchSessionStore.schedulePhase(match)
         if (phase == ScheduleMatchPhase.UPCOMING) return
 
@@ -283,10 +295,11 @@ object RiotLiveStatsHistoryResolver {
             latestEvent = "Riot LiveStats · ${clock(elapsedSeconds)}",
             blueBarons = blueFrame.optInt("barons", 0),
             redBarons = redFrame.optInt("barons", 0),
-            bluePlayers = parsePlayers(blueMeta, blueFrame),
-            redPlayers = parsePlayers(redMeta, redFrame),
+            bluePlayers = parsePlayers(blueMeta, blueFrame, blueId, "BLUE"),
+            redPlayers = parsePlayers(redMeta, redFrame, redId, "RED"),
             source = "Riot LoL Esports LiveStats · verified window",
-            gameId = gameId
+            gameId = gameId,
+            targetKey = LiveMatchTargetRegistry.key(match)
         )
     }
 
@@ -302,7 +315,12 @@ object RiotLiveStatsHistoryResolver {
         return fallback
     }
 
-    private fun parsePlayers(metadata: JSONObject, teamFrame: JSONObject): List<LivePlayerSnapshot> {
+    private fun parsePlayers(
+        metadata: JSONObject,
+        teamFrame: JSONObject,
+        teamId: String,
+        side: String
+    ): List<LivePlayerSnapshot> {
         val metaArray = metadata.optJSONArray("participantMetadata") ?: JSONArray()
         val metaById = mutableMapOf<Int, JSONObject>()
         for (i in 0 until metaArray.length()) {
@@ -326,7 +344,9 @@ object RiotLiveStatsHistoryResolver {
                         deaths = row.optInt("deaths", 0),
                         assists = row.optInt("assists", 0),
                         creepScore = row.optInt("creepScore", 0),
-                        gold = row.optInt("totalGold", 0)
+                        gold = row.optInt("totalGold", 0),
+                        teamId = teamId,
+                        side = side
                     )
                 )
             }
