@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Bounded global starting-roster OCR runner.
-
-Keeps platform acquisition separate from recognition, but prevents the recognizer
-from scaling linearly with every image found on every official account.
-"""
+"""Bounded global starting-roster OCR runner with compact recognition traces."""
 from __future__ import annotations
 
 import importlib.util
 import os
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -20,6 +17,21 @@ MAX_POSTS_PER_SOURCE = int(os.environ.get("RIFTLAB_ROSTER_MAX_POSTS_PER_SOURCE",
 MAX_IMAGES_PER_POST = int(os.environ.get("RIFTLAB_ROSTER_MAX_IMAGES_PER_POST", "2"))
 OCR_TIMEOUT_SECONDS = float(os.environ.get("RIFTLAB_ROSTER_OCR_TIMEOUT_SECONDS", "10"))
 OCR_MAX_DIMENSION = int(os.environ.get("RIFTLAB_ROSTER_OCR_MAX_DIMENSION", "2200"))
+TRACE_PREVIEW_CHARS = int(os.environ.get("RIFTLAB_ROSTER_TRACE_PREVIEW_CHARS", "220"))
+TRACE_MAX_LINES_PER_SOURCE = int(os.environ.get("RIFTLAB_ROSTER_TRACE_MAX_LINES", "8"))
+_TRACE = []
+
+
+def _clean_preview(value: str) -> str:
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(value) > TRACE_PREVIEW_CHARS:
+        value = value[:TRACE_PREVIEW_CHARS] + "…"
+    return value
+
+
+def _trace(message: str):
+    if len(_TRACE) < TRACE_MAX_LINES_PER_SOURCE:
+        _TRACE.append(message)
 
 
 def _budget_posts(posts, cfg=None):
@@ -43,14 +55,54 @@ def _budget_posts(posts, cfg=None):
     return [row for _, _, row in ranked[:MAX_POSTS_PER_SOURCE]]
 
 
+# Trace parser decisions without changing the parser's behavior.
+_original_detect_teams = global_collector.base.detect_teams
+_original_extract_from_lines = global_collector.base.extract_from_lines
+_original_choose_lineups = global_collector.base.choose_lineups
+
+
+def _trace_detect_teams(text, aliases):
+    teams = _original_detect_teams(text, aliases)
+    _trace(f"teams={teams or []}")
+    return teams
+
+
+def _trace_extract_from_lines(text):
+    roles = _original_extract_from_lines(text)
+    compact = {k: v[:3] for k, v in roles.items() if v}
+    _trace(f"line_roles={compact}")
+    return roles
+
+
+def _trace_choose_lineups(line_roles, column_roles):
+    lineups = _original_choose_lineups(line_roles, column_roles)
+    compact_columns = {
+        side: {role: values[:2] for role, values in mapping.items() if values}
+        for side, mapping in column_roles.items()
+    }
+    _trace(f"column_roles={compact_columns}")
+    _trace(f"lineups={lineups or []}")
+    return lineups
+
+
+global_collector.base.detect_teams = _trace_detect_teams
+global_collector.base.extract_from_lines = _trace_extract_from_lines
+global_collector.base.choose_lineups = _trace_choose_lineups
+
+
 _original_process_posts = global_collector._process_posts
 
 
 def _bounded_process_posts(source, cfg, posts, transport_label):
+    global _TRACE
     bounded = _budget_posts(posts, cfg)
+    _TRACE = []
     evidence, diagnostics = _original_process_posts(source, cfg, bounded, transport_label)
+    account = source.get("account")
+    trace_lines = [f"{account}: trace {line}" for line in _TRACE]
     diagnostics = [
-        f"{source.get('account')}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s"
+        f"{account}: ocr_budget posts={len(bounded)}/{len(posts or [])} images_per_post<={MAX_IMAGES_PER_POST} timeout={OCR_TIMEOUT_SECONDS:g}s",
+        *trace_lines,
     ] + diagnostics
     return evidence, diagnostics
 
@@ -69,9 +121,10 @@ global_collector.base.fetch_weibo_posts = _bounded_weibo_fetch
 
 
 def fast_multilingual_ocr(img):
-    """One Tesseract pass per image, with resize and hard timeout."""
+    """One Tesseract pass per image, with resize, hard timeout and compact trace."""
     langs = os.environ.get("RIFTLAB_OCR_LANGS", "chi_sim+eng+kor+jpn")
     work = img.copy()
+    original_size = work.size
     if max(work.size) > OCR_MAX_DIMENSION:
         work.thumbnail((OCR_MAX_DIMENSION, OCR_MAX_DIMENSION))
     data = global_collector.base.pytesseract.image_to_data(
@@ -107,6 +160,9 @@ def fast_multilingual_ocr(img):
         )
         lines.setdefault(key, []).append(token)
     text = "\n".join(" ".join(tokens) for _, tokens in sorted(lines.items()))
+    _trace(
+        f"ocr size={original_size[0]}x{original_size[1]}->{work.size[0]}x{work.size[1]} words={len(words)} text={_clean_preview(text)!r}"
+    )
     return text, words, work.size
 
 
