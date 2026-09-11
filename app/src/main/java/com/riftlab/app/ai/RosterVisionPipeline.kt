@@ -48,11 +48,27 @@ data class RosterOcrLine(
     val normalizedCenterX: Float get() = if (imageWidth > 0) centerX / imageWidth else 0.5f
 }
 
+data class RosterOcrToken(
+    val text: String,
+    val engine: String,
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int,
+    val imageWidth: Int,
+    val imageHeight: Int
+) {
+    val centerX: Float get() = (left + right) / 2f
+    val centerY: Float get() = (top + bottom) / 2f
+    val normalizedCenterX: Float get() = if (imageWidth > 0) centerX / imageWidth else 0.5f
+}
+
 data class RosterOcrResult(
     val text: String,
     val engines: List<String>,
     val lineCount: Int,
     val lines: List<RosterOcrLine> = emptyList(),
+    val tokens: List<RosterOcrToken> = emptyList(),
     val imageWidth: Int = 0,
     val imageHeight: Int = 0
 )
@@ -64,9 +80,9 @@ data class RosterOcrResult(
  * available without Google Play Services. AICore and RiftLab's own visual model
  * are optional enhancement lanes and must never gate roster availability.
  *
- * Layout geometry is preserved because official league posters commonly put two
- * five-player lineups in left/right columns. Flattening OCR to plain text loses
- * the one signal needed to split those teams safely.
+ * Layout geometry is preserved down to OCR elements because official league
+ * posters commonly place two lineups around shared role labels. Plain text or
+ * line-only geometry is not sufficient to split those teams safely.
  */
 object RosterVisionPipeline {
     fun capabilities(context: Context): List<RosterVisionCapability> = listOf(
@@ -89,6 +105,7 @@ object RosterVisionPipeline {
         val recognizers = buildRecognizers(leagueHint)
         val flatLines = linkedSetOf<String>()
         val layoutLines = mutableListOf<RosterOcrLine>()
+        val layoutTokens = mutableListOf<RosterOcrToken>()
         val engines = mutableListOf<String>()
         try {
             for ((label, recognizer) in recognizers) {
@@ -100,8 +117,7 @@ object RosterVisionPipeline {
                         val text = line.text.trim()
                         if (text.isBlank()) return@forEach
                         flatLines += text
-                        val box = line.boundingBox
-                        if (box != null) {
+                        line.boundingBox?.let { box ->
                             layoutLines += RosterOcrLine(
                                 text = text,
                                 engine = label,
@@ -113,32 +129,59 @@ object RosterVisionPipeline {
                                 imageHeight = bitmap.height
                             )
                         }
+                        line.elements.forEach { element ->
+                            val token = element.text.trim()
+                            if (token.isBlank()) return@forEach
+                            element.boundingBox?.let { box ->
+                                layoutTokens += RosterOcrToken(
+                                    text = token,
+                                    engine = label,
+                                    left = box.left.coerceAtLeast(0),
+                                    top = box.top.coerceAtLeast(0),
+                                    right = box.right.coerceAtMost(bitmap.width),
+                                    bottom = box.bottom.coerceAtMost(bitmap.height),
+                                    imageWidth = bitmap.width,
+                                    imageHeight = bitmap.height
+                                )
+                            }
+                        }
                     }
             }
         } finally {
             recognizers.forEach { (_, recognizer) -> runCatching { recognizer.close() } }
         }
-        val dedupedGeometry = layoutLines
-            .distinctBy { line ->
-                listOf(
-                    line.engine,
-                    line.text.lowercase(),
-                    line.left / 8,
-                    line.top / 8,
-                    line.right / 8,
-                    line.bottom / 8
-                ).joinToString(":")
-            }
+        val dedupedLines = layoutLines
+            .distinctBy { line -> geometryKey(line.engine, line.text, line.left, line.top, line.right, line.bottom) }
             .sortedWith(compareBy<RosterOcrLine> { it.top }.thenBy { it.left })
+        val dedupedTokens = layoutTokens
+            .distinctBy { token -> geometryKey(token.engine, token.text, token.left, token.top, token.right, token.bottom) }
+            .sortedWith(compareBy<RosterOcrToken> { it.top }.thenBy { it.left })
         return RosterOcrResult(
             text = flatLines.joinToString("\n"),
             engines = engines,
             lineCount = flatLines.size,
-            lines = dedupedGeometry,
+            lines = dedupedLines,
+            tokens = dedupedTokens,
             imageWidth = bitmap.width,
             imageHeight = bitmap.height
         )
     }
+
+    private fun geometryKey(
+        engine: String,
+        text: String,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int
+    ): String = listOf(
+        engine,
+        text.lowercase(),
+        left / 8,
+        top / 8,
+        right / 8,
+        bottom / 8
+    ).joinToString(":")
 
     private fun buildRecognizers(leagueHint: String): List<Pair<String, TextRecognizer>> {
         val hint = leagueHint.uppercase()
