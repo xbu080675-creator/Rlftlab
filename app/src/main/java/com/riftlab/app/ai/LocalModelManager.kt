@@ -31,6 +31,7 @@ data class LocalModelInstallState(
     val totalBytes: Long? = null,
     val localPath: String? = null,
     val sha256: String? = null,
+    val benchmarkLatencyMs: Long? = null,
     val message: String = ""
 )
 
@@ -38,18 +39,27 @@ data class LocalModelInstallState(
  * Owns persistent local-model files under filesDir/local_ai_models.
  *
  * Model assets are deliberately outside cacheDir so normal cache cleanup never removes them.
- * A model is never considered usable merely because the download completed: the catalog must provide
- * both a concrete package URL and expected SHA-256, the file must verify, and a runtime-specific
- * benchmark/backend installer must subsequently promote it to READY.
+ * Download completion is not readiness: SHA-256 plus a real LiteRT-LM load/inference benchmark are
+ * both required before the runtime can be promoted to READY.
  */
 object LocalModelManager {
     private const val PREFS = "riftlab_local_model_manager"
     private const val MODELS_DIR = "local_ai_models"
 
+    // Verified LiteRT Community build of Qwen3-0.6B INT4 no-think. Keep this fallback pinned so the
+    // first real-device rollout does not depend on a mutable catalog response.
+    private const val QWEN3_NO_THINK_ID = "qwen3-0.6b-int4-nothink"
+    private const val QWEN3_NO_THINK_URL =
+        "https://huggingface.co/litert-community/Qwen3-0.6B-int4/resolve/main/qwen3_0.6b_nothink_q4_block32_ekv1280.litertlm?download=true"
+    private const val QWEN3_NO_THINK_SHA256 =
+        "2df6821ec12702dafd33915e7a1a1adc7c4b053f3672fd9555dfaf3a114c4139"
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
         .build()
 
     private val mutableState = MutableStateFlow(LocalModelInstallState())
@@ -62,6 +72,7 @@ object LocalModelManager {
             val modelId = prefs.getString("model_id", null)
             val path = prefs.getString("path", null)
             val sha = prefs.getString("sha256", null)
+            val benchmarkMs = prefs.getLong("benchmark_ms", -1L).takeIf { it >= 0L }
             val file = path?.let(::File)
             mutableState.value = if (modelId != null && file?.isFile == true && !sha.isNullOrBlank()) {
                 LocalModelInstallState(
@@ -71,7 +82,8 @@ object LocalModelManager {
                     totalBytes = file.length(),
                     localPath = file.absolutePath,
                     sha256 = sha,
-                    message = "模型文件已验证，等待运行时基准测试"
+                    benchmarkLatencyMs = benchmarkMs,
+                    message = "模型文件已验证，等待本次进程真实运行时基准测试"
                 )
             } else {
                 LocalModelInstallState()
@@ -79,10 +91,17 @@ object LocalModelManager {
         }
     }
 
+    fun resolvedDownloadMetadata(descriptor: LocalModelDescriptor): Pair<String, String>? {
+        val catalogUrl = descriptor.downloadUrl?.trim().orEmpty()
+        val catalogSha = descriptor.sha256?.trim()?.lowercase().orEmpty()
+        if (catalogUrl.isNotBlank() && catalogSha.length == 64) return catalogUrl to catalogSha
+        if (descriptor.id == QWEN3_NO_THINK_ID) return QWEN3_NO_THINK_URL to QWEN3_NO_THINK_SHA256
+        return null
+    }
+
     fun installSelected(context: Context, descriptor: LocalModelDescriptor) {
-        val url = descriptor.downloadUrl?.trim().orEmpty()
-        val expectedSha = descriptor.sha256?.trim()?.lowercase().orEmpty()
-        if (url.isBlank() || expectedSha.length != 64) {
+        val metadata = resolvedDownloadMetadata(descriptor)
+        if (metadata == null) {
             mutableState.value = LocalModelInstallState(
                 modelId = descriptor.id,
                 status = LocalModelInstallStatus.FAILED,
@@ -90,6 +109,7 @@ object LocalModelManager {
             )
             return
         }
+        val (url, expectedSha) = metadata
         if (mutableState.value.status == LocalModelInstallStatus.DOWNLOADING ||
             mutableState.value.status == LocalModelInstallStatus.VERIFYING
         ) return
@@ -97,13 +117,13 @@ object LocalModelManager {
         val app = context.applicationContext
         scope.launch {
             val modelDir = File(app.filesDir, MODELS_DIR).apply { mkdirs() }
-            val finalFile = File(modelDir, "${safeId(descriptor.id)}.bin")
+            val finalFile = File(modelDir, "${safeId(descriptor.id)}.litertlm")
             val partFile = File(modelDir, "${safeId(descriptor.id)}.part")
             runCatching {
                 mutableState.value = LocalModelInstallState(
                     modelId = descriptor.id,
                     status = LocalModelInstallStatus.DOWNLOADING,
-                    message = "正在下载模型…"
+                    message = "正在下载 LiteRT-LM 模型…"
                 )
 
                 val request = Request.Builder().url(url).get().build()
@@ -150,6 +170,7 @@ object LocalModelManager {
                     .putString("model_id", descriptor.id)
                     .putString("path", finalFile.absolutePath)
                     .putString("sha256", actualSha)
+                    .remove("benchmark_ms")
                     .apply()
 
                 mutableState.value = LocalModelInstallState(
@@ -159,7 +180,7 @@ object LocalModelManager {
                     totalBytes = finalFile.length(),
                     localPath = finalFile.absolutePath,
                     sha256 = actualSha,
-                    message = "下载与校验通过，等待本机短基准测试"
+                    message = "下载与校验通过；下一步必须执行真实模型加载与短推理"
                 )
             }.onFailure { error ->
                 partFile.delete()
@@ -173,22 +194,28 @@ object LocalModelManager {
     }
 
     /** Runtime layer calls this only after model load + latency/thermal benchmark both pass. */
-    fun markReady(modelId: String, localPath: String) {
+    fun markReady(modelId: String, localPath: String, benchmarkLatencyMs: Long) {
         val current = mutableState.value
         if (current.modelId != modelId || current.localPath != localPath || current.status != LocalModelInstallStatus.VERIFIED) return
+        val app = runCatching { com.riftlab.app.RiftLabApplication.appContext }.getOrNull()
+        app?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.edit()
+            ?.putLong("benchmark_ms", benchmarkLatencyMs)
+            ?.apply()
         mutableState.value = current.copy(
             status = LocalModelInstallStatus.READY,
-            message = "本机基准测试通过，可启用本地智能辅助"
+            benchmarkLatencyMs = benchmarkLatencyMs,
+            message = "真实模型加载/短推理通过 · ${benchmarkLatencyMs}ms · 可启用"
         )
     }
 
     fun removeInstalled(context: Context) {
         val app = context.applicationContext
         scope.launch {
+            LiteRtLocalAiRuntime.shutdown()
             val current = mutableState.value
             current.localPath?.let(::File)?.delete()
             File(app.filesDir, MODELS_DIR).listFiles()
-                ?.filter { it.name.endsWith(".part") }
+                ?.filter { it.name.endsWith(".part") || it.name.endsWith(".litertlm") }
                 ?.forEach { it.delete() }
             app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
             LocalAiCore.disableModel()
