@@ -233,7 +233,7 @@ private fun EntityDetailHeader(
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             Text(title, color = RiftText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = RiftMuted, fontSize = 9.sp)
+            Text(subtitle, color = RiftMuted, fontSize = 10.sp)
         }
         Box(Modifier.clickable(onClick = onClose).padding(10.dp), contentAlignment = Alignment.Center) {
             Icon(Icons.Default.Close, null, tint = RiftMuted)

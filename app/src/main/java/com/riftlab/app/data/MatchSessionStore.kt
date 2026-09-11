@@ -72,6 +72,8 @@ object MatchSessionStore {
     private val teamSource = LolEsportsTeamDataSource()
     private val liveDataSource = GlobalOfficialLiveDataSource()
     private val postMatchResolver = LplHistoricalPostMatchResolver()
+    private val globalPostMatchProvider = OpggMatchSupplementProvider()
+    private val _postSourceStatus = MutableStateFlow("POST MATCH · 等待可核实终局数据")
 
     private var liveJob: Job? = null
     private var scheduleJob: Job? = null
@@ -94,7 +96,7 @@ object MatchSessionStore {
 
     val liveSourceStatus: StateFlow<LiveSourceStatus> = liveDataSource.status
     val liveLifecycle: StateFlow<LiveLifecycleState> = liveDataSource.lifecycle
-    val postSourceStatus: StateFlow<String> = postMatchResolver.status
+    val postSourceStatus: StateFlow<String> = _postSourceStatus.asStateFlow()
 
     private fun emptyLiveSnapshot(message: String): LiveSnapshot = LiveSnapshot(
         game = 0,
@@ -230,15 +232,36 @@ object MatchSessionStore {
                 "赛事订阅 ${subscribedLeagueKeys.joinToString(" / ")} · 当前 Unified Schedule 暂无赛事"
             } else center.statusMessage
 
-            // Post-match recovery is independent from the live target. Always resolve the most
-            // recent completed series from the schedule. LPL currently has an additional TJStats final resolver;
-            // can still rebuild the complete final archive.
+            // Post-match recovery is independent from the live target. Always attempt to rebuild the
+            // latest completed series from a source appropriate for that competition. LPL keeps its
+            // TJStats resolver; other leagues may use the explicitly labelled OP.GG supplement. A missing
+            // provider result stays missing and never becomes a synthetic final.
             val latestCompleted = matches
                 .filter(::isCompletedState)
                 .maxByOrNull { plannedStartEpochMs(it) ?: Long.MIN_VALUE }
-            if (latestCompleted != null && latestCompleted.league.contains("LPL", ignoreCase = true)) {
+            if (latestCompleted != null) {
                 scope.launch {
-                    runCatching { postMatchResolver.refresh(latestCompleted) }
+                    val lplTarget = latestCompleted.leagueSlug.equals("lpl", ignoreCase = true) ||
+                        latestCompleted.league.equals("LPL", ignoreCase = true) ||
+                        latestCompleted.league.contains("PRO LEAGUE", ignoreCase = true)
+                    if (lplTarget) {
+                        _postSourceStatus.value = "LPL POST · 正在同步可核实终局数据…"
+                        runCatching { postMatchResolver.refresh(latestCompleted) }
+                            .onSuccess { _postSourceStatus.value = postMatchResolver.status.value }
+                            .onFailure { error ->
+                                _postSourceStatus.value = "LPL POST · 同步失败 · ${error.message?.take(120) ?: error::class.java.simpleName}"
+                            }
+                    } else {
+                        _postSourceStatus.value = "GLOBAL POST · 正在匹配可核实终局数据…"
+                        runCatching { globalPostMatchProvider.fetch(latestCompleted) }
+                            .onSuccess { supplement ->
+                                supplement.series?.let(CompletedGameArchive::publishSeries)
+                                _postSourceStatus.value = supplement.status
+                            }
+                            .onFailure { error ->
+                                _postSourceStatus.value = "GLOBAL POST · 同步失败 · ${error.message?.take(120) ?: error::class.java.simpleName}"
+                            }
+                    }
                 }
             }
 

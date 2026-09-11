@@ -116,18 +116,18 @@ internal fun MatchTimelinePanel(snapshot: LiveSnapshot) {
             Text(
                 if (timeline.completed) "RECORDED" else if (followLatest) "LIVE FOLLOW" else "PAUSED",
                 color = if (timeline.completed) RiftMuted else RiftCyan,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
-            Text("00:00", color = RiftMuted, fontSize = 9.sp)
+            Text("00:00", color = RiftMuted, fontSize = 10.sp)
             Spacer(Modifier.weight(1f))
             Text(formatClock(selectedSecond), color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            Text(formatClock(timeline.durationSeconds), color = RiftMuted, fontSize = 9.sp)
+            Text(formatClock(timeline.durationSeconds), color = RiftMuted, fontSize = 10.sp)
         }
         Slider(
             value = scrub.coerceIn(0f, timeline.durationSeconds.coerceAtLeast(1).toFloat()),
@@ -145,7 +145,7 @@ internal fun MatchTimelinePanel(snapshot: LiveSnapshot) {
             Text(
                 "回到最新 ${formatClock(timeline.durationSeconds)} ›",
                 color = RiftCyan,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth().clickable {
                     followLatest = true
@@ -165,7 +165,7 @@ internal fun MatchTimelinePanel(snapshot: LiveSnapshot) {
 
         if (fights.isNotEmpty() && (filter == TimelineFilter.ALL || filter == TimelineFilter.KILL)) {
             Spacer(Modifier.height(10.dp))
-            Text("KEY FIGHTS / 团战窗口", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("KEY FIGHTS / 团战窗口", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             fights.forEach { fight ->
                 val summary = buildString {
                     append(formatClock(fight.start))
@@ -177,7 +177,7 @@ internal fun MatchTimelinePanel(snapshot: LiveSnapshot) {
         }
 
         Spacer(Modifier.height(10.dp))
-        Text("EVENTS / 事件", color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text("EVENTS / 事件", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         if (visibleEvents.isEmpty()) {
             Text("当前时间点之前没有该筛选类型的事件", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp))
         } else {
@@ -195,7 +195,7 @@ private fun TimelineStateCard(snapshot: LiveSnapshot, selectedSecond: Int) {
             .border(1.dp, RiftLine.copy(alpha = 0.75f), shape)
             .padding(10.dp)
     ) {
-        Text("STATE @ ${formatClock(selectedSecond)}", color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text("STATE @ ${formatClock(selectedSecond)}", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(5.dp))
         Row(Modifier.fillMaxWidth()) {
             TeamStateColumn(
@@ -210,7 +210,7 @@ private fun TimelineStateCard(snapshot: LiveSnapshot, selectedSecond: Int) {
             )
             Column(Modifier.padding(horizontal = 8.dp)) {
                 Text(formatGoldDiff(snapshot.goldDiff), color = if (snapshot.goldDiff >= 0) RiftCyan else RiftRed, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("GOLD", color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
+                Text("GOLD", color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
             }
             TeamStateColumn(
                 name = snapshot.red,
@@ -245,7 +245,7 @@ private fun TeamStateColumn(
         Text(
             "${formatGold(gold)} · K$kills T$towers D$dragons B$barons",
             color = RiftMuted,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             modifier = Modifier.fillMaxWidth(),
             textAlign = align
         )
@@ -253,7 +253,7 @@ private fun TeamStateColumn(
             Spacer(Modifier.height(5.dp))
             players.sortedBy { roleOrder(it.role) }.take(5).forEach { player ->
                 val label = "${player.summonerName.ifBlank { player.role }} ${player.kills}/${player.deaths}/${player.assists} · L${player.level} · ${player.creepScore}CS"
-                Text(label, color = RiftMuted, fontSize = 8.sp, modifier = Modifier.fillMaxWidth(), textAlign = align)
+                Text(label, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.fillMaxWidth(), textAlign = align)
             }
         }
     }
@@ -267,7 +267,7 @@ private fun TimelineFilters(selected: TimelineFilter, onSelect: (TimelineFilter)
             Text(
                 item.label,
                 color = if (active) RiftCyan else RiftMuted,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
@@ -282,7 +282,7 @@ private fun TimelineFilters(selected: TimelineFilter, onSelect: (TimelineFilter)
 @Composable
 private fun TimelineEventRow(event: MatchTimelineEvent) {
     Row(Modifier.fillMaxWidth().padding(top = 7.dp)) {
-        Text(formatClock(event.seconds), color = RiftCyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
+        Text(formatClock(event.seconds), color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 8.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 event.title,
@@ -295,7 +295,7 @@ private fun TimelineEventRow(event: MatchTimelineEvent) {
                 fontWeight = FontWeight.Bold
             )
             if (event.detail.isNotBlank()) {
-                Text(event.detail, color = RiftMuted, fontSize = 8.sp)
+                Text(event.detail, color = RiftMuted, fontSize = 10.sp)
             }
         }
     }

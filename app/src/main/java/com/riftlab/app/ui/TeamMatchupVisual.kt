@@ -63,7 +63,7 @@ internal fun TeamMatchupVisual(
             )
             centerSubtext?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(3.dp))
-                Text(it, color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
+                Text(it, color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
             }
         }
         TeamIdentityVisual(
@@ -119,7 +119,7 @@ private fun TeamIdentityVisual(
         )
         subtext?.takeIf { it.isNotBlank() }?.let {
             Spacer(Modifier.height(2.dp))
-            Text(it, color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.Center, maxLines = 1)
+            Text(it, color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
 }

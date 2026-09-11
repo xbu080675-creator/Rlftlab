@@ -184,11 +184,11 @@ private fun MatchHeroPanel(
                     ScheduleMatchPhase.COMPLETED -> "FINAL"
                 },
                 color = if (phase == ScheduleMatchPhase.LIVE) RiftCyan else RiftMuted,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.weight(1f))
-            Text("BO${match.bestOf}", color = RiftMuted, fontSize = 9.sp)
+            Text("BO${match.bestOf}", color = RiftMuted, fontSize = 10.sp)
         }
         Spacer(Modifier.height(10.dp))
         TeamMatchupVisual(
@@ -204,7 +204,7 @@ private fun MatchHeroPanel(
         Text(
             "${match.blockName.ifBlank { match.league }} · ${MatchSessionStore.scheduleTimingNote(match)}",
             color = RiftMuted,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center
         )
@@ -351,9 +351,9 @@ private fun VisualPlayerRow(
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
-            Text(playerStats(left), color = RiftMuted, fontSize = 8.sp)
+            Text(playerStats(left), color = RiftMuted, fontSize = 10.sp)
         }
-        Text(roleLabel(role), modifier = Modifier.width(30.dp), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text(roleLabel(role), modifier = Modifier.width(30.dp), color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
             Text(
                 right?.let { cleanPlayerName(it.summonerName, rightTeamName) } ?: "数据缺失",
@@ -362,7 +362,7 @@ private fun VisualPlayerRow(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.End
             )
-            Text(playerStats(right), color = RiftMuted, fontSize = 8.sp, textAlign = TextAlign.End)
+            Text(playerStats(right), color = RiftMuted, fontSize = 10.sp, textAlign = TextAlign.End)
         }
         Spacer(Modifier.width(6.dp))
         ChampionMiniIcon(right?.championId.orEmpty())
@@ -448,7 +448,7 @@ private fun MvpHeroCard(
             Text(
                 listOf(mvp.team, mvp.role).filter { it.isNotBlank() }.joinToString(" · "),
                 color = RiftMuted,
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.weight(1f))
@@ -479,7 +479,7 @@ private fun VoteVisualCard(match: ScheduledEsportsMatch, vote: OfficialVoteRecor
                 Text(vote.title, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 if (leaderName.isNotBlank()) {
                     Text(leaderName, fontSize = 22.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                    Text(leaderTeam, color = RiftMuted, fontSize = 9.sp)
+                    Text(leaderTeam, color = RiftMuted, fontSize = 10.sp)
                 }
                 leader?.let {
                     Spacer(Modifier.height(4.dp))
@@ -497,11 +497,11 @@ private fun VoteVisualCard(match: ScheduledEsportsMatch, vote: OfficialVoteRecor
             vote.options.sortedByDescending { it.percent ?: it.votes.toDouble() }.take(5).forEachIndexed { index, option ->
                 val (name, teamCode) = splitVoteLabel(option.label)
                 Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${index + 1}", color = if (index == 0) RiftCyan else RiftMuted, fontSize = 9.sp, modifier = Modifier.width(18.dp))
-                    Text(name, modifier = Modifier.weight(1f), fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                    if (teamCode.isNotBlank()) Text(teamCode, color = RiftMuted, fontSize = 8.sp)
+                    Text("${index + 1}", color = if (index == 0) RiftCyan else RiftMuted, fontSize = 10.sp, modifier = Modifier.width(18.dp))
+                    Text(name, modifier = Modifier.weight(1f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    if (teamCode.isNotBlank()) Text(teamCode, color = RiftMuted, fontSize = 10.sp)
                     Spacer(Modifier.width(7.dp))
-                    Text(voteScoreLabel(vote, option.votes, option.percent), color = RiftMuted, fontSize = 8.sp)
+                    Text(voteScoreLabel(vote, option.votes, option.percent), color = RiftMuted, fontSize = 10.sp)
                 }
             }
         }
@@ -529,19 +529,19 @@ private fun DraftVisualPanel(draft: DraftPickRecord) {
 private fun DraftTeamBlock(side: String, picks: List<String>, bans: List<String>) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(side, color = if (side == "BLUE") RiftCyan else RiftRed, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(42.dp))
-        Text("PICK", color = RiftMuted, fontSize = 8.sp)
+        Text("PICK", color = RiftMuted, fontSize = 10.sp)
     }
     Spacer(Modifier.height(5.dp))
     if (picks.isEmpty()) {
-        Text("PICK 暂无数据", color = RiftMuted, fontSize = 8.sp)
+        Text("PICK 暂无数据", color = RiftMuted, fontSize = 10.sp)
     } else {
         ChampionIconRow(picks, iconSize = 40)
     }
     Spacer(Modifier.height(7.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("BAN", color = RiftMuted, fontSize = 8.sp, modifier = Modifier.width(42.dp))
+        Text("BAN", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.width(42.dp))
         if (bans.isEmpty()) {
-            Text("当前来源未提供", color = RiftMuted, fontSize = 8.sp)
+            Text("当前来源未提供", color = RiftMuted, fontSize = 10.sp)
         } else {
             ChampionIconRow(bans, iconSize = 28)
         }
@@ -578,7 +578,7 @@ private fun ChampionTile(champion: String, iconSize: Int) {
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Text(champion.take(2), color = RiftMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(champion.take(2), color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
         if (iconSize >= 40) {
@@ -659,7 +659,7 @@ private fun DataSourceStrip(
         Text(
             if (loading) "SYNCING" else "DATA",
             color = if (loading) RiftCyan else RiftMuted,
-            fontSize = 8.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.width(8.dp))
@@ -673,7 +673,7 @@ private fun DataSourceStrip(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 9.dp, vertical = 0.dp),
                 modifier = Modifier.height(28.dp)
             ) {
-                Text(if (loading) "…" else "刷新", fontSize = 8.sp)
+                Text(if (loading) "…" else "刷新", fontSize = 10.sp)
             }
         }
     }
@@ -686,7 +686,7 @@ private fun StatStrip(vararg values: String) {
             Text(
                 value,
                 color = if (index == 0) RiftText else RiftMuted,
-                fontSize = 8.sp,
+                fontSize = 10.sp,
                 fontWeight = if (index == 0) FontWeight.Bold else FontWeight.SemiBold
             )
         }
@@ -709,7 +709,7 @@ private fun SourceLabel(source: String) {
 @Composable
 private fun CompactStatusPanel(message: String) {
     DetailPanel {
-        Text(message, color = RiftMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        Text(message, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -718,7 +718,7 @@ private fun DetailSectionTitle(text: String) {
     Text(
         text,
         color = RiftMuted,
-        fontSize = 9.sp,
+        fontSize = 10.sp,
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.7.sp,
         modifier = Modifier.padding(top = 4.dp)

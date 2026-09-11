@@ -61,7 +61,7 @@ fun ComprehensiveDataCoveragePanel() {
                     ) {
                         Text(cell.domain.label, color = RiftText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         Text(cell.state.label, color = color, fontSize = 10.sp)
-                        Text("${cell.availableFields}/${cell.requiredFields}", color = RiftMuted, fontSize = 9.sp)
+                        Text("${cell.availableFields}/${cell.requiredFields}", color = RiftMuted, fontSize = 10.sp)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -79,7 +79,7 @@ fun ComprehensiveDataCoveragePanel() {
             Text(
                 "NEXT GAP  " + missing.take(3).joinToString(" · ") { "${it.domain.label}:${it.missing.firstOrNull() ?: it.state.label}" },
                 color = RiftMuted,
-                fontSize = 9.sp
+                fontSize = 10.sp
             )
         }
 

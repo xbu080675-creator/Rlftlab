@@ -84,7 +84,7 @@ internal fun MatchTimelineContent() {
                         "实时阶段优先保存约 10 秒状态快照；海外赛区与国际赛事只使用 RiftLab 本机归档、Riot/官方可核实事件数据，不请求、不解析 Bilibili，也不从终局比分伪造中间过程。"
                     },
                     color = RiftMuted,
-                    fontSize = 9.sp
+                    fontSize = 10.sp
                 )
             }
         }

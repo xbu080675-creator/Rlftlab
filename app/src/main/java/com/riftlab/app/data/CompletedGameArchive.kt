@@ -26,8 +26,10 @@ data class CompletedSeriesSnapshot(
 /**
  * Post-match archive. It is intentionally separated from the live surface.
  *
- * A completed game can be reconstructed from Tencent/TJStats after the game has ended, so the
- * post tab does not depend on RiftLab having been open for the final live frame.
+ * A completed game can be reconstructed from an explicitly sourced post-match provider after the
+ * game has ended, so the post tab does not depend on RiftLab having been open for the final live
+ * frame. LPL may use TJStats; other leagues may use a labelled global supplement. Missing data stays
+ * unavailable rather than being synthesized.
  */
 object CompletedGameArchive {
     private val _latest = MutableStateFlow<LiveSnapshot?>(null)

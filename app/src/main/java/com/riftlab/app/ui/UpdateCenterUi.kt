@@ -42,22 +42,22 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("RIFTLAB UPDATE", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("当前版本", color = RiftMuted, fontSize = 9.sp)
+            Text("当前版本", color = RiftMuted, fontSize = 10.sp)
             Text("${BuildConfig.VERSION_NAME} · code ${BuildConfig.VERSION_CODE}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
             if (state.latestVersionName.isNotBlank()) {
                 Spacer(Modifier.height(3.dp))
-                Text("最新 DEV", color = RiftMuted, fontSize = 9.sp)
+                Text("最新 DEV", color = RiftMuted, fontSize = 10.sp)
                 Text("${state.latestVersionName} · code ${state.latestVersionCode}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
 
             if (state.sourceLabel.isNotBlank()) {
-                Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 9.sp)
+                Text("更新通道 · ${state.sourceLabel}", color = RiftMuted, fontSize = 10.sp)
                 if (state.sourceLabel.startsWith("GitHub 更新加速")) {
                     Text(
                         "仅作用于本次 RiftLab GitHub 更新请求 · 非 VPN / 非系统代理 · 节点失败会自动切换",
                         color = RiftMuted,
-                        fontSize = 8.sp,
+                        fontSize = 10.sp,
                         lineHeight = 12.sp
                     )
                 }
@@ -70,7 +70,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                         .heightIn(max = 180.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text("更新内容", color = RiftMuted, fontSize = 9.sp)
+                    Text("更新内容", color = RiftMuted, fontSize = 10.sp)
                     Spacer(Modifier.height(5.dp))
                     Text(state.changelog, fontSize = 10.sp, lineHeight = 15.sp)
                 }
@@ -85,7 +85,7 @@ internal fun UpdateCenterDialog(onClose: () -> Unit) {
                 Text("${state.progressPercent}% · $sizeText", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            state.error?.let { Text(it, color = RiftRed, fontSize = 9.sp) }
+            state.error?.let { Text(it, color = RiftRed, fontSize = 10.sp) }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
