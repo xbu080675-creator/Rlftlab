@@ -84,9 +84,18 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
         var cachedRoute: Route? = null
         var cachedRouteKey = ""
         var previous: LiveSnapshot? = null
+        var observedTargetKey = ""
 
         while (currentCoroutineContext().isActive) {
             try {
+                val nextTargetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    ref = null
+                    cachedRoute = null
+                    cachedRouteKey = ""
+                    previous = null
+                }
                 if (ref == null) {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,

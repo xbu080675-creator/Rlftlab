@@ -192,10 +192,21 @@ internal class LolEsportsLiveDataSource(
         var currentGameId = ""
         var previous: LiveSnapshot? = null
         var lockedFromSchedule = false
+        var observedTargetKey = ""
 
         while (currentCoroutineContext().isActive) {
             try {
                 val registeredTarget = LiveMatchTargetRegistry.snapshot()
+                val nextTargetKey = LiveMatchTargetRegistry.key(registeredTarget)
+                if (nextTargetKey != observedTargetKey) {
+                    observedTargetKey = nextTargetKey
+                    currentEvent = null
+                    knownGames = emptyList()
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+                    lockedFromSchedule = false
+                }
                 if (registeredTarget != null && isExternalProviderTarget(registeredTarget)) {
                     currentEvent = null
                     knownGames = emptyList()

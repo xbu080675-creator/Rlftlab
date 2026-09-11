@@ -139,6 +139,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                                 status?.phase == LiveSourcePhase.LIVE &&
                                     status.lastUpdateEpochMs > 0L &&
                                     now - status.lastUpdateEpochMs <= LIVE_STATUS_STALE_MS &&
+                                    providerMatchesCurrentTargetLocked(candidate, requireFrame = true) &&
                                     providerSnapshots[candidate.name]?.let(::isMeaningful) == true
                             }
                             .minByOrNull { it.priority }
@@ -227,6 +228,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
             s?.phase == LiveSourcePhase.LIVE &&
                 s.lastUpdateEpochMs > 0L &&
                 now - s.lastUpdateEpochMs <= LIVE_STATUS_STALE_MS &&
+                providerMatchesCurrentTargetLocked(provider, requireFrame = true) &&
                 providerSnapshots[provider.name]?.let(::isMeaningful) == true
         }
 
@@ -249,8 +251,9 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
             return
         }
 
-        val between = eligibleProvidersLocked().firstOrNull {
-            providerStatuses[it.name]?.phase == LiveSourcePhase.BETWEEN_GAMES
+        val between = eligibleProvidersLocked().firstOrNull { provider ->
+            providerStatuses[provider.name]?.phase == LiveSourcePhase.BETWEEN_GAMES &&
+                providerMatchesCurrentTargetLocked(provider, requireFrame = false)
         }
         if (between != null) {
             if (eventLiveSinceEpochMs == 0L) eventLiveSinceEpochMs = now
@@ -332,6 +335,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         val useful = eligible.firstOrNull { provider ->
             val s = providerStatuses[provider.name]
             s != null && s.phase != LiveSourcePhase.IDLE &&
+                providerMatchesCurrentTargetLocked(provider, requireFrame = false) &&
                 (s.lastUpdateEpochMs == 0L || now - s.lastUpdateEpochMs <= PROVIDER_STATUS_MAX_AGE_MS)
         }
         val s = useful?.let { providerStatuses[it.name] }
@@ -368,6 +372,22 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         )
     }
 
+    private fun providerMatchesCurrentTargetLocked(provider: Provider, requireFrame: Boolean): Boolean {
+        val target = LiveMatchTargetRegistry.snapshot() ?: return false
+        val status = providerStatuses[provider.name] ?: return false
+        val targetEventId = target.eventId.trim()
+        val providerEventId = status.eventId.trim()
+        if (targetEventId.isNotBlank()) {
+            if (providerEventId.isNotBlank() && providerEventId != targetEventId) return false
+            if (providerEventId.isBlank() && status.phase in setOf(LiveSourcePhase.LIVE, LiveSourcePhase.BETWEEN_GAMES)) {
+                return false
+            }
+        }
+        if (!requireFrame) return true
+        val snapshot = providerSnapshots[provider.name] ?: return false
+        return LiveMatchTargetRegistry.snapshotBelongsTo(snapshot, target)
+    }
+
     private fun eligibleProvidersLocked(): List<Provider> = providers.filter {
         !it.lplOnly || currentTargetIsLpl()
     }
@@ -377,7 +397,8 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         if (eligible.isEmpty()) return true
         return eligible.all { provider ->
             val s = providerStatuses[provider.name] ?: return@all true
-            s.phase == LiveSourcePhase.ERROR ||
+            !providerMatchesCurrentTargetLocked(provider, requireFrame = false) ||
+                s.phase == LiveSourcePhase.ERROR ||
                 (s.lastUpdateEpochMs > 0L && now - s.lastUpdateEpochMs > PROVIDER_STATUS_MAX_AGE_MS)
         }
     }
