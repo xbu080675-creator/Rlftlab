@@ -1,5 +1,6 @@
 package com.riftlab.app.data
 
+import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,31 +17,42 @@ data class StartingRosterState(
     val left: StartingRosterEvidence? = null,
     val right: StartingRosterEvidence? = null,
     val lastCheckedEpochMs: Long = 0L,
+    val endpointLabel: String = "NONE",
+    val usedLastGood: Boolean = false,
+    val checkedEndpoints: Int = 0,
+    val diagnostics: String = "",
     val message: String = "等待赛程目标"
 )
 
 /**
  * Global minute-level official roster watcher.
  *
- * The client consumes normalized evidence only; social crawling/OCR happens upstream. That means a
- * mainland user does not need direct access to X/Instagram/YouTube or another overseas source just
- * to receive a confirmed roster.
+ * The client consumes normalized evidence only; social crawling/OCR happens upstream. Delivery is
+ * independently observable here so the UI can distinguish "no announcement" from "mirror failed".
  */
 object StartingRosterCenter {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val feed = StartingRosterFeed()
     private val mutableState = MutableStateFlow(StartingRosterState())
     val state: StateFlow<StartingRosterState> = mutableState.asStateFlow()
+    private var feed: StartingRosterFeed? = null
     private var job: Job? = null
 
+    fun initialize(context: Context) {
+        if (feed == null) feed = StartingRosterFeed(context.applicationContext)
+        ensureRunning()
+    }
+
     fun ensureRunning() {
+        val activeFeed = feed ?: return
         if (job?.isActive == true) return
         job = scope.launch {
             while (isActive) {
                 val target = MatchSessionStore.targetMatch.value
                 if (target == null || target.teams.size < 2) {
-                    mutableState.value = StartingRosterState(message = "等待赛程目标")
-                    delay(60_000L)
+                    mutableState.value = mutableState.value.copy(message = "等待赛程目标", diagnostics = "target_not_ready")
+                    // MatchSessionStore starts asynchronously. Do not sleep for a full minute just
+                    // because the roster watcher happened to win the startup race.
+                    delay(2_000L)
                     continue
                 }
 
@@ -48,25 +60,32 @@ object StartingRosterCenter {
                     "${target.startTimeIso}|${target.teams.take(2).joinToString("|") { it.code.ifBlank { it.name } }}"
                 }
 
-                runCatching { feed.fetchFor(target) }
-                    .onSuccess { evidence ->
-                        val left = findFor(target.teams[0], evidence)
-                        val right = findFor(target.teams[1], evidence)
+                runCatching { activeFeed.fetchFor(target) }
+                    .onSuccess { result ->
+                        val left = findFor(target.teams[0], result.evidence)
+                        val right = findFor(target.teams[1], result.evidence)
                         val rows = listOfNotNull(left, right)
                         val count = rows.size
                         val conflictCount = rows.count { it.conflict }
                         val crossCount = rows.count { it.crossConfirmed }
+                        val transport = if (result.usedLastGood) "LAST-GOOD CACHE" else result.endpointLabel
                         mutableState.value = StartingRosterState(
                             matchKey = matchKey,
                             left = left,
                             right = right,
                             lastCheckedEpochMs = System.currentTimeMillis(),
+                            endpointLabel = result.endpointLabel,
+                            usedLastGood = result.usedLastGood,
+                            checkedEndpoints = result.checkedEndpoints,
+                            diagnostics = result.diagnostics,
                             message = when {
-                                conflictCount > 0 -> "OFFICIAL ROSTER · 官方来源存在冲突，等待确认"
-                                count == 2 && crossCount == 2 -> "OFFICIAL ROSTER · 两队首发已交叉确认"
-                                count == 2 -> "OFFICIAL ROSTER · 两队首发已确认"
-                                count == 1 -> "OFFICIAL ROSTER · 1/2 队首发已确认"
-                                else -> "OFFICIAL ROSTER · 尚未发现匹配的官方首发"
+                                conflictCount > 0 -> "OFFICIAL ROSTER · 官方来源存在冲突，等待确认 · $transport"
+                                count == 2 && crossCount == 2 -> "OFFICIAL ROSTER · 两队首发已交叉确认 · $transport"
+                                count == 2 -> "OFFICIAL ROSTER · 两队首发已确认 · $transport"
+                                count == 1 -> "OFFICIAL ROSTER · 1/2 队首发已确认 · $transport"
+                                result.endpointLabel == "VALID_NO_MATCH" -> "OFFICIAL ROSTER · 数据源正常，当前比赛暂无匹配官宣"
+                                result.endpointLabel == "NO_VALID_SOURCE" -> "OFFICIAL ROSTER · 分发链异常，正在等待可用源"
+                                else -> "OFFICIAL ROSTER · 尚未发现匹配的官方首发 · $transport"
                             }
                         )
                     }
@@ -86,7 +105,7 @@ object StartingRosterCenter {
     fun evidenceFor(team: EsportsTeamRef): StartingRosterEvidence? {
         val current = mutableState.value
         return listOfNotNull(current.left, current.right).firstOrNull { evidence ->
-            token(evidence.team) in aliases(team)
+            !evidence.conflict && token(evidence.team) in aliases(team)
         }
     }
 
