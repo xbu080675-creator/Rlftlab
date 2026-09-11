@@ -389,7 +389,7 @@ internal class LolEsportsLiveDataSource(
 
     /**
      * The window endpoint is cursor based. Using Schedule.startTime is wrong for delayed starts
-     * and currently returns no JSON for this LPL series. Query near wall-clock "now" instead,
+     * and can return no JSON for delayed series. Query near wall-clock "now" instead,
      * with progressively wider safety lags, and accept the first meaningful current snapshot.
      */
     private suspend fun fetchLatestSnapshot(
