@@ -189,7 +189,7 @@ internal fun LocalAiSettingsPanel() {
                         onClick = { LiteRtLocalAiRuntime.benchmarkVerifiedModel(context, selectedModel) }
                     ) { Text(if (runtimeState.busy) "基准测试中" else "运行真机基准") }
                     Text(
-                        "会分开记录冷启动加载、warm-up 与 3 次稳态短推理；READY 只看稳态 median / P90 与热状态，首轮慢不会直接判死刑。",
+                        "优先尝试 GPU / OpenCL，初始化失败会自动回退 CPU。冷启动、warm-up 与 3 次稳态推理分开记录；READY 按稳态等级判断。",
                         color = RiftMuted,
                         fontSize = 11.sp,
                         lineHeight = 16.sp
@@ -198,7 +198,7 @@ internal fun LocalAiSettingsPanel() {
                 if (statusForSelected && installState.status == LocalModelInstallStatus.READY) {
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "READY · 稳态 median ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"} · 请手动打开总开关",
+                        "READY · ${runtimeState.grade.label} · ${runtimeState.backendLabel} · median ${installState.benchmarkLatencyMs?.let { "${it}ms" } ?: "已通过"}",
                         color = RiftCyan,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
@@ -207,6 +207,12 @@ internal fun LocalAiSettingsPanel() {
                 if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                    Text(
+                        "BACKEND ${runtimeState.backendLabel} · GRADE ${runtimeState.grade.label}",
+                        color = RiftCyan,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                     if (runtimeState.loadMs != null || runtimeState.warmupMs != null || runtimeState.sampleMs.isNotEmpty()) {
                         Text(
                             listOfNotNull(
@@ -241,7 +247,7 @@ internal fun LocalAiSettingsPanel() {
         }
 
         Text(
-            "下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，SHA-256 通过后仍不会直接启用。基准把冷启动、warm-up、稳态 median/P90 和热状态分开；失败时模型文件会保留，可降温、切换性能模式或降低系统负载后重新测试。模型资产与普通缓存分离，清理缓存不会删除模型。",
+            "下载策略：模型包写入 filesDir/local_ai_models，SHA-256 通过后才允许真机基准。运行时先探测 GPU / OpenCL，失败自动回退 CPU；稳态 <1.5s 为优秀、<2.5s 为推荐、<4s 为可用，只有持续过慢或严重热状态才回到规则模式。模型文件会保留，清理普通缓存不会删除。",
             color = RiftMuted,
             fontSize = 11.sp,
             lineHeight = 17.sp
