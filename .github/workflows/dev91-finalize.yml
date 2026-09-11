@@ -1,0 +1,54 @@
+name: Finalize dev91 roster fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/dev91-finalize.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+      - name: Fix raw-string regex semantics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt')
+          s = p.read_text(encoding='utf-8')
+          old = s
+          s = s.replace('Regex("""[\'’]s\\\\b""", RegexOption.IGNORE_CASE)', 'Regex("""[\'’]s\\b""", RegexOption.IGNORE_CASE)')
+          s = s.replace('Regex("""[^\\\\p{L}\\\\p{N}]+""")', 'Regex("""[^\\p{L}\\p{N}]+""")')
+          s = s.replace('Regex("""[^A-Z0-9\\\\p{L}\\\\p{N}]+""")', 'Regex("""[^A-Z0-9\\p{L}\\p{N}]+""")')
+          if s == old:
+              raise SystemExit('expected dev.91 over-escaped regex patterns were not found')
+          p.write_text(s, encoding='utf-8')
+          PY
+          grep -F 'Regex("""['"'"'’]s\b""", RegexOption.IGNORE_CASE)' app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt
+          grep -F 'Regex("""[^\p{L}\p{N}]+""")' app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt
+          grep -F 'Regex("""[^A-Z0-9\p{L}\p{N}]+""")' app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt
+      - name: Commit semantic regex fix
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/java/com/riftlab/app/data/StartingRosterFeed.kt
+          git commit -m 'dev.91: correct roster regex semantics'
+          git push origin HEAD:main
+      - name: Dispatch final verification and OTA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run android-build.yml --ref main
+          gh workflow run compile-diagnostics.yml --ref main
+          gh workflow run ota-direct.yml --ref main
