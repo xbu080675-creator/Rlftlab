@@ -60,8 +60,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 85
-        versionName = "1.0.0-dev.85"
+        versionCode = 86
+        versionName = "1.0.0-dev.86"
         buildConfigField(
             "String",
             "GITHUB_ACCELERATOR_BASE_URLS",
@@ -201,3 +201,5 @@ dependencies {
 // dev.84: managed disposable-cache accounting, manual cleanup UI and automatic pressure trimming. Persistent archives, credentials, settings and downloaded local-AI models are excluded.
 
 // dev.85: expose the optional local-AI control surface: device profile, model suitability, explicit selection and enable gating. No model is bundled or auto-downloaded; rules remain the default fallback.
+
+// dev.86: persistent Model Manager with explicit download, SHA-256 verification and benchmark-ready states. Verified files stay outside disposable cache and never auto-enable the AI backend.
