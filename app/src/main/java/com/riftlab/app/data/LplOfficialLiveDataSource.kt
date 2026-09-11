@@ -47,15 +47,16 @@ data class LiveLifecycleState(
 /**
  * Global, match-agnostic live provider router.
  *
- * Provider order is a policy, not a match special-case:
+ * Provider order remains a truth policy:
  * 1) Tencent/LPL comm-match-app realtime data plane (LPL only)
  * 2) Riot LoL Esports LiveStats window feed (global official continuous frames)
- * 3) Cito API WSS / quota-aware REST fallback (global, only when a key is configured)
+ * 3) Cito realtime fabric (global WebSocket primary + REST reconnect/reconcile)
  * 4) TJStats matchDetail current/final-frame fallback (LPL only)
  *
- * All eligible providers run in parallel. A provider that stalls cannot block the state machine;
- * after EVENT_LIVE has no meaningful frame for EVENT_TO_FRAME_TIMEOUT_MS, RiftLab enters
- * GAME_LOADING and keeps probing every provider instead of showing an endless "解析中" state.
+ * dev.80 adds a second rule: Cito-only combat context may enrich a higher-priority canonical
+ * scoreboard frame without replacing its core numbers. This is how HP/alive/items/KP/damage/wards
+ * travel through the normal MatchSessionStore -> archive -> HUD pipeline even when Riot/Tencent is
+ * the selected source of truth for gold, kills and objectives.
  */
 internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
@@ -69,7 +70,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
     private val commRealtime = LplCommRealtimeDataSource()
     private val riotLiveStats = LolEsportsLiveDataSource()
-    private val citoLive = CitoLiveDataSource()
+    private val citoLive = CitoRealtimeLiveDataSource()
     private val lplMatchDetail = LplCurrentGameLiveDataSource()
 
     private val providers = listOf(
@@ -147,20 +148,15 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                         if (best != null) {
                             val candidate = providerSnapshots[best.name]
                             if (candidate != null) {
-                                val key = buildString {
-                                    append(best.name).append('|')
-                                    append(candidate.gameId).append('|')
-                                    append(candidate.elapsedSeconds).append('|')
-                                    append(candidate.blueGold).append('|').append(candidate.redGold).append('|')
-                                    append(candidate.blueKills).append('|').append(candidate.redKills)
-                                }
+                                val fused = fuseCitoSupplementLocked(candidate, best.name, now)
+                                val key = emissionKey(best.name, fused)
                                 if (key != lastEmissionKey) {
                                     lastEmissionKey = key
                                     lastMeaningfulFrameEpochMs = now
                                     lastChosenProvider = best.name
                                     chosenProvider = best
-                                    chosen = candidate.copy(
-                                        source = "${candidate.source} · Router=${best.name}",
+                                    chosen = fused.copy(
+                                        source = "${fused.source} · Router=${best.name}",
                                         targetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
                                     )
                                 }
@@ -188,6 +184,36 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         }
 
         awaitClose { }
+    }
+
+    private fun fuseCitoSupplementLocked(
+        primary: LiveSnapshot,
+        primaryProvider: String,
+        now: Long
+    ): LiveSnapshot {
+        if (primaryProvider == CITO_PROVIDER_NAME) return primary
+        val citoStatus = providerStatuses[CITO_PROVIDER_NAME] ?: return primary
+        if (citoStatus.phase != LiveSourcePhase.LIVE || citoStatus.lastUpdateEpochMs <= 0L) return primary
+        if (now - citoStatus.lastUpdateEpochMs > CITO_SUPPLEMENT_STALE_MS) return primary
+        val cito = providerSnapshots[CITO_PROVIDER_NAME] ?: return primary
+        val target = LiveMatchTargetRegistry.snapshot() ?: return primary
+        if (!LiveMatchTargetRegistry.snapshotBelongsTo(cito, target)) return primary
+        return CitoLiveFusion.mergeSupplement(primary, cito)
+    }
+
+    private fun emissionKey(provider: String, snapshot: LiveSnapshot): String = buildString {
+        append(provider).append('|')
+        append(snapshot.gameId).append('|')
+        append(snapshot.elapsedSeconds).append('|')
+        append(snapshot.blueGold).append('|').append(snapshot.redGold).append('|')
+        append(snapshot.blueKills).append('|').append(snapshot.redKills).append('|')
+        append(snapshot.supplementUpdatedAtEpochMs)
+        (snapshot.bluePlayers + snapshot.redPlayers).forEach { player ->
+            append('|').append(player.participantId)
+            append(':').append(player.alive)
+            append(':').append(player.currentHealth ?: -1)
+            append(':').append(player.items.joinToString(","))
+        }
     }
 
     private fun refreshLifecycleLocked() {
@@ -439,7 +465,9 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         match.teams.take(2).joinToString(" vs ") { it.code.ifBlank { it.name } }
 
     companion object {
+        private const val CITO_PROVIDER_NAME = "Cito API"
         private const val LIVE_STATUS_STALE_MS = 15_000L
+        private const val CITO_SUPPLEMENT_STALE_MS = 15_000L
         private const val PROVIDER_STATUS_MAX_AGE_MS = 45_000L
         private const val EVENT_TO_FRAME_TIMEOUT_MS = 20_000L
         private const val WATCHDOG_TICK_MS = 1_000L
