@@ -115,10 +115,12 @@ private fun BroadcastHubLauncher(
     Column(
         modifier
             .clickable(onClick = onClick)
-            .background(RiftPanel, shape)
-            .border(
-                1.dp,
-                if (gameLive) RiftRed.copy(alpha = 0.85f) else if (eventActive) RiftCyan.copy(alpha = 0.6f) else RiftLine,
+            .background(
+                when {
+                    gameLive -> RiftRed.copy(alpha = 0.12f)
+                    eventActive -> RiftCyan.copy(alpha = 0.10f)
+                    else -> RiftPanel
+                },
                 shape
             )
             .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -222,29 +224,22 @@ private fun BroadcastRegionSection(
     platforms: List<StreamPlatform>,
     onOpen: (StreamPlatform) -> Unit
 ) {
-    Text(title, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    RiftSectionLabel(title)
     Spacer(Modifier.height(7.dp))
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         platforms.forEach { platform ->
-            val shape = CutCornerShape(topEnd = 10.dp, bottomStart = 7.dp)
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpen(platform) }
-                    .background(RiftPanel, shape)
-                    .border(1.dp, RiftLine, shape)
-                    .padding(horizontal = 12.dp, vertical = 11.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(platform.displayName, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        if (platform.packages.isEmpty()) "网页入口" else "优先打开已安装 APP · 否则网页",
-                        color = RiftMuted,
-                        fontSize = 10.sp
-                    )
+            RiftHudPanel(onClick = { onOpen(platform) }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(platform.displayName, color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (platform.packages.isEmpty()) "网页入口" else "优先打开已安装 APP · 否则网页",
+                            color = RiftMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                    RiftStatusBadge("OPEN")
                 }
-                Text("打开 ›", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -316,45 +316,43 @@ private fun EventSummaryCard(
     val hasCurrent = bucket.matches.any { it.matchId == current?.matchId }
     val hasNext = bucket.matches.any { it.matchId == next?.matchId }
     val currentActivity = current?.takeIf { hasCurrent }?.let(MatchSessionStore::scheduleActivity)
-    Column(
-        Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
-            .border(1.dp, if (hasCurrent) RiftCyan.copy(alpha = 0.5f) else RiftLine, CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
-            .padding(14.dp)
-    ) {
+    RiftHudPanel(accent = hasCurrent) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
+            Column(Modifier.weight(1f)) {
+                Text(
+                    bucket.title,
+                    color = RiftText,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (bucket.researchOnly) "年度赛事档案" else competitionRange(bucket.matches),
+                    color = RiftMuted,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
+            }
+            RiftStatusBadge(
                 when {
-                    bucket.researchOnly -> "年度研究档案"
-                    hasCurrent -> currentActivity?.let(::scheduleActivityText) ?: "进行中"
-                    hasNext -> "当前赛段"
-                    bucket.matches.isNotEmpty() && bucket.matches.all { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED } -> "已结束"
-                    else -> "赛事"
-                },
-                color = if (hasCurrent) RiftCyan else RiftText,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp
+                    bucket.researchOnly -> "RESEARCH"
+                    hasCurrent -> currentActivity?.let(::scheduleActivityText)?.uppercase() ?: "LIVE"
+                    hasNext -> "NEXT"
+                    bucket.matches.isNotEmpty() && bucket.matches.all { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED } -> "FINAL"
+                    else -> "EVENT"
+                }
             )
-            Spacer(Modifier.weight(1f))
-            Text(if (bucket.researchOnly) "RESEARCH" else "${bucket.matches.size} 场", color = RiftMuted, fontSize = 10.sp)
         }
-        Spacer(Modifier.height(5.dp))
-        Text(if (bucket.researchOnly) "赛程待可信源发布 · 研究档案先行" else competitionRange(bucket.matches), color = RiftMuted, fontSize = 10.sp)
         if (hasCurrent && current != null) {
-            Spacer(Modifier.height(5.dp))
-            Text(
-                "${currentActivity?.let(::scheduleActivityText) ?: "进行中"} · ${matchLabel(current)} · ${MatchSessionStore.scheduleTimingNote(current)}",
-                color = RiftCyan,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold
-            )
+            Spacer(Modifier.height(11.dp))
+            Text(matchLabel(current), color = RiftCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(MatchSessionStore.scheduleTimingNote(current), color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
         } else if (hasNext && next != null) {
-            Spacer(Modifier.height(5.dp))
-            Text("NEXT · ${matchLabel(next)} · ${MatchSessionStore.scheduleTimingNote(next)}", color = RiftMuted, fontSize = 10.sp)
+            Spacer(Modifier.height(11.dp))
+            Text("下一场 · ${matchLabel(next)}", color = RiftText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(MatchSessionStore.scheduleTimingNote(next), color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 3.dp))
         }
         if (bucket.tournamentId != null) {
-            Spacer(Modifier.height(5.dp))
-            Text(standingsStatus, color = RiftMuted, fontSize = 10.sp)
+            Text(standingsStatus, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
@@ -513,39 +511,29 @@ private fun InternationalEventPlaceholder(menu: InternationalCompetitionMenu) {
             "2026 全球总决赛位置永久保留在国际赛事首位。参赛队、赛程、开赛时间、场馆和直播信息只使用 Riot / 官方赛事源动态填充；数据未发布时不伪造。"
         )
         InternationalCompetitionMenu.DEMACIA_GLOBAL -> Triple(
-            "2026 德杯国际邀请赛",
-            "最新国际赛事 · 固定入口",
+            "2026 德杯国际邀请赛", "最新国际赛事 · 固定入口",
             "德杯国际邀请赛独立归入国际赛事，不归入 LPL 常规联赛。参赛队、分组、赛程和直播信息在可信赛事源可用后自动填充。"
         )
         InternationalCompetitionMenu.WSCI -> Triple(
-            "WSCI",
-            "国际赛事 · 独立赛事入口",
+            "WSCI", "国际赛事 · 独立赛事入口",
             "WSCI 作为独立国际赛事建档。赛程、比分和战队来自已标注 Provider；缺少 Standings、Seed 或晋级来源时保持未知。"
         )
         InternationalCompetitionMenu.WSCL -> Triple(
-            "WSCL",
-            "国际赛事 · 当前赛事入口保留",
+            "WSCL", "国际赛事 · 当前赛事入口保留",
             "WSCL 独立归入国际赛事。赛程、比分和战队只在可信源返回后展示；不会因为参赛队曾属于次级联赛而错误归类回联赛目录。"
         )
-        else -> Triple(
-            menu.label,
-            "国际赛事 · 固定入口",
-            "当前分页暂无可核实赛程；RiftLab 保留赛事入口，待 Riot / 官方赛事源返回数据后自动填充。"
-        )
+        else -> Triple(menu.label, "国际赛事 · 固定入口", "当前暂无可核实赛程；可信赛事源发布后自动填充。")
     }
-    Column(
-        Modifier.fillMaxWidth()
-            .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .border(1.dp, if (menu == InternationalCompetitionMenu.WORLDS) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .padding(14.dp)
-    ) {
-        Text(if (menu == InternationalCompetitionMenu.WORLDS) "SEASON FINALE · MAIN EVENT" else "INTERNATIONAL EVENT", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(5.dp))
-        Text(title, color = RiftText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Text(meta, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        Text(detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 14.sp)
+    RiftHudPanel(accent = menu == InternationalCompetitionMenu.WORLDS) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(meta, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+            }
+            RiftStatusBadge("WAITING")
+        }
+        Spacer(Modifier.height(9.dp))
+        Text(detail, color = RiftMuted, fontSize = 10.sp, lineHeight = 15.sp)
     }
 }
 
@@ -582,33 +570,30 @@ private fun CompetitionDirectoryCard(
     val hasCurrent = currentMatch != null
     val hasNext = bucket.matches.any { it.matchId == nextMatchId }
     val completed = bucket.matches.count { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED }
-    Column(
-        Modifier.fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(RiftPanel, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .border(1.dp, if (hasCurrent) RiftCyan.copy(alpha = 0.55f) else RiftLine, CutCornerShape(topEnd = 14.dp, bottomStart = 8.dp))
-            .padding(horizontal = 14.dp, vertical = 13.dp)
-    ) {
+    RiftHudPanel(accent = hasCurrent, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(bucket.title, color = if (hasCurrent) RiftCyan else RiftText, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(4.dp))
-                Text(if (bucket.researchOnly) "年度研究档案 · 赛程待同步" else competitionRange(bucket.matches), color = RiftMuted, fontSize = 10.sp)
+                Text(bucket.title, color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (bucket.researchOnly) "年度赛事档案" else competitionRange(bucket.matches),
+                    color = RiftMuted,
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
-            Column(horizontalAlignment = Alignment.End) {
+            RiftStatusBadge(
                 when {
-                    hasCurrent -> Text(
-                        currentMatch?.let { scheduleActivityText(MatchSessionStore.scheduleActivity(it)) } ?: "进行中",
-                        color = RiftCyan,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    hasNext -> Text("NEXT", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    hasCurrent -> currentMatch?.let { scheduleActivityText(MatchSessionStore.scheduleActivity(it)) }?.uppercase() ?: "LIVE"
+                    hasNext -> "NEXT"
+                    bucket.researchOnly -> "RESEARCH"
+                    else -> "${bucket.matches.size} MATCHES"
                 }
-                Text(if (bucket.researchOnly) "VERSION · RULES · DRAW · SCHEDULE" else "${bucket.matches.size} 场 · 已结束 $completed", color = RiftMuted, fontSize = 10.sp)
-            }
+            )
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Default.ChevronRight, null, tint = RiftMuted)
+        }
+        if (!bucket.researchOnly) {
+            Text("已结束 $completed / ${bucket.matches.size}", color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 9.dp))
         }
     }
 }

@@ -135,19 +135,19 @@ internal object RiftTeamSkins {
         motif = RiftSkinMotif.GRID,
         glass = false,
         lightPalette = light(
-            background = 0xFFF4F7FA,
-            panelAlt = 0xEAF0F4F8,
-            line = 0xFFCAD4DF,
-            accent = 0xFF087A91,
-            secondary = 0xFF147E69
+            background = 0xFFF6F4F6,
+            panelAlt = 0xEAF0EEF2,
+            line = 0xFFC9CBD3,
+            accent = 0xFFD92345,
+            secondary = 0xFF238FB9
         ),
         darkPalette = dark(
-            background = 0xFF0C1118,
-            panel = 0xEE121A24,
-            panelAlt = 0xE8182330,
-            line = 0xFF2A3A4E,
-            accent = 0xFF6CEBFF,
-            secondary = 0xFF8AF3C9
+            background = 0xFF090B10,
+            panel = 0xEF10141C,
+            panelAlt = 0xE8161C26,
+            line = 0xFF2A3340,
+            accent = 0xFFFF365D,
+            secondary = 0xFF43D6F1
         )
     )
 
@@ -315,10 +315,8 @@ internal fun RiftTeamSkinBackdrop(
     val accent = palette.accent
     val secondary = palette.secondary
 
-    if (skin.id == RiftSkinId.DEFAULT) {
-        Box(modifier.fillMaxSize().background(palette.background.copy(alpha = 1f)))
-        return
-    }
+    // The default RiftLab skin also gets the broadcast/grid backdrop. V1 returned early here,
+    // leaving the most common screens as a flat sheet while club skins looked much richer.
 
     val base = if (dark) {
         listOf(

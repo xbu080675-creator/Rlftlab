@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -383,181 +387,236 @@ private fun GoldHistoryPanel(
     timeline: GameTimeline?
 ) {
     val snapshots = remember(frames, current) {
-        val archived = frames.map { it.snapshot }.filter { it.game == current.game }
-        if (archived.lastOrNull()?.elapsedSeconds == current.elapsedSeconds) archived else archived + current
+        val archived = frames.map { it.snapshot }
+            .filter { it.game == current.game }
+            .sortedBy { it.elapsedSeconds }
+        (archived + current)
+            .distinctBy { it.elapsedSeconds }
+            .sortedBy { it.elapsedSeconds }
     }
-    // Keep the scrub selection anchored to game time, not to the current list index. Historical
-    // backfill can append/prepend frames after the user releases the slider; keying state by
-    // snapshots.size used to recreate the state and snap the thumb straight back to the final frame.
+    // Selection is anchored to actual game time. Backfill can insert/rebuild frames without moving
+    // the user's chosen moment or drawing a backwards/looping curve.
     var selectedElapsedSecond by remember(current.gameId, current.game) {
         mutableIntStateOf(-1)
     }
-    OperatorPanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("ECONOMY OVER TIME", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    if (phase == ScheduleMatchPhase.COMPLETED) "历史经济过程 · 可拖动回看" else "经济随比赛时间动态变化",
-                    color = RiftText,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Text("${snapshots.size} points", color = RiftMuted, fontSize = 10.sp)
-        }
-        Spacer(Modifier.height(8.dp))
+    OperatorPanel(accent = snapshots.size >= 2) {
         if (snapshots.size < 2) {
-            Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
+            Text("ECONOMY REPLAY", color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text("经济差回放", color = RiftText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth().height(108.dp), contentAlignment = Alignment.Center) {
                 Text(
                     when (phase) {
                         ScheduleMatchPhase.LIVE -> "正在积累实时经济帧…"
                         ScheduleMatchPhase.COMPLETED -> when {
                             opggBackfill?.phase == OpggHistoryPhase.LOADING -> opggBackfill.message
-                            opggBackfill?.phase == OpggHistoryPhase.UNAVAILABLE || opggBackfill?.phase == OpggHistoryPhase.ERROR -> "${opggBackfill.message}；当前保留终局快照，不伪造过程曲线。"
+                            opggBackfill?.phase == OpggHistoryPhase.UNAVAILABLE || opggBackfill?.phase == OpggHistoryPhase.ERROR -> "${opggBackfill.message}；当前仅保留终局快照。"
                             backfill?.phase == RiotHistoryPhase.LOADING -> backfill.message
                             backfill?.phase == RiotHistoryPhase.UNAVAILABLE || backfill?.phase == RiotHistoryPhase.ERROR -> "Riot 历史帧不可用，正在尝试 OP.GG GOLD/XP 过程帧…"
-                            else -> "正在从 Riot LiveStats 恢复历史经济帧…"
+                            else -> "正在恢复历史经济帧…"
                         }
                         ScheduleMatchPhase.UPCOMING -> "比赛尚未开始"
                     },
                     color = RiftMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
-        } else {
-            val safeIndex = when {
-                selectedElapsedSecond < 0 -> snapshots.lastIndex
-                else -> snapshots.indices.minByOrNull { index ->
-                    abs(snapshots[index].elapsedSeconds - selectedElapsedSecond)
-                } ?: snapshots.lastIndex
-            }
-            val selected = snapshots[safeIndex]
-            val previous = snapshots.getOrNull(safeIndex - 1)
-            GoldHistoryChart(snapshots, safeIndex)
-            Slider(
-                value = safeIndex.toFloat(),
-                onValueChange = { rawIndex ->
-                    val index = rawIndex.roundToInt().coerceIn(0, snapshots.lastIndex)
-                    selectedElapsedSecond = snapshots[index].elapsedSeconds
-                },
-                valueRange = 0f..snapshots.lastIndex.toFloat(),
-                steps = (snapshots.size - 2).coerceAtLeast(0)
-            )
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("节点 ${formatOperatorClock(selected.elapsedSeconds)}", color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                Text("${safeIndex + 1}/${snapshots.size}", color = RiftMuted, fontSize = 10.sp)
-            }
-            Spacer(Modifier.height(5.dp))
-            OperatorScrubMetricRow(
-                "${selected.blue} ${formatGold(selected.blueGold)}",
-                "Δ ${signedGold(selected.goldDiff)}",
-                if (selected.blueXp > 0 || selected.redXp > 0) "XP Δ ${signedGold(selected.blueXp - selected.redXp)}" else "XP —",
-                "${selected.red} ${formatGold(selected.redGold)}"
-            )
-            val nearestEvent = timeline?.events
-                ?.minByOrNull { event -> abs(event.seconds - selected.elapsedSeconds) }
-                ?.takeIf { event -> abs(event.seconds - selected.elapsedSeconds) <= 20 }
-            Spacer(Modifier.height(7.dp))
-            Column(
-                Modifier.fillMaxWidth()
-                    .background(RiftPanelAlt, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
-                    .padding(10.dp)
-            ) {
+            return@OperatorPanel
+        }
+
+        val safeIndex = when {
+            selectedElapsedSecond < 0 -> snapshots.lastIndex
+            else -> snapshots.indices.minByOrNull { index ->
+                abs(snapshots[index].elapsedSeconds - selectedElapsedSecond)
+            } ?: snapshots.lastIndex
+        }
+        val selected = snapshots[safeIndex]
+        val previous = snapshots.getOrNull(safeIndex - 1)
+        val dark = LocalRiftDarkMode.current
+        val resolvedBlue = RiftTeamSkins.accentFor(selected.blue, dark)
+        val resolvedRed = RiftTeamSkins.accentFor(selected.red, dark)
+        val blueColor = if (resolvedBlue == resolvedRed) RiftCyan else resolvedBlue
+        val redColor = if (resolvedBlue == resolvedRed) RiftRed else resolvedRed
+        val leaderText = when {
+            selected.goldDiff > 0 -> "${selected.blue} +${formatGold(selected.goldDiff)}"
+            selected.goldDiff < 0 -> "${selected.red} +${formatGold(-selected.goldDiff)}"
+            else -> "经济持平"
+        }
+        val leaderColor = when {
+            selected.goldDiff > 0 -> blueColor
+            selected.goldDiff < 0 -> redColor
+            else -> RiftText
+        }
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text("ECONOMY SWING", color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
                 Text(
-                    nearestEvent?.let { "${formatOperatorClock(it.seconds)} · ${it.title}" } ?: nodeEventSummary(previous, selected),
-                    color = if (nearestEvent != null) RiftCyan else RiftText,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    nearestEvent?.detail?.ifBlank { "来自连续状态帧的可核实事件。" }
-                        ?: "节点由真实状态帧选取；没有离散事件时不会为了曲线观感编造击杀/资源事件。",
-                    color = RiftMuted,
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
-                    modifier = Modifier.padding(top = 3.dp)
+                    if (phase == ScheduleMatchPhase.COMPLETED) "历史经济差 · 直接拖动图表回看" else "实时经济差",
+                    color = RiftText,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(Modifier.height(7.dp))
-            val first = snapshots.first()
-            val last = snapshots.last()
-            Row(Modifier.fillMaxWidth()) {
-                Text(
-                    "${first.blue} ${formatGold(first.blueGold)} → ${formatGold(last.blueGold)}",
-                    color = RiftCyan,
-                    fontSize = 10.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    "${first.red} ${formatGold(first.redGold)} → ${formatGold(last.redGold)}",
-                    color = RiftRed,
-                    fontSize = 10.sp,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f)
-                )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatOperatorClock(selected.elapsedSeconds), color = RiftText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(leaderText, color = leaderColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
+        Spacer(Modifier.height(12.dp))
+
+        GoldDifferenceChart(
+            points = snapshots,
+            selectedIndex = safeIndex,
+            blueColor = blueColor,
+            redColor = redColor,
+            onSelectSecond = { selectedElapsedSecond = it }
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 5.dp)) {
+            Text(formatOperatorClock(snapshots.first().elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            Text("拖动曲线选择时间", color = RiftMuted, fontSize = 10.sp)
+            Spacer(Modifier.weight(1f))
+            Text(formatOperatorClock(snapshots.last().elapsedSeconds), color = RiftMuted, fontSize = 10.sp)
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(selected.blue, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(formatGold(selected.blueGold), color = blueColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(Modifier.width(112.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("GOLD DIFF", color = RiftMuted, fontSize = 10.sp)
+                Text(leaderText, color = leaderColor, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                if (selected.blueXp > 0 || selected.redXp > 0) {
+                    Text("XP ${signedGold(selected.blueXp - selected.redXp)}", color = RiftMuted, fontSize = 10.sp)
+                }
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                Text(selected.red, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(formatGold(selected.redGold), color = redColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        val nearestEvent = timeline?.events
+            ?.minByOrNull { event -> abs(event.seconds - selected.elapsedSeconds) }
+            ?.takeIf { event -> abs(event.seconds - selected.elapsedSeconds) <= 20 }
+        Spacer(Modifier.height(12.dp))
+        Column(
+            Modifier.fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(leaderColor.copy(alpha = 0.12f), RiftPanelAlt.copy(alpha = 0.74f))
+                    ),
+                    CutCornerShape(topEnd = 10.dp, bottomStart = 7.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
+            Text(
+                nearestEvent?.let { "${formatOperatorClock(it.seconds)} · ${it.title}" } ?: nodeEventSummary(previous, selected),
+                color = if (nearestEvent != null) leaderColor else RiftText,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                nearestEvent?.detail?.ifBlank { "来自连续状态帧的可核实事件。" }
+                    ?: "没有离散事件时只展示真实状态变化，不补写不存在的击杀或资源事件。",
+                color = RiftMuted,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+                modifier = Modifier.padding(top = 3.dp)
+            )
+        }
+        Text(
+            "${snapshots.size} 个已验证状态帧 · ${selected.source}",
+            color = RiftMuted,
+            fontSize = 10.sp,
+            modifier = Modifier.padding(top = 9.dp)
+        )
     }
 }
 
 @Composable
-private fun GoldHistoryChart(points: List<LiveSnapshot>, selectedIndex: Int) {
-    val cyan = RiftCyan
-    val red = RiftRed
-    val line = RiftLine.copy(alpha = 0.55f)
-    val minSecond = points.firstOrNull()?.elapsedSeconds ?: 0
+private fun GoldDifferenceChart(
+    points: List<LiveSnapshot>,
+    selectedIndex: Int,
+    blueColor: Color,
+    redColor: Color,
+    onSelectSecond: (Int) -> Unit
+) {
+    val grid = RiftLine.copy(alpha = 0.34f)
+    val zero = RiftText.copy(alpha = 0.45f)
+    val cursor = RiftText.copy(alpha = 0.55f)
+    val minSecond = points.minOfOrNull { it.elapsedSeconds } ?: 0
     val maxSecond = max(points.maxOfOrNull { it.elapsedSeconds } ?: 1, minSecond + 1)
-    val minGold = min(
-        points.minOfOrNull { it.blueGold } ?: 0,
-        points.minOfOrNull { it.redGold } ?: 0
-    )
-    val maxGold = max(
-        points.maxOfOrNull { it.blueGold } ?: 1,
-        points.maxOfOrNull { it.redGold } ?: 1
-    ).coerceAtLeast(minGold + 1)
+    val maxAbsDiff = (points.maxOfOrNull { abs(it.goldDiff) } ?: 0).coerceAtLeast(1500)
+    val shape = CutCornerShape(topEnd = 14.dp, bottomStart = 9.dp)
+
+    fun nearestSecondForX(x: Float, width: Float): Int {
+        val fraction = if (width <= 1f) 1f else (x / width).coerceIn(0f, 1f)
+        val target = minSecond + ((maxSecond - minSecond) * fraction).roundToInt()
+        return points.minByOrNull { abs(it.elapsedSeconds - target) }?.elapsedSeconds ?: maxSecond
+    }
 
     Canvas(
         Modifier.fillMaxWidth()
-            .height(132.dp)
-            .background(Color.Black.copy(alpha = 0.18f), CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
-            .border(1.dp, line, CutCornerShape(topEnd = 8.dp, bottomStart = 6.dp))
-            .padding(8.dp)
+            .height(184.dp)
+            .background(
+                Brush.verticalGradient(
+                    listOf(RiftPanelAlt.copy(alpha = 0.88f), RiftBg.copy(alpha = 0.50f))
+                ),
+                shape
+            )
+            .pointerInput(points, minSecond, maxSecond) {
+                detectTapGestures { offset ->
+                    onSelectSecond(nearestSecondForX(offset.x, size.width.toFloat()))
+                }
+            }
+            .pointerInput(points, minSecond, maxSecond) {
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        onSelectSecond(nearestSecondForX(offset.x, size.width.toFloat()))
+                    },
+                    onDrag = { change, _ ->
+                        onSelectSecond(nearestSecondForX(change.position.x, size.width.toFloat()))
+                        change.consume()
+                    }
+                )
+            }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
     ) {
+        val midY = size.height / 2f
+        val halfRange = size.height * 0.40f
         for (i in 1..3) {
             val y = size.height * i / 4f
-            drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+            drawLine(grid.copy(alpha = if (i == 2) 0.55f else 0.22f), Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
         }
+        drawLine(zero, Offset(0f, midY), Offset(size.width, midY), strokeWidth = 1.6f)
 
         fun xOf(second: Int): Float =
             ((second - minSecond).toFloat() / (maxSecond - minSecond).toFloat()).coerceIn(0f, 1f) * size.width
+        fun yOf(diff: Int): Float =
+            midY - (diff.toFloat() / maxAbsDiff.toFloat()).coerceIn(-1f, 1f) * halfRange
 
-        fun yOf(gold: Int): Float =
-            size.height - ((gold - minGold).toFloat() / (maxGold - minGold).toFloat()).coerceIn(0f, 1f) * size.height
-
-        val bluePath = Path()
-        val redPath = Path()
-        points.forEachIndexed { index, point ->
-            val x = xOf(point.elapsedSeconds)
-            val by = yOf(point.blueGold)
-            val ry = yOf(point.redGold)
-            if (index == 0) {
-                bluePath.moveTo(x, by)
-                redPath.moveTo(x, ry)
-            } else {
-                bluePath.lineTo(x, by)
-                redPath.lineTo(x, ry)
-            }
+        points.zipWithNext().forEach { (a, b) ->
+            val avg = (a.goldDiff + b.goldDiff) / 2
+            drawLine(
+                color = if (avg >= 0) blueColor else redColor,
+                start = Offset(xOf(a.elapsedSeconds), yOf(a.goldDiff)),
+                end = Offset(xOf(b.elapsedSeconds), yOf(b.goldDiff)),
+                strokeWidth = 3.4f
+            )
         }
-        drawPath(bluePath, cyan, style = Stroke(width = 2.4f))
-        drawPath(redPath, red, style = Stroke(width = 2.4f))
         points.getOrNull(selectedIndex)?.let { point ->
             val x = xOf(point.elapsedSeconds)
-            drawLine(line.copy(alpha = 0.9f), Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.5f)
-            drawCircle(cyan, radius = 5.5f, center = Offset(x, yOf(point.blueGold)))
-            drawCircle(red, radius = 5.5f, center = Offset(x, yOf(point.redGold)))
+            val y = yOf(point.goldDiff)
+            val pointColor = if (point.goldDiff >= 0) blueColor else redColor
+            drawLine(cursor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.4f)
+            drawCircle(pointColor.copy(alpha = 0.20f), radius = 10f, center = Offset(x, y))
+            drawCircle(pointColor, radius = 5.5f, center = Offset(x, y))
         }
     }
 }
@@ -671,14 +730,7 @@ private fun OperatorValueRow(label: String, value: String) {
 
 @Composable
 private fun OperatorPanel(accent: Boolean = false, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    val shape = CutCornerShape(topEnd = 14.dp, bottomStart = 9.dp)
-    Column(
-        Modifier.fillMaxWidth()
-            .background(RiftPanel, shape)
-            .border(1.dp, if (accent) RiftCyan.copy(alpha = 0.58f) else RiftLine, shape)
-            .padding(14.dp),
-        content = content
-    )
+    RiftHudPanel(accent = accent, content = content)
 }
 
 private fun currentMatchMatches(current: ScheduledEsportsMatch?, wanted: ScheduledEsportsMatch): Boolean =

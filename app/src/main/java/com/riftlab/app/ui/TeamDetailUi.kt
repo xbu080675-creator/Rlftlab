@@ -84,27 +84,30 @@ internal fun TeamDetailContent(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            Column(
-                Modifier.fillMaxWidth()
-                    .background(RiftPanel, CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
-                    .border(1.dp, RiftCyan.copy(alpha = 0.42f), CutCornerShape(topEnd = 16.dp, bottomStart = 10.dp))
-                    .padding(14.dp)
-            ) {
+            RiftHudPanel(accent = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TeamLogo(
                         imageUrl = displayTeam.imageUrl,
                         code = displayTeam.code.ifBlank { displayTeam.name },
-                        modifier = Modifier.size(58.dp)
+                        modifier = Modifier.size(70.dp)
                     )
-                    Spacer(Modifier.width(13.dp))
+                    Spacer(Modifier.width(15.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(displayTeam.code.ifBlank { displayTeam.name }, color = RiftText, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            displayTeam.code.ifBlank { displayTeam.name },
+                            color = RiftText,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         if (displayTeam.name.isNotBlank() && displayTeam.name != displayTeam.code) {
-                            Text(displayTeam.name, color = RiftMuted, fontSize = 10.sp)
+                            Text(displayTeam.name, color = RiftMuted, fontSize = 11.sp)
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(state.status, color = RiftMuted, fontSize = 10.sp)
+                        Spacer(Modifier.height(6.dp))
+                        RiftStatusBadge("TEAM PROFILE")
                     }
+                }
+                if (state.status.isNotBlank()) {
+                    Text(state.status, color = RiftMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp))
                 }
             }
         }
@@ -255,7 +258,6 @@ private fun TeamPlayerRow(
     Row(
         Modifier.fillMaxWidth()
             .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -364,7 +366,6 @@ private fun TeamStaffRow(staff: EsportsStaffRef, management: Boolean) {
     Row(
         Modifier.fillMaxWidth()
             .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -405,7 +406,6 @@ private fun TeamHistoryRow(history: TeamHistoryRef) {
     Row(
         Modifier.fillMaxWidth()
             .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftCyan.copy(alpha = 0.22f), CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
             .padding(horizontal = 10.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -441,7 +441,7 @@ private fun TeamHistoryRow(history: TeamHistoryRef) {
 private fun TeamArchiveCard(foundedAt: String, lolFoundedAt: String, region: String, city: String, updatedAt: String) {
     Column(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(12.dp),
+            .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         if (foundedAt.isNotBlank()) Text("俱乐部 / 当前品牌成立 · $foundedAt", color = RiftText, fontSize = 10.sp)
@@ -456,7 +456,7 @@ private fun TeamArchiveCard(foundedAt: String, lolFoundedAt: String, region: Str
 private fun TeamOrganizationRow(org: TeamOrganizationRef) {
     Row(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
@@ -471,7 +471,7 @@ private fun TeamOrganizationRow(org: TeamOrganizationRef) {
 private fun TeamHonorRow(honor: TeamHonorRef) {
     Row(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftCyan.copy(alpha = 0.25f), CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(honor.year, color = RiftCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(46.dp))
@@ -487,7 +487,7 @@ private fun TeamHonorRow(honor: TeamHonorRef) {
 private fun TeamResultRow(result: TeamResultRef) {
     Row(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(result.year, color = RiftCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(46.dp))
@@ -509,7 +509,7 @@ private fun TeamResultRow(result: TeamResultRef) {
 private fun TeamLineageRow(lineage: TeamLineageRef) {
     Column(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(11.dp)
+            .padding(11.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(lineage.name, color = RiftText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -527,7 +527,7 @@ private fun TeamLineageRow(lineage: TeamLineageRef) {
 private fun TeamAlumniRow(alumni: TeamAlumniRef) {
     Row(
         Modifier.fillMaxWidth().background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp)).padding(horizontal = 11.dp, vertical = 9.dp),
+            .padding(horizontal = 11.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
@@ -596,13 +596,7 @@ private fun TeamMatchRow(team: EsportsTeamRef, match: ScheduledEsportsMatch, onC
     val phase = MatchSessionStore.schedulePhase(match)
     val left = match.teams.getOrNull(0)
     val right = match.teams.getOrNull(1)
-    Column(
-        Modifier.fillMaxWidth()
-            .clickable(onClick = onClick)
-            .background(RiftPanel, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .border(1.dp, if (phase.name == "LIVE") RiftCyan.copy(alpha = 0.5f) else RiftLine, CutCornerShape(topEnd = 10.dp, bottomStart = 6.dp))
-            .padding(11.dp)
-    ) {
+    RiftHudPanel(accent = phase.name == "LIVE", onClick = onClick) {
         Text(
             "${MatchSessionStore.scheduleDateKey(match)} · ${match.blockName.ifBlank { match.league }} · BO${match.bestOf}",
             color = RiftMuted,
@@ -623,14 +617,14 @@ private fun TeamMatchRow(team: EsportsTeamRef, match: ScheduledEsportsMatch, onC
             },
             logoSize = 38.dp,
             centerFontSize = 15.sp,
-            teamNameFontSize = 10.sp
+            teamNameFontSize = 12.sp
         )
     }
 }
 
 @Composable
 private fun TeamSectionTitle(value: String) {
-    Text(value, color = RiftMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+    RiftSectionLabel(value)
 }
 
 @Composable

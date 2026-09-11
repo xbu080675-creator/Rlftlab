@@ -36,20 +36,14 @@ fun TournamentEditionArchiveInlinePanel() {
     val qualification = qualificationCenter.snapshotsByTournamentId[state.selectedTournamentId]
     var showAllHistory by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(RiftPanelAlt, CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-            .border(1.dp, RiftLine, CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-            .padding(10.dp)
-    ) {
+    RiftHudPanel(accent = selected != null) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text("TOURNAMENT EDITIONS / 年度赛事档案", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("TOURNAMENT ARCHIVE / 年度赛事档案", color = RiftText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text("旧届次追加保留，不因上游分页滚动被新赛事覆盖", color = RiftMuted, fontSize = 10.sp)
             }
             Column {
-                Text("${state.editions.size} EDITIONS", color = RiftText, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                RiftStatusBadge("${state.editions.size} EDITIONS")
                 if (!state.followingCurrent) {
                     Text(
                         "跟随当前赛事",
@@ -67,7 +61,7 @@ fun TournamentEditionArchiveInlinePanel() {
         Spacer(Modifier.height(8.dp))
         if (state.editions.isEmpty()) {
             Text(state.statusMessage, color = RiftMuted, fontSize = 10.sp)
-            return@Column
+            return@RiftHudPanel
         }
 
         val completeTrail = fullHistoryTrail(state.editions, selected?.edition)
