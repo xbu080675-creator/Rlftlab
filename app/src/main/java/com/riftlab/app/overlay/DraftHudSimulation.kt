@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** 本地 BP 模拟，只用于手机布局与完整观赛流程验证。 */
 enum class DraftSide { BLUE, RED }
 enum class DraftRole { TOP, JUG, MID, BOT, SUP }
 
@@ -56,11 +55,11 @@ data class DraftHudState(
 object DraftHudSimulation {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var playbackJob: Job? = null
-    private var handoffEnabled = false
+    private var handoffEnabled = true
 
     private val script = listOf(
         DraftHudPick(DraftSide.BLUE, DraftRole.TOP, "Bin", "纳尔", 52.8, 74, 18, 61.1, "上路"),
-        DraftHudPick(DraftSide.RED, DraftRole.TOP, "Flandre", "兰博", 51.9, 69, 15, 60.0, "上路"),
+        DraftHudPick(DraftSide.RED, DraftRole.TOP, "Flandre", "凯南", 51.9, 69, 15, 60.0, "上路"),
         DraftHudPick(DraftSide.BLUE, DraftRole.JUG, "Wei", "蔚", 53.4, 81, 16, 62.5, "打野"),
         DraftHudPick(DraftSide.RED, DraftRole.JUG, "Tarzan", "猴子", 52.7, 88, 21, 61.9, "打野"),
         DraftHudPick(DraftSide.BLUE, DraftRole.MID, "knight", "阿狸", 54.1, 96, 24, 66.7, "中路"),
@@ -75,7 +74,7 @@ object DraftHudSimulation {
     val state: StateFlow<DraftHudState> = _state.asStateFlow()
 
     @Synchronized
-    fun startAuto(handoffToTactical: Boolean = false) {
+    fun startAuto(handoffToTactical: Boolean = true) {
         playbackJob?.cancel()
         handoffEnabled = handoffToTactical
         resetInternal(active = true, autoPlay = true)
@@ -89,7 +88,7 @@ object DraftHudSimulation {
     }
 
     @Synchronized
-    fun startManual(handoffToTactical: Boolean = false) {
+    fun startManual(handoffToTactical: Boolean = true) {
         playbackJob?.cancel()
         handoffEnabled = handoffToTactical
         resetInternal(active = true, autoPlay = false)
@@ -97,7 +96,10 @@ object DraftHudSimulation {
 
     @Synchronized
     fun next() {
-        if (!_state.value.active && !_state.value.finished) resetInternal(active = true, autoPlay = false)
+        if (!_state.value.active && !_state.value.finished) {
+            handoffEnabled = true
+            resetInternal(active = true, autoPlay = false)
+        }
         if (_state.value.autoPlay) {
             playbackJob?.cancel()
             _state.value = _state.value.copy(autoPlay = false, message = "BP 模拟已暂停 · 手动步进")
@@ -108,7 +110,7 @@ object DraftHudSimulation {
     @Synchronized
     fun toggleAuto() {
         if (!_state.value.active || _state.value.finished) {
-            startAuto(handoffEnabled)
+            startAuto(handoffToTactical = true)
             return
         }
         if (_state.value.autoPlay) {
@@ -129,7 +131,7 @@ object DraftHudSimulation {
     fun stop(stopTactical: Boolean = true) {
         playbackJob?.cancel()
         playbackJob = null
-        handoffEnabled = false
+        handoffEnabled = true
         _state.value = DraftHudState(totalSteps = script.size)
         if (stopTactical) TacticalHudSimulation.stop()
     }
@@ -157,7 +159,7 @@ object DraftHudSimulation {
         val matchup = buildMatchup(nextPick.role, blue, red)
         val nextStep = current.step + 1
         val finished = nextStep >= script.size
-        val nextState = current.copy(
+        _state.value = current.copy(
             active = !finished,
             step = nextStep,
             bluePicks = blue,
@@ -168,17 +170,11 @@ object DraftHudSimulation {
             finished = finished,
             message = if (finished) "BP 已锁定 · 准备进入比赛态势" else "${teamName(nextPick.side)} ${nextPick.player} 锁定 ${nextPick.champion}"
         )
-        _state.value = nextState
         if (finished) handoffIfNeeded()
     }
 
     private fun finish(current: DraftHudState) {
-        _state.value = current.copy(
-            active = false,
-            autoPlay = false,
-            finished = true,
-            message = "BP 已锁定 · 准备进入比赛态势"
-        )
+        _state.value = current.copy(active = false, autoPlay = false, finished = true, message = "BP 已锁定 · 准备进入比赛态势")
         handoffIfNeeded()
     }
 
@@ -191,11 +187,7 @@ object DraftHudSimulation {
         }
     }
 
-    private fun buildMatchup(
-        role: DraftRole,
-        blue: List<DraftHudPick>,
-        red: List<DraftHudPick>
-    ): DraftHudMatchup? {
+    private fun buildMatchup(role: DraftRole, blue: List<DraftHudPick>, red: List<DraftHudPick>): DraftHudMatchup? {
         val left = blue.lastOrNull { it.role == role } ?: return null
         val right = red.lastOrNull { it.role == role } ?: return null
         val fixture = when (role) {
@@ -205,15 +197,7 @@ object DraftHudSimulation {
             DraftRole.BOT -> Triple("下路对线接近", 1.1, 71)
             DraftRole.SUP -> Triple("开团能力各有侧重", -0.4, 58)
         }
-        return DraftHudMatchup(
-            role = role,
-            blueChampion = left.champion,
-            redChampion = right.champion,
-            verdict = fixture.first,
-            csd15 = fixture.second,
-            sampleGames = fixture.third,
-            confidence = if (fixture.third >= 60) "中高" else "中"
-        )
+        return DraftHudMatchup(role, left.champion, right.champion, fixture.first, fixture.second, fixture.third, if (fixture.third >= 60) "中高" else "中")
     }
 
     private fun teamName(side: DraftSide): String = if (side == DraftSide.BLUE) "BLG" else "AL"
