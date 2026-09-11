@@ -20,6 +20,7 @@ OCR_MAX_DIMENSION = int(os.environ.get("RIFTLAB_ROSTER_OCR_MAX_DIMENSION", "2200
 TRACE_PREVIEW_CHARS = int(os.environ.get("RIFTLAB_ROSTER_TRACE_PREVIEW_CHARS", "220"))
 TRACE_MAX_LINES_PER_SOURCE = int(os.environ.get("RIFTLAB_ROSTER_TRACE_MAX_LINES", "8"))
 _TRACE = []
+_ACTIVE_SOURCE = {}
 
 
 def _clean_preview(value: str) -> str:
@@ -94,10 +95,15 @@ _original_process_posts = global_collector._process_posts
 
 
 def _bounded_process_posts(source, cfg, posts, transport_label):
-    global _TRACE
+    global _TRACE, _ACTIVE_SOURCE
     bounded = _budget_posts(posts, cfg)
     _TRACE = []
-    evidence, diagnostics = _original_process_posts(source, cfg, bounded, transport_label)
+    previous_source = _ACTIVE_SOURCE
+    _ACTIVE_SOURCE = dict(source or {})
+    try:
+        evidence, diagnostics = _original_process_posts(source, cfg, bounded, transport_label)
+    finally:
+        _ACTIVE_SOURCE = previous_source
     account = source.get("account")
     trace_lines = [f"{account}: trace {line}" for line in _TRACE]
     diagnostics = [
@@ -120,9 +126,34 @@ def _bounded_weibo_fetch(uid, limit=20):
 global_collector.base.fetch_weibo_posts = _bounded_weibo_fetch
 
 
+def _langs_for_active_source() -> str:
+    """Use only scripts plausible for this competition instead of all at once.
+
+    Latin remains present everywhere because player IDs are overwhelmingly Latin.
+    This reduces CJK cross-script hallucinations and cuts Tesseract cost globally.
+    """
+    league = str(_ACTIVE_SOURCE.get("league") or "").upper()
+    timezone = str(_ACTIVE_SOURCE.get("timezone") or "")
+    if "LPL" in league or "PCS" in league or timezone in {"Asia/Shanghai", "Asia/Taipei"}:
+        return "eng+chi_sim"
+    if "LCK" in league or timezone == "Asia/Seoul":
+        return "eng+kor"
+    if "LJL" in league or timezone == "Asia/Tokyo":
+        return "eng+jpn"
+    # LCP can publish across multiple languages; keep English first and add the
+    # most common regional scripts only for that multi-region league.
+    if "LCP" in league:
+        return "eng+chi_sim+jpn+kor"
+    return "eng"
+
+
 def fast_multilingual_ocr(img):
-    """One Tesseract pass per image, with resize, hard timeout and compact trace."""
-    langs = os.environ.get("RIFTLAB_OCR_LANGS", "chi_sim+eng+kor+jpn")
+    """One source-aware Tesseract pass per image with a hard timeout.
+
+    PSM 11 is intentionally used for sparse poster typography. It does not assume
+    a paragraph-shaped text block, which is a poor fit for esports artwork.
+    """
+    langs = _langs_for_active_source()
     work = img.copy()
     original_size = work.size
     if max(work.size) > OCR_MAX_DIMENSION:
@@ -130,7 +161,7 @@ def fast_multilingual_ocr(img):
     data = global_collector.base.pytesseract.image_to_data(
         work,
         lang=langs,
-        config="--psm 6",
+        config="--psm 11",
         output_type=global_collector.base.pytesseract.Output.DICT,
         timeout=OCR_TIMEOUT_SECONDS,
     )
@@ -161,7 +192,8 @@ def fast_multilingual_ocr(img):
         lines.setdefault(key, []).append(token)
     text = "\n".join(" ".join(tokens) for _, tokens in sorted(lines.items()))
     _trace(
-        f"ocr size={original_size[0]}x{original_size[1]}->{work.size[0]}x{work.size[1]} words={len(words)} text={_clean_preview(text)!r}"
+        f"ocr lang={langs} psm=11 size={original_size[0]}x{original_size[1]}->{work.size[0]}x{work.size[1]} "
+        f"words={len(words)} text={_clean_preview(text)!r}"
     )
     return text, words, work.size
 
