@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "updatedAt": "2026-09-11T15:04:00Z",
+  "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
+  "delivery": {
+    "canonical": "GitHub",
+    "mainlandMirror": "Gitee",
+    "note": "The app consumes normalized evidence and does not need direct access to overseas social platforms."
+  },
+  "evidence": [
+    {
+      "matchDateLocal": "2026-09-12",
+      "timezone": "Asia/Shanghai",
+      "league": "LPL",
+      "team": "IG",
+      "opponent": "AL",
+      "source": "TEAM_SOCIAL",
+      "platform": "WEIBO",
+      "account": "iG电子竞技俱乐部",
+      "publishedAt": "2026-09-11T15:00:00Z",
+      "observedAt": "2026-09-11T15:04:00Z",
+      "evidenceType": "TEXT",
+      "confidence": 1.0,
+      "starters": [
+        {"role": "TOP", "id": "TheShy"},
+        {"role": "JUG", "id": "Wei"},
+        {"role": "MID", "id": "Rookie"},
+        {"role": "BOT", "id": "JiaQi"},
+        {"role": "SUP", "id": "Meiko"}
+      ]
+    }
+  ]
+}
