@@ -54,10 +54,15 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         LocalAiCore.initialize(this)
         LocalModelManager.initialize(this)
 
-        // Global official starter lane. Social crawling/OCR is normalized upstream, so the phone
-        // only downloads small roster evidence JSON and never requires direct access to overseas
-        // social platforms. Mainland-friendly mirrors are tried before the canonical GitHub copy.
-        StartingRosterCenter.ensureRunning()
+        // Start the schedule target before the roster watcher so the first roster poll does not race
+        // an empty target and then sleep for a full minute. The watcher still retries quickly while
+        // the asynchronous schedule layer is warming up.
+        MatchSessionStore.ensureDataRunning()
+
+        // Global official starter lane. Social crawling/OCR is normalized upstream. Delivery mirrors
+        // are schema-checked, stale-for-this-match mirrors fall through to the next endpoint, and a
+        // persistent last-known-good payload protects confirmed rosters during temporary outages.
+        StartingRosterCenter.initialize(this)
 
         // Cache pressure guard. Only cacheDir/externalCacheDir are eligible. Persistent archives,
         // encrypted provider keys, user settings and downloaded local-AI models are never touched.
@@ -65,7 +70,6 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
             StorageCacheManager.trimIfNeeded(this@RiftLabApplication)
         }
 
-        MatchSessionStore.ensureDataRunning()
         TournamentEditionArchiveStore.ensureRunning()
         QualificationCenterStore.ensureRunning()
         ComprehensiveDataCenter.ensureRunning()
