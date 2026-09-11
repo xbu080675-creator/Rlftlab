@@ -16,8 +16,8 @@ replacements = {
         ("fontSize = if (fullscreen) 11.sp else 9.sp", "fontSize = if (fullscreen) 11.sp else 10.sp"),
     ],
     "app/src/main/java/com/riftlab/app/ui/QualificationPathUi.kt": [
-        ("fontSize = 6.sp", "fontSize = 10.sp"),
         ("fontSize = 6.sp, lineHeight = 9.sp", "fontSize = 10.sp, lineHeight = 14.sp"),
+        ("fontSize = 6.sp", "fontSize = 10.sp"),
     ],
     "app/src/main/java/com/riftlab/app/ui/ScheduleCenterUi.kt": [
         ("teamNameFontSize = 8.sp", "teamNameFontSize = 10.sp"),
@@ -35,15 +35,19 @@ for relative, pairs in replacements.items():
     if text != original:
         path.write_text(text, encoding="utf-8")
 
-# Catch the bug the first font pass missed: indirect font-size parameters and conditional sizes.
+# Catch the bug the first font pass missed: indirect font-size parameters and every branch of
+# conditional font-size expressions. Ignore unrelated sp values such as letterSpacing.
 violations = []
 for path in (ROOT / "app/src/main/java").rglob("*.kt"):
     text = path.read_text(encoding="utf-8")
-    for m in re.finditer(r"(?:fontSize|teamNameFontSize)\s*=\s*(?:if\s*\([^\n]+?\)\s*)?(\d+(?:\.\d+)?)\.sp", text):
-        if float(m.group(1)) < 10:
-            line = text.count("\n", 0, m.start()) + 1
-            violations.append(f"{path.relative_to(ROOT)}:{line}: {m.group(0)}")
+    for line_no, line in enumerate(text.splitlines(), 1):
+        if "fontSize" not in line and "teamNameFontSize" not in line:
+            continue
+        for raw in re.findall(r"(\d+(?:\.\d+)?)\.sp", line):
+            if float(raw) < 10:
+                violations.append(f"{path.relative_to(ROOT)}:{line_no}: {line.strip()}")
+                break
 if violations:
-    raise SystemExit("residual font sizes below 10sp:\n" + "\n".join(violations))
+    raise SystemExit("residual font-size branches below 10sp:\n" + "\n".join(violations))
 
-print("dev73 residual readability patch applied; no explicit fontSize/teamNameFontSize below 10sp remains")
+print("dev73 residual readability patch applied; no explicit font-size branch below 10sp remains")
