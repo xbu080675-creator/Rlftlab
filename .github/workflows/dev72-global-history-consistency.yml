@@ -23,11 +23,18 @@ jobs:
         run: |
           set -euo pipefail
           FILE=app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt
+          ARCHIVE=app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt
+          grep -q 'match.eventId.startsWith("provider:")' "$FILE"
           grep -q 'parsePlayers(blueMeta, blueFrame, blueId, "BLUE")' "$FILE"
           grep -q 'parsePlayers(redMeta, redFrame, redId, "RED")' "$FILE"
           grep -q 'targetKey = LiveMatchTargetRegistry.key(match)' "$FILE"
           grep -q 'teamId = teamId' "$FILE"
           grep -q 'side = side' "$FILE"
+          grep -q '.put("leagueId", match.leagueId)' "$ARCHIVE"
+          grep -q '.put("leagueSlug", match.leagueSlug)' "$ARCHIVE"
+          grep -q '.put("targetKey", snapshot.targetKey)' "$ARCHIVE"
+          grep -q '.put("teamId", player.teamId)' "$ARCHIVE"
+          grep -q '.put("side", player.side)' "$ARCHIVE"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -43,7 +50,8 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt
+          git add app/src/main/java/com/riftlab/app/data/RiotLiveStatsHistoryResolver.kt \
+                  app/src/main/java/com/riftlab/app/data/MatchLifecycleArchive.kt
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'dev72: align global Riot history with live player identity'
+          git commit -m 'dev72: align global Riot history and archive identity'
           git push
