@@ -16,6 +16,7 @@ data class StartingRosterState(
     val matchKey: String = "",
     val left: StartingRosterEvidence? = null,
     val right: StartingRosterEvidence? = null,
+    val announcements: List<StartingRosterAnnouncement> = emptyList(),
     val lastCheckedEpochMs: Long = 0L,
     val endpointLabel: String = "NONE",
     val usedLastGood: Boolean = false,
@@ -27,18 +28,21 @@ data class StartingRosterState(
 /**
  * Global minute-level official roster watcher.
  *
- * The client consumes normalized evidence only; social crawling/OCR happens upstream. Delivery is
- * independently observable here so the UI can distinguish "no announcement" from "mirror failed".
+ * Normalized evidence is preferred, but official announcement metadata is kept
+ * independently. A failed OCR/parser must therefore degrade to "官宣已发现，解析中"
+ * instead of making the information disappear from the client.
  */
 object StartingRosterCenter {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutableState = MutableStateFlow(StartingRosterState())
     val state: StateFlow<StartingRosterState> = mutableState.asStateFlow()
     private var feed: StartingRosterFeed? = null
+    private var announcementFeed: StartingRosterAnnouncementFeed? = null
     private var job: Job? = null
 
     fun initialize(context: Context) {
         if (feed == null) feed = StartingRosterFeed(context.applicationContext)
+        if (announcementFeed == null) announcementFeed = StartingRosterAnnouncementFeed()
         ensureRunning()
     }
 
@@ -50,8 +54,6 @@ object StartingRosterCenter {
                 val target = MatchSessionStore.targetMatch.value
                 if (target == null || target.teams.size < 2) {
                     mutableState.value = mutableState.value.copy(message = "等待赛程目标", diagnostics = "target_not_ready")
-                    // MatchSessionStore starts asynchronously. Do not sleep for a full minute just
-                    // because the roster watcher happened to win the startup race.
                     delay(2_000L)
                     continue
                 }
@@ -62,27 +64,39 @@ object StartingRosterCenter {
 
                 runCatching { activeFeed.fetchFor(target) }
                     .onSuccess { result ->
+                        val announcements = runCatching {
+                            announcementFeed?.fetchFor(target).orEmpty()
+                        }.getOrDefault(emptyList())
                         val left = findFor(target.teams[0], result.evidence)
                         val right = findFor(target.teams[1], result.evidence)
                         val rows = listOfNotNull(left, right)
                         val count = rows.size
                         val conflictCount = rows.count { it.conflict }
                         val crossCount = rows.count { it.crossConfirmed }
+                        val unparsedCount = announcements.count { !it.parsed }
                         val transport = if (result.usedLastGood) "LAST-GOOD CACHE" else result.endpointLabel
                         mutableState.value = StartingRosterState(
                             matchKey = matchKey,
                             left = left,
                             right = right,
+                            announcements = announcements,
                             lastCheckedEpochMs = System.currentTimeMillis(),
                             endpointLabel = result.endpointLabel,
                             usedLastGood = result.usedLastGood,
                             checkedEndpoints = result.checkedEndpoints,
-                            diagnostics = result.diagnostics,
+                            diagnostics = buildString {
+                                append(result.diagnostics)
+                                if (announcements.isNotEmpty()) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append("RAW_OFFICIAL:${announcements.size};UNPARSED:$unparsedCount")
+                                }
+                            },
                             message = when {
                                 conflictCount > 0 -> "OFFICIAL ROSTER · 官方来源存在冲突，等待确认 · $transport"
                                 count == 2 && crossCount == 2 -> "OFFICIAL ROSTER · 两队首发已交叉确认 · $transport"
                                 count == 2 -> "OFFICIAL ROSTER · 两队首发已确认 · $transport"
                                 count == 1 -> "OFFICIAL ROSTER · 1/2 队首发已确认 · $transport"
+                                announcements.isNotEmpty() -> "OFFICIAL ROSTER · 已发现官方发布 · 自动解析中 · ${announcements.first().account}"
                                 result.endpointLabel == "VALID_NO_MATCH" -> "OFFICIAL ROSTER · 数据源正常，当前比赛暂无匹配官宣"
                                 result.endpointLabel == "NO_VALID_SOURCE" -> "OFFICIAL ROSTER · 分发链异常，正在等待可用源"
                                 else -> "OFFICIAL ROSTER · 尚未发现匹配的官方首发 · $transport"
