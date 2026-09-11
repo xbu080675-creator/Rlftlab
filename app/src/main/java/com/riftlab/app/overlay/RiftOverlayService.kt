@@ -3,6 +3,7 @@ package com.riftlab.app.overlay
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -41,11 +42,14 @@ class RiftOverlayService : Service() {
     private var draftHudParams: WindowManager.LayoutParams? = null
     private var draftDock: DraftHudControlView? = null
     private var draftDockParams: WindowManager.LayoutParams? = null
+    private var tacticalHud: TacticalHudOverlayView? = null
+    private var tacticalHudParams: WindowManager.LayoutParams? = null
     private var draftEditing = false
     private var selectedDraftModule = DraftHudModule.BLUE_PICK
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var collectJob: Job? = null
     private var draftHudJob: Job? = null
+    private var tacticalHudJob: Job? = null
 
     private data class OverlayUiState(
         val snapshot: LiveSnapshot,
@@ -65,6 +69,18 @@ class RiftOverlayService : Service() {
         when (intent?.action) {
             ACTION_HIDE -> hideOverlay()
             ACTION_SHOW -> showOverlay()
+            ACTION_SIM_AUTO -> {
+                TacticalHudSimulation.startAuto()
+                showOverlay()
+            }
+            ACTION_SIM_NEXT -> {
+                TacticalHudSimulation.next()
+                showOverlay()
+            }
+            ACTION_SIM_STOP -> {
+                TacticalHudSimulation.stop()
+                showOverlay()
+            }
             ACTION_STOP -> stopSelf()
             else -> syncOverlayVisibility()
         }
@@ -80,6 +96,9 @@ class RiftOverlayService : Service() {
             draftHud?.render(DraftHudSimulation.state.value)
             refreshDraftDock()
         }
+        tacticalHud?.post {
+            tacticalHud?.render(TacticalHudSimulation.state.value)
+        }
     }
 
     private fun syncOverlayVisibility() {
@@ -89,13 +108,14 @@ class RiftOverlayService : Service() {
     private fun showOverlay() {
         if (!Settings.canDrawOverlays(this)) return
         if (overlay == null) createOverlay()
-        updateDraftMode(DraftHudSimulation.state.value)
+        refreshOverlayMode()
     }
 
     private fun hideOverlay() {
         overlay?.visibility = View.GONE
         draftHud?.visibility = View.GONE
         draftDock?.visibility = View.GONE
+        tacticalHud?.visibility = View.GONE
     }
 
     private fun createOverlay() {
@@ -132,8 +152,13 @@ class RiftOverlayService : Service() {
         }
 
         draftHudJob = scope.launch {
-            DraftHudSimulation.state.collect { state ->
-                updateDraftMode(state)
+            DraftHudSimulation.state.collect {
+                refreshOverlayMode()
+            }
+        }
+        tacticalHudJob = scope.launch {
+            TacticalHudSimulation.state.collect {
+                refreshOverlayMode()
             }
         }
     }
@@ -216,6 +241,25 @@ class RiftOverlayService : Service() {
         draftDockParams = dockParams
     }
 
+    private fun createTacticalWindow() {
+        if (tacticalHud != null) return
+        val hud = TacticalHudOverlayView(this)
+        val hudParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayType(),
+            lockedHudFlags(),
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            x = dp(10)
+            y = dp(92)
+        }
+        windowManager.addView(hud, hudParams)
+        tacticalHud = hud
+        tacticalHudParams = hudParams
+    }
+
     private fun setDraftEditMode(enabled: Boolean) {
         if (draftEditing == enabled) return
         if (enabled && DraftHudSimulation.state.value.autoPlay) {
@@ -247,26 +291,47 @@ class RiftOverlayService : Service() {
         }
     }
 
-    private fun updateDraftMode(state: DraftHudState) {
+    private fun refreshOverlayMode() {
         if (hostInForeground) {
             hideOverlay()
             return
         }
-        if (state.active) {
-            createDraftWindows()
-            overlay?.visibility = View.GONE
-            draftHud?.apply {
-                visibility = View.VISIBLE
-                render(state)
+
+        val draftState = DraftHudSimulation.state.value
+        val tacticalState = TacticalHudSimulation.state.value
+        when {
+            draftState.active -> {
+                createDraftWindows()
+                overlay?.visibility = View.GONE
+                tacticalHud?.visibility = View.GONE
+                draftHud?.apply {
+                    visibility = View.VISIBLE
+                    render(draftState)
+                }
+                draftDock?.visibility = View.VISIBLE
+                refreshDraftDock()
             }
-            draftDock?.visibility = View.VISIBLE
-            refreshDraftDock()
-        } else {
-            if (draftEditing) setDraftEditMode(false)
-            draftHud?.visibility = View.GONE
-            draftDock?.visibility = View.GONE
-            overlay?.visibility = View.VISIBLE
-            overlay?.post { clampOverlayToDisplay() }
+
+            tacticalState.active -> {
+                if (draftEditing) setDraftEditMode(false)
+                createTacticalWindow()
+                overlay?.visibility = View.GONE
+                draftHud?.visibility = View.GONE
+                draftDock?.visibility = View.GONE
+                tacticalHud?.apply {
+                    visibility = View.VISIBLE
+                    render(tacticalState)
+                }
+            }
+
+            else -> {
+                if (draftEditing) setDraftEditMode(false)
+                draftHud?.visibility = View.GONE
+                draftDock?.visibility = View.GONE
+                tacticalHud?.visibility = View.GONE
+                overlay?.visibility = View.VISIBLE
+                overlay?.post { clampOverlayToDisplay() }
+            }
         }
     }
 
@@ -364,12 +429,22 @@ class RiftOverlayService : Service() {
         }
     }
 
+    private fun actionIntent(action: String, requestCode: Int): PendingIntent = PendingIntent.getService(
+        this,
+        requestCode,
+        Intent(this, RiftOverlayService::class.java).setAction(action),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
     private fun buildNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_stat_rift)
         .setContentTitle("RiftScreen 正在运行")
-        .setContentText("赛事副屏 / 全屏 HUD · 锁定后全屏触摸穿透")
+        .setContentText("赛事副屏 · 通知栏可启动 Global/Fight HUD 模拟")
         .setOngoing(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)
+        .addAction(R.drawable.ic_stat_rift, "HUD模拟", actionIntent(ACTION_SIM_AUTO, 51))
+        .addAction(R.drawable.ic_stat_rift, "下一步", actionIntent(ACTION_SIM_NEXT, 52))
+        .addAction(R.drawable.ic_stat_rift, "停止模拟", actionIntent(ACTION_SIM_STOP, 53))
         .build()
 
     private fun createChannel() {
@@ -383,17 +458,22 @@ class RiftOverlayService : Service() {
         isRunning = false
         collectJob?.cancel()
         draftHudJob?.cancel()
+        tacticalHudJob?.cancel()
         DraftHudSimulation.stop()
+        TacticalHudSimulation.stop()
         if (this::windowManager.isInitialized) {
             overlay?.let { runCatching { windowManager.removeView(it) } }
             draftHud?.let { runCatching { windowManager.removeView(it) } }
             draftDock?.let { runCatching { windowManager.removeView(it) } }
+            tacticalHud?.let { runCatching { windowManager.removeView(it) } }
         }
         overlay = null
         draftHud = null
         draftDock = null
+        tacticalHud = null
         draftHudParams = null
         draftDockParams = null
+        tacticalHudParams = null
         scope.cancel()
         super.onDestroy()
     }
@@ -405,6 +485,9 @@ class RiftOverlayService : Service() {
         const val ACTION_SHOW = "com.riftlab.app.overlay.SHOW"
         const val ACTION_HIDE = "com.riftlab.app.overlay.HIDE"
         const val ACTION_STOP = "com.riftlab.app.overlay.STOP"
+        const val ACTION_SIM_AUTO = "com.riftlab.app.overlay.SIM_AUTO"
+        const val ACTION_SIM_NEXT = "com.riftlab.app.overlay.SIM_NEXT"
+        const val ACTION_SIM_STOP = "com.riftlab.app.overlay.SIM_STOP"
         private const val ACTION_SYNC = "com.riftlab.app.overlay.SYNC"
 
         @Volatile
@@ -417,6 +500,16 @@ class RiftOverlayService : Service() {
         fun start(context: Context) {
             val intent = Intent(context, RiftOverlayService::class.java).setAction(ACTION_SYNC)
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun startSimulation(context: Context) {
+            val intent = Intent(context, RiftOverlayService::class.java).setAction(ACTION_SIM_AUTO)
+            ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun stopSimulation(context: Context) {
+            if (!isRunning) return
+            context.startService(Intent(context, RiftOverlayService::class.java).setAction(ACTION_SIM_STOP))
         }
 
         fun setHostForeground(context: Context, foreground: Boolean) {
