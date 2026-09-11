@@ -131,6 +131,7 @@ object RiotLiveStatsHistoryResolver {
             if (gameId.isBlank()) return unavailable(key, gameNumber, "Riot EventDetails 的 G$gameNumber 缺少 gameId")
 
             val sideIds = parseSideIds(gameObject)
+            val canonicalSideTruth = MatchLifecycleArchive.find(match)?.finalGames?.get(gameNumber)
             val kickoff = try {
                 RiotResilientHttp.getJson(
                     "${LolEsportsConfig.LIVE_BASE}/window/$gameId",
@@ -196,6 +197,7 @@ object RiotLiveStatsHistoryResolver {
                             frame = frame,
                             metadata = metadata,
                             sideIds = sideIds,
+                            canonicalSideTruth = canonicalSideTruth,
                             elapsedSeconds = elapsed
                         )
                         if (snapshot != null && meaningful(snapshot)) {
@@ -268,6 +270,7 @@ object RiotLiveStatsHistoryResolver {
         frame: JSONObject,
         metadata: JSONObject,
         sideIds: Pair<String, String>,
+        canonicalSideTruth: LiveSnapshot?,
         elapsedSeconds: Int
     ): LiveSnapshot? {
         val blueFrame = frame.optJSONObject("blueTeam") ?: return null
@@ -276,8 +279,8 @@ object RiotLiveStatsHistoryResolver {
         val redMeta = metadata.optJSONObject("redTeamMetadata") ?: JSONObject()
         val blueId = blueMeta.optString("esportsTeamId").ifBlank { sideIds.first }
         val redId = redMeta.optString("esportsTeamId").ifBlank { sideIds.second }
-        val blueCode = teamCode(match, blueId, 0, "BLUE")
-        val redCode = teamCode(match, redId, 1, "RED")
+        val blueCode = teamCode(match, blueId, canonicalSideTruth?.blue.orEmpty(), "BLUE")
+        val redCode = teamCode(match, redId, canonicalSideTruth?.red.orEmpty(), "RED")
 
         return LiveSnapshot(
             game = gameNumber,
@@ -303,15 +306,19 @@ object RiotLiveStatsHistoryResolver {
         )
     }
 
-    private fun teamCode(match: ScheduledEsportsMatch, teamId: String, index: Int, fallback: String): String {
-        match.teams.firstOrNull { it.id == teamId }?.let { team ->
+    private fun teamCode(
+        match: ScheduledEsportsMatch,
+        teamId: String,
+        canonicalSideLabel: String,
+        fallback: String
+    ): String {
+        match.teams.firstOrNull { teamId.isNotBlank() && it.id == teamId }?.let { team ->
             if (team.code.isNotBlank()) return team.code
             if (team.name.isNotBlank()) return team.name
         }
-        match.teams.getOrNull(index)?.let { team ->
-            if (team.code.isNotBlank()) return team.code
-            if (team.name.isNotBlank()) return team.name
-        }
+        canonicalSideLabel.trim().takeUnless {
+            it.isBlank() || it == "—" || it.equals("BLUE", ignoreCase = true) || it.equals("RED", ignoreCase = true)
+        }?.let { return it }
         return fallback
     }
 

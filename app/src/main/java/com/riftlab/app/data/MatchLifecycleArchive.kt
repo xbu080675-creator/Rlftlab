@@ -51,10 +51,26 @@ data class MatchLifecycleRecord(
     val finalGames: Map<Int, LiveSnapshot> = emptyMap(),
     val updatedAtEpochMs: Long = System.currentTimeMillis()
 ) {
-    fun framesFor(game: Int): List<MatchLifecycleFrame> = games[game].orEmpty()
+    fun framesFor(game: Int): List<MatchLifecycleFrame> {
+        val frames = games[game].orEmpty()
+        val terminal = finalGames[game] ?: return frames
+        val canonicalBlue = terminal.blue.trim().takeUnless {
+            it.isBlank() || it == "—" || it.equals("BLUE", ignoreCase = true)
+        } ?: return frames
+        val canonicalRed = terminal.red.trim().takeUnless {
+            it.isBlank() || it == "—" || it.equals("RED", ignoreCase = true)
+        } ?: return frames
+        if (canonicalBlue.equals(canonicalRed, ignoreCase = true)) return frames
+
+        return frames.map { frame ->
+            val snapshot = frame.snapshot
+            if (snapshot.blue == canonicalBlue && snapshot.red == canonicalRed) frame
+            else frame.copy(snapshot = snapshot.copy(blue = canonicalBlue, red = canonicalRed))
+        }
+    }
 
     fun latestGame(game: Int): LiveSnapshot? =
-        games[game]?.lastOrNull()?.snapshot ?: finalGames[game]
+        framesFor(game).lastOrNull()?.snapshot ?: finalGames[game]
 }
 
 object MatchLifecycleArchive {
