@@ -11,6 +11,7 @@ on:
       - 'scripts/starting_roster_global_collector.py'
       - 'scripts/starting_roster_fast_global_collector.py'
       - 'scripts/starting_roster_four_lane_collector.py'
+      - 'scripts/starting_roster_policy_selftest.py'
       - 'scripts/starting_roster_browser_collector.py'
       - 'scripts/starting_roster_browser_four_lane.py'
       - 'data/global/starting_roster_sources.json'
@@ -44,6 +45,10 @@ jobs:
           python3 -m pip install --disable-pip-version-check --quiet \
             requests beautifulsoup4 pillow pytesseract playwright
           python3 -m playwright install --with-deps chromium
+
+      - name: Validate roster publishing policies
+        run: |
+          python3 scripts/starting_roster_policy_selftest.py
 
       - name: Collect social posts with Chromium transport
         continue-on-error: true
