@@ -1,0 +1,80 @@
+name: Apply RiftLab dev89 benchmark UX
+
+on:
+  push:
+    paths:
+      - '.github/workflows/dev89-benchmark-apply.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire warmed benchmark UI and version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/riftlab/app/ui/LocalAiSettingsPanel.kt')
+          s = p.read_text()
+          s = s.replace(
+              '"会真实加载模型并完成一次短推理；延迟和热状态不过门槛就继续规则模式。"',
+              '"会分开记录冷启动加载、warm-up 与 3 次稳态短推理；READY 只看稳态 median / P90 与热状态，首轮慢不会直接判死刑。"'
+          )
+          old = '''                if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                }'''
+          new = '''                if (runtimeState.modelId == selectedModel.id && runtimeState.message.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(runtimeState.message, color = RiftMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                    if (runtimeState.loadMs != null || runtimeState.warmupMs != null || runtimeState.sampleMs.isNotEmpty()) {
+                        Text(
+                            listOfNotNull(
+                                runtimeState.loadMs?.let { "COLD ${it}ms" },
+                                runtimeState.warmupMs?.let { "WARM-UP ${it}ms" },
+                                runtimeState.medianMs?.let { "MEDIAN ${it}ms" },
+                                runtimeState.p90Ms?.let { "P90 ${it}ms" },
+                                runtimeState.sampleMs.takeIf { it.isNotEmpty() }?.joinToString(prefix = "SAMPLES ", separator = "/") { "${it}ms" }
+                            ).joinToString(" · "),
+                            color = RiftMuted,
+                            fontSize = 10.sp,
+                            lineHeight = 15.sp
+                        )
+                        Text(
+                            "THERMAL ${runtimeState.thermalBefore ?: "?"} → ${runtimeState.thermalAfter ?: "?"}",
+                            color = RiftMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                }'''
+          if old not in s:
+              raise SystemExit('expected runtimeState block not found')
+          s = s.replace(old, new)
+          s = s.replace(
+              '"下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，完成 SHA-256 校验后仍不会直接启用，必须再通过真实运行时加载、短延迟基准和热状态检查。失败或不达标立即回到规则模式。模型资产与普通缓存分离，清理缓存不会删除模型。"',
+              '"下载策略：只展示适合本机的模型；模型包先写入 filesDir/local_ai_models，SHA-256 通过后仍不会直接启用。基准会把冷启动、warm-up、稳态 median/P90 和热状态分开；只有稳态不过门槛才回到规则模式。模型文件会保留，可降温或切换性能模式后重新测试。"'
+          )
+          p.write_text(s)
+
+          p = Path('app/build.gradle.kts')
+          s = p.read_text()
+          s = s.replace('versionCode = 88', 'versionCode = 89', 1)
+          s = s.replace('versionName = "1.0.0-dev.88"', 'versionName = "1.0.0-dev.89"', 1)
+          p.write_text(s)
+
+          Path('DEV_CURRENT_CHANGELOG.txt').write_text('''dev.89：重做本地 AI 真机基准。取消“一次短推理 > 2500ms 就判失败”的粗暴逻辑。\n\n真实 LiteRT-LM 基准现在拆成：模型冷启动加载时间、1 次 warm-up、3 次稳态短推理、稳态 median、P90 与热状态前后值。冷启动和 warm-up 只记录，不参与 READY 判定；READY 只看稳态 median <= 2500ms、P90 <= 3500ms 且热状态未达到 severe。\n\n基准失败不删除模型，仍保持 VERIFIED，可在降温、切换性能模式或系统负载降低后重新测试。页面会显示 COLD / WARM-UP / MEDIAN / P90 / SAMPLES / THERMAL，便于判断到底是首轮初始化慢、持续推理慢还是热降频。\n\n这次修改针对红魔 9 Pro+ 实测 Qwen3 0.6B INT4 单次 5350ms 被旧逻辑直接判死的问题；不再让冷启动或首次生成代表整台设备的持续推理能力。\n''')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/riftlab/app/ui/LocalAiSettingsPanel.kt app/build.gradle.kts DEV_CURRENT_CHANGELOG.txt
+          git commit -m "dev.89: expose warmed steady-state benchmark metrics"
+          git pull --rebase origin main
+          git push origin HEAD:main
