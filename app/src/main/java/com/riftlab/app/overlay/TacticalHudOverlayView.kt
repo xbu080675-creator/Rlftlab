@@ -12,29 +12,35 @@ import android.widget.TextView
 import kotlin.math.roundToInt
 
 /**
- * Broadcast-safe tactical overlay: it intentionally avoids score, total kills, towers and full item
- * rows. The demo renders only information that would justify covering part of the match picture.
+ * 全局赛事 X 光层。
+ *
+ * 这不是第二块直播底板：不重复总击杀、总塔数、总经济等导播已常驻展示的信息。
+ * 只放导播未第一时间给、底板没呈现、但会改变观众判断的状态。
  */
 class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
     private val panel = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(12), dp(9), dp(12), dp(10))
+        setPadding(dp(14), dp(10), dp(14), dp(12))
     }
     private val backgroundShape = GradientDrawable()
     private val accent = View(context)
-    private val phase = label("GLOBAL", 10f, Color.WHITE, true)
-    private val sim = label("SIM", 9f, 0xFF9BA8BA.toInt(), true)
+    private val phase = label("全局态势", 10f, Color.WHITE, true)
+    private val sim = label("模拟", 9f, 0xFF9BA8BA.toInt(), true)
     private val clock = label("--:--", 10f, 0xFF9BA8BA.toInt(), true)
-    private val headline = label("", 14f, Color.WHITE, true)
-    private val alive = label("", 27f, Color.WHITE, true).apply { gravity = Gravity.CENTER }
-    private val primary = label("", 11f, 0xFFE9EDF4.toInt(), true)
-    private val secondary = label("", 10f, 0xFF9BA8BA.toInt(), true)
+    private val match = label("", 9f, 0xFF77869A.toInt(), false)
+    private val headline = label("", 15f, Color.WHITE, true)
+    private val explanation = label("", 11f, 0xFFDDE5EF.toInt(), false).apply { maxLines = 3 }
+    private val evidenceWrap = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+    }
+    private val alive = label("", 24f, Color.WHITE, true).apply { gravity = Gravity.CENTER }
     private val objectiveLine = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
     }
     private val objectiveName = label("", 10f, 0xFF9BA8BA.toInt(), true)
-    private val objectiveHp = label("", 13f, Color.WHITE, true)
+    private val objectiveHp = label("", 12f, Color.WHITE, true)
     private val objectiveTrack = FrameLayout(context)
     private val objectiveFill = View(context)
     private val players = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -42,7 +48,8 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
 
     init {
         elevation = dp(12).toFloat()
-        addView(panel, LayoutParams(dp(286), LayoutParams.WRAP_CONTENT))
+        val width = (resources.displayMetrics.widthPixels * 0.92f).roundToInt().coerceAtLeast(dp(320))
+        addView(panel, LayoutParams(width, LayoutParams.WRAP_CONTENT))
 
         val top = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -54,13 +61,20 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
         top.addView(space(), LinearLayout.LayoutParams(0, 1, 1f))
         top.addView(clock)
         panel.addView(top)
+        panel.addView(match)
 
         panel.addView(accent, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(2)).apply {
             topMargin = dp(6)
             bottomMargin = dp(8)
         })
         panel.addView(headline)
-        alive.setPadding(0, dp(4), 0, dp(3))
+        explanation.setPadding(0, dp(5), 0, 0)
+        panel.addView(explanation)
+
+        evidenceWrap.setPadding(0, dp(8), 0, dp(2))
+        panel.addView(evidenceWrap)
+
+        alive.setPadding(0, dp(5), 0, dp(4))
         panel.addView(alive)
 
         objectiveLine.addView(objectiveName, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
@@ -76,10 +90,6 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
         })
 
         panel.addView(players)
-        primary.setPadding(0, dp(6), 0, 0)
-        secondary.setPadding(0, dp(4), 0, 0)
-        panel.addView(primary)
-        panel.addView(secondary)
         progress.gravity = Gravity.END
         progress.setPadding(0, dp(5), 0, 0)
         panel.addView(progress)
@@ -93,43 +103,60 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
 
         val fight = state.phase == TacticalHudPhase.FIGHT
         val phaseColor = if (fight) 0xFFFF5E67.toInt() else 0xFF6CEBFF.toInt()
-        phase.text = if (fight) "RIFT // FIGHT" else "RIFT // GLOBAL"
+        phase.text = if (fight) "团战态势" else "全局态势"
         phase.setTextColor(phaseColor)
         clock.text = state.clock
+        match.text = state.matchLabel
         headline.text = state.headline
-        headline.setTextColor(if (fight) Color.WHITE else 0xFFF0F4FA.toInt())
+        explanation.text = state.explanation
         accent.setBackgroundColor(phaseColor)
         objectiveFill.setBackgroundColor(phaseColor)
-        progress.text = "${state.step}/${state.totalSteps}"
+        progress.text = "模拟 ${state.step}/${state.totalSteps}"
 
         backgroundShape.setColor(if (fight) 0xE817151B.toInt() else 0xE8121821.toInt())
-        backgroundShape.cornerRadius = dp(5).toFloat()
+        backgroundShape.cornerRadius = dp(8).toFloat()
         backgroundShape.setStroke(dp(1), if (fight) 0x88FF5E67.toInt() else 0x806CEBFF.toInt())
         background = backgroundShape
+
+        renderEvidence(state.evidence, phaseColor)
+        renderPlayers(state.players, phaseColor)
 
         if (fight) {
             val blue = state.blueAlive
             val red = state.redAlive
             alive.visibility = if (blue != null && red != null) View.VISIBLE else View.GONE
-            alive.text = if (blue != null && red != null) "$blue  v  $red" else ""
-            primary.visibility = View.GONE
-            secondary.visibility = View.GONE
+            alive.text = if (blue != null && red != null) "BLG  $blue  :  $red  AL" else ""
             renderObjective(state)
-            renderPlayers(state.players, phaseColor)
         } else {
             alive.visibility = View.GONE
             objectiveLine.visibility = View.GONE
             objectiveTrack.visibility = View.GONE
-            players.visibility = View.GONE
-            primary.visibility = if (state.primary.isBlank()) View.GONE else View.VISIBLE
-            secondary.visibility = if (state.secondary.isBlank()) View.GONE else View.VISIBLE
-            primary.text = state.primary
-            secondary.text = state.secondary
         }
 
-        alpha = 0.64f
+        alpha = 0.72f
         animate().cancel()
-        animate().alpha(1f).setDuration(150L).start()
+        animate().alpha(1f).setDuration(160L).start()
+    }
+
+    private fun renderEvidence(rows: List<TacticalHudEvidence>, phaseColor: Int) {
+        evidenceWrap.removeAllViews()
+        evidenceWrap.visibility = if (rows.isEmpty()) View.GONE else View.VISIBLE
+        rows.take(4).forEachIndexed { index, row ->
+            val chip = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(8), dp(5), dp(8), dp(5))
+                background = GradientDrawable().apply {
+                    setColor(if (row.emphasis) 0x3329D3FF else 0x221B2430)
+                    setStroke(dp(1), if (row.emphasis) phaseColor else 0x445A6878)
+                    cornerRadius = dp(6).toFloat()
+                }
+            }
+            chip.addView(label(row.label, 8f, 0xFF8F9CAF.toInt(), true))
+            chip.addView(label(row.value, 10f, if (row.emphasis) Color.WHITE else 0xFFDDE4EE.toInt(), true))
+            evidenceWrap.addView(chip, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+                if (index > 0) marginStart = dp(5)
+            })
+        }
     }
 
     private fun renderObjective(state: TacticalHudState) {
@@ -140,7 +167,7 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
         objectiveTrack.visibility = if (show && max != null && max > 0) View.VISIBLE else View.GONE
         if (!show) return
         objectiveName.text = state.objective
-        objectiveHp.text = hp.toString()
+        objectiveHp.text = if (max != null) "$hp / $max" else hp.toString()
         if (max != null && max > 0) {
             objectiveTrack.post {
                 val ratio = (hp.toFloat() / max.toFloat()).coerceIn(0f, 1f)
@@ -155,14 +182,20 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
     private fun renderPlayers(rows: List<TacticalHudPlayer>, phaseColor: Int) {
         players.removeAllViews()
         players.visibility = if (rows.isEmpty()) View.GONE else View.VISIBLE
-        rows.take(2).forEach { row ->
+        rows.take(3).forEach { row ->
             val line = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dp(3), 0, dp(3))
+                setPadding(0, dp(4), 0, dp(4))
             }
-            val identity = label("${row.team} ${row.role}", 10f, Color.WHITE, true)
-            line.addView(identity, LinearLayout.LayoutParams(dp(78), LayoutParams.WRAP_CONTENT))
+            val identityText = buildString {
+                append(row.team)
+                append(" · ")
+                append(row.player.ifBlank { row.role })
+                if (row.player.isNotBlank()) append(" · ${row.role}")
+            }
+            val identity = label(identityText, 10f, Color.WHITE, true)
+            line.addView(identity, LinearLayout.LayoutParams(dp(128), LayoutParams.WRAP_CONTENT))
 
             val hpTrack = FrameLayout(context).apply { background = solid(0xFF2A303B.toInt(), 2) }
             val hpFill = View(context).apply {
@@ -188,19 +221,20 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
             }
 
             val status = when {
-                row.alive == false -> "DEAD"
-                row.smiteReady != null -> "S ${if (row.smiteReady) "●" else "×"}"
+                row.alive == false -> "阵亡"
+                row.note.isNotBlank() -> row.note
+                row.smiteReady != null -> "惩戒${if (row.smiteReady) "可用" else "不可用"}"
                 else -> buildString {
-                    row.flashReady?.let { append("F ${if (it) "●" else "×"}") }
+                    row.flashReady?.let { append("闪现${if (it) "可用" else "未转好"}") }
                     row.ultimateReady?.let {
-                        if (isNotEmpty()) append("  ")
-                        append("R ${if (it) "●" else "×"}")
+                        if (isNotEmpty()) append(" · ")
+                        append("R${if (it) "可用" else "不可用"}")
                     }
                 }.ifBlank { "${row.hpPercent ?: 0}%" }
             }
             val stateText = label(status, 9f, if (row.alive == false) 0xFFFF777E.toInt() else 0xFFDDE4EE.toInt(), true)
             stateText.gravity = Gravity.END
-            line.addView(stateText, LinearLayout.LayoutParams(dp(70), LayoutParams.WRAP_CONTENT))
+            line.addView(stateText, LinearLayout.LayoutParams(dp(96), LayoutParams.WRAP_CONTENT))
             players.addView(line, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         }
     }
@@ -211,7 +245,7 @@ class TacticalHudOverlayView(context: Context) : FrameLayout(context) {
         setTextColor(color)
         includeFontPadding = false
         typeface = if (bold) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        maxLines = 1
+        maxLines = 3
     }
 
     private fun space(): View = View(context)
