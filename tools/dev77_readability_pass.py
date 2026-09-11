@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "app/src/main/java/com/riftlab/app/ui"
@@ -72,6 +73,7 @@ consumer_body_12 = {
     "RiftLabApp.kt",
     "UpdateCenterUi.kt",
 }
+line_height_map = {"12": "15", "14": "17", "15": "18"}
 
 for path in UI.glob("*.kt"):
     if path.name in {"RiftTheme.kt", "RiftVisualSystem.kt"}:
@@ -86,20 +88,19 @@ for path in UI.glob("*.kt"):
         )
         text = text.replace("teamNameFontSize = 10.sp", "teamNameFontSize = 11.sp")
         text = text.replace("if (compact) 10.sp else 10.sp", "if (compact) 11.sp else 11.sp")
-        # Old 10sp paragraphs often used 12–15sp line heights. Once raised, give Chinese/Latin body
-        # copy enough vertical breathing room rather than preserving the cramped baseline grid.
-        text = text.replace("lineHeight = 12.sp", "lineHeight = 15.sp")
-        text = text.replace("lineHeight = 14.sp", "lineHeight = 17.sp")
-        text = text.replace("lineHeight = 15.sp", "lineHeight = 18.sp")
+        # Old micro-copy used very tight line heights. Expand only the original value once.
+        text = re.sub(
+            r"lineHeight = (12|14|15)\.sp",
+            lambda m: f"lineHeight = {line_height_map[m.group(1)]}.sp",
+            text,
+        )
         return text
 
     rewrite(path, patch_ui)
 
 # 4) A few text-heavy dialogs deserve normal reading size rather than dense HUD size.
 def promote_dialog_body(text: str) -> str:
-    # Endpoint/status labels can stay 11sp. Long prose should be a true body size.
     prose_fragments = [
-        "仅作用于本次 RiftLab GitHub 更新请求 · 非 VPN / 非系统代理 · 节点失败会自动切换",
         "所有 Provider Key 均使用 Android Keystore AES-GCM 加密，仅保存在本机；不会写入源码、GitHub、日志或比赛归档。",
     ]
     for fragment in prose_fragments:
