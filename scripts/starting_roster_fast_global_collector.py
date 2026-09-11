@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+TRACE_OUTPUT = Path("data/global/starting_roster_ocr_trace.json")
 spec = importlib.util.spec_from_file_location("rift_roster_global", ROOT / "starting_roster_global_collector.py")
 global_collector = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
@@ -20,7 +23,9 @@ OCR_MAX_DIMENSION = int(os.environ.get("RIFTLAB_ROSTER_OCR_MAX_DIMENSION", "2200
 TRACE_PREVIEW_CHARS = int(os.environ.get("RIFTLAB_ROSTER_TRACE_PREVIEW_CHARS", "220"))
 TRACE_MAX_LINES_PER_SOURCE = int(os.environ.get("RIFTLAB_ROSTER_TRACE_MAX_LINES", "8"))
 _TRACE = []
+_TRACE_RECORDS = []
 _ACTIVE_SOURCE = {}
+_ACTIVE_OCR_INDEX = 0
 
 
 def _clean_preview(value: str) -> str:
@@ -95,15 +100,18 @@ _original_process_posts = global_collector._process_posts
 
 
 def _bounded_process_posts(source, cfg, posts, transport_label):
-    global _TRACE, _ACTIVE_SOURCE
+    global _TRACE, _ACTIVE_SOURCE, _ACTIVE_OCR_INDEX
     bounded = _budget_posts(posts, cfg)
     _TRACE = []
     previous_source = _ACTIVE_SOURCE
+    previous_index = _ACTIVE_OCR_INDEX
     _ACTIVE_SOURCE = dict(source or {})
+    _ACTIVE_OCR_INDEX = 0
     try:
         evidence, diagnostics = _original_process_posts(source, cfg, bounded, transport_label)
     finally:
         _ACTIVE_SOURCE = previous_source
+        _ACTIVE_OCR_INDEX = previous_index
     account = source.get("account")
     trace_lines = [f"{account}: trace {line}" for line in _TRACE]
     diagnostics = [
@@ -127,32 +135,22 @@ global_collector.base.fetch_weibo_posts = _bounded_weibo_fetch
 
 
 def _langs_for_active_source() -> str:
-    """Use only scripts plausible for this competition instead of all at once.
-
-    Latin remains present everywhere because player IDs are overwhelmingly Latin.
-    This reduces CJK cross-script hallucinations and cuts Tesseract cost globally.
-    """
     league = str(_ACTIVE_SOURCE.get("league") or "").upper()
-    timezone = str(_ACTIVE_SOURCE.get("timezone") or "")
-    if "LPL" in league or "PCS" in league or timezone in {"Asia/Shanghai", "Asia/Taipei"}:
+    timezone_name = str(_ACTIVE_SOURCE.get("timezone") or "")
+    if "LPL" in league or "PCS" in league or timezone_name in {"Asia/Shanghai", "Asia/Taipei"}:
         return "eng+chi_sim"
-    if "LCK" in league or timezone == "Asia/Seoul":
+    if "LCK" in league or timezone_name == "Asia/Seoul":
         return "eng+kor"
-    if "LJL" in league or timezone == "Asia/Tokyo":
+    if "LJL" in league or timezone_name == "Asia/Tokyo":
         return "eng+jpn"
-    # LCP can publish across multiple languages; keep English first and add the
-    # most common regional scripts only for that multi-region league.
     if "LCP" in league:
         return "eng+chi_sim+jpn+kor"
     return "eng"
 
 
 def fast_multilingual_ocr(img):
-    """One source-aware Tesseract pass per image with a hard timeout.
-
-    PSM 11 is intentionally used for sparse poster typography. It does not assume
-    a paragraph-shaped text block, which is a poor fit for esports artwork.
-    """
+    """One source-aware Tesseract pass per image with a hard timeout."""
+    global _ACTIVE_OCR_INDEX
     langs = _langs_for_active_source()
     work = img.copy()
     original_size = work.size
@@ -182,7 +180,7 @@ def fast_multilingual_ocr(img):
             "top": int(data["top"][i]),
             "width": int(data["width"][i]),
             "height": int(data["height"][i]),
-            "conf": confidence,
+            "conf": round(confidence, 1),
         })
         key = (
             int(data.get("block_num", [0] * count)[i]),
@@ -191,14 +189,43 @@ def fast_multilingual_ocr(img):
         )
         lines.setdefault(key, []).append(token)
     text = "\n".join(" ".join(tokens) for _, tokens in sorted(lines.items()))
+    preview = _clean_preview(text)
+    _ACTIVE_OCR_INDEX += 1
+    _TRACE_RECORDS.append({
+        "league": str(_ACTIVE_SOURCE.get("league") or ""),
+        "team": str(_ACTIVE_SOURCE.get("team") or ""),
+        "account": str(_ACTIVE_SOURCE.get("account") or ""),
+        "platform": str(_ACTIVE_SOURCE.get("platform") or ""),
+        "sourceKind": str(_ACTIVE_SOURCE.get("source") or ""),
+        "ocrIndex": _ACTIVE_OCR_INDEX,
+        "languages": langs,
+        "psm": 11,
+        "originalSize": [original_size[0], original_size[1]],
+        "processedSize": [work.size[0], work.size[1]],
+        "wordCount": len(words),
+        "textPreview": preview,
+        "words": words[:80],
+    })
     _trace(
         f"ocr lang={langs} psm=11 size={original_size[0]}x{original_size[1]}->{work.size[0]}x{work.size[1]} "
-        f"words={len(words)} text={_clean_preview(text)!r}"
+        f"words={len(words)} text={preview!r}"
     )
     return text, words, work.size
+
+
+def write_trace_report(path: Path = TRACE_OUTPUT):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schemaVersion": 1,
+        "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "recordCount": len(_TRACE_RECORDS),
+        "records": _TRACE_RECORDS,
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 global_collector.base.ocr_image = fast_multilingual_ocr
 
 if __name__ == "__main__":
     global_collector.base.main()
+    write_trace_report()
