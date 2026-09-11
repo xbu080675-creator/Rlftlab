@@ -9,7 +9,7 @@ import coil.memory.MemoryCache
 import com.riftlab.app.ai.LocalAiCore
 import com.riftlab.app.ai.LocalModelManager
 import com.riftlab.app.data.ComprehensiveDataCenter
-import com.riftlab.app.data.LplStartingRosterCenter
+import com.riftlab.app.data.StartingRosterCenter
 import com.riftlab.app.data.MatchLifecycleArchive
 import com.riftlab.app.data.MatchLifecycleCapture
 import com.riftlab.app.data.MatchSessionStore
@@ -54,9 +54,10 @@ class RiftLabApplication : Application(), ImageLoaderFactory {
         LocalAiCore.initialize(this)
         LocalModelManager.initialize(this)
 
-        // Official social starter announcements are intentionally watched independently from the
-        // website/schedule poll. Club/LPL Weibo may be the first official source on match eve.
-        LplStartingRosterCenter.ensureRunning()
+        // Global official starter lane. Social crawling/OCR is normalized upstream, so the phone
+        // only downloads small roster evidence JSON and never requires direct access to overseas
+        // social platforms. Mainland-friendly mirrors are tried before the canonical GitHub copy.
+        StartingRosterCenter.ensureRunning()
 
         // Cache pressure guard. Only cacheDir/externalCacheDir are eligible. Persistent archives,
         // encrypted provider keys, user settings and downloaded local-AI models are never touched.
