@@ -1,0 +1,59 @@
+name: dev73 expand global schedule window
+
+on:
+  push:
+    branches: [ dev72-postrelease-audit ]
+    paths:
+      - '.github/workflows/dev73-expand-global-window.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev72-postrelease-audit
+          fetch-depth: 0
+      - name: Expand runtime global schedule window to audited horizon
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          kt = Path('app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt')
+          text = kt.read_text(encoding='utf-8')
+          old = '''        // competitions. Six pages in each direction covers the useful current/recent schedule window;\n        // the long-term historical archive remains the responsibility of the central mirror.\n'''
+          new = '''        // competitions. Ten pages in each direction matches the audited current/recent global\n        // horizon; the long-term historical archive remains the responsibility of the central mirror.\n'''
+          if old not in text:
+              raise SystemExit('global window comment not found')
+          text = text.replace(old, new, 1)
+          marker = '''        for (direction in listOf("older", "newer")) {\n            var token = schedulePageToken(center, direction)\n            repeat(6) {\n'''
+          replacement = '''        for (direction in listOf("older", "newer")) {\n            var token = schedulePageToken(center, direction)\n            repeat(10) {\n'''
+          if marker not in text:
+              raise SystemExit('global pagination loop not found')
+          text = text.replace(marker, replacement, 1)
+          kt.write_text(text, encoding='utf-8')
+
+          audit = Path('tools/dev73_schedule_completeness_audit.py')
+          data = audit.read_text(encoding='utf-8')
+          old = '    # Reproduce the new Android primary path: Riot global schedule, six pages each direction.\n'
+          new = '    # Reproduce the new Android primary path: Riot global schedule, ten pages each direction.\n'
+          if old not in data:
+              raise SystemExit('audit comment not found')
+          data = data.replace(old, new, 1)
+          if '    runtime_rows = collect_window(None, 6)\n' not in data:
+              raise SystemExit('audit runtime window not found')
+          data = data.replace('    runtime_rows = collect_window(None, 6)\n', '    runtime_rows = collect_window(None, 10)\n', 1)
+          audit.write_text(data, encoding='utf-8')
+          PY
+          rm -f .github/workflows/dev73-expand-global-window.yml
+          git config user.name "PocketSpace"
+          git config user.email "xbu080675@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(schedule): cover audited global schedule horizon"
+          git push origin HEAD:dev72-postrelease-audit
