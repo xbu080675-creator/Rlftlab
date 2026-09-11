@@ -6,7 +6,7 @@ on:
     paths:
       - '.github/workflows/dev79-apply.yml'
 
-# One-shot release-candidate gate; remove after the branch passes.
+# One-shot release-candidate gate after the skin-palette HUD fix; remove after this passes.
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -31,6 +31,7 @@ jobs:
           grep -q 'MatchTimelineStore.timelines' app/src/main/java/com/riftlab/app/data/ComprehensiveDataCenter.kt
           grep -q 'bluePlayerSnapshots' app/src/main/java/com/riftlab/app/data/OpggMatchSupplementProvider.kt
           grep -q 'CoverageDial' app/src/main/java/com/riftlab/app/ui/ComprehensiveDataCoverageUi.kt
+          grep -q 'CoveragePalette' app/src/main/java/com/riftlab/app/ui/ComprehensiveDataCoverageUi.kt
           grep -q 'fetchGlobalSchedule' app/src/main/java/com/riftlab/app/data/LolEsportsApiClient.kt
           grep -q 'InternationalEventMirrorProvider.fetchMatches' app/src/main/java/com/riftlab/app/data/LolEsportsDataSources.kt
       - uses: gradle/actions/setup-gradle@v4
