@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -18,6 +19,11 @@ query_spec = importlib.util.spec_from_file_location("rift_match_query", ROOT / "
 match_query = importlib.util.module_from_spec(query_spec)
 assert query_spec and query_spec.loader
 query_spec.loader.exec_module(match_query)
+
+target_spec = importlib.util.spec_from_file_location("rift_match_targets", ROOT / "starting_roster_match_targets.py")
+match_targets = importlib.util.module_from_spec(target_spec)
+assert target_spec and target_spec.loader
+target_spec.loader.exec_module(match_targets)
 
 cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
 policies = cfg.get("leaguePolicies") or {}
@@ -71,16 +77,45 @@ for source, text, expected_basis, expected_teams in cases:
     assert expected_teams.issubset(set(meta["teams"])), (source["league"], meta)
 
 # Multi-match day search must start with date + both teams + lineup intent.
-lpl_queries = match_query.build_match_search_queries("2026-09-12", "AL", "IG", "LPL")
+lpl_queries = match_query.build_match_search_queries("2026-09-12", "IG", "AL", "LPL")
 assert lpl_queries, "LPL search query builder returned nothing"
 assert "9月12日" in lpl_queries[0]
 assert "AL" in lpl_queries[0] and "IG" in lpl_queries[0]
 assert "首发" in lpl_queries[0]
+assert any("9月12日 AL对战IG 首发名单" == q for q in lpl_queries[:6]), lpl_queries[:6]
 
 lck_queries = match_query.build_match_search_queries("2026-09-12", "T1", "HLE", "LCK")
 assert "2026-09-12" in lck_queries[0]
 assert "T1" in lck_queries[0] and "HLE" in lck_queries[0]
 assert "lineup" in lck_queries[0].lower() or "선발" in lck_queries[0]
+assert any("HLE vs T1" in q for q in lck_queries[:6])
+
+# Schedule targets must never emit unresolved TBD/TBA matchups.
+start = (datetime.now(timezone.utc) + timedelta(hours=2)).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+root = {
+    "data": {
+        "schedule": {
+            "events": [
+                {
+                    "type": "match",
+                    "id": "resolved",
+                    "startTime": start,
+                    "league": {"slug": "lpl", "name": "LPL"},
+                    "match": {"id": "m1", "teams": [{"code": "AL", "name": "Anyone's Legend"}, {"code": "IG", "name": "Invictus Gaming"}]},
+                },
+                {
+                    "type": "match",
+                    "id": "unresolved",
+                    "startTime": start,
+                    "league": {"slug": "lpl", "name": "LPL"},
+                    "match": {"id": "m2", "teams": [{"code": "TBD", "name": "TBD"}, {"code": "BLG", "name": "Bilibili Gaming"}]},
+                },
+            ]
+        }
+    }
+}
+targets = match_targets.build_targets(cfg, root, hours_before=6, hours_after=36, limit=12)
+assert len(targets) == 1 and targets[0]["teams"] == ["AL", "IG"], targets
 
 # Team-owned image-only posts remain fallback candidates, never primary facts.
 image_only = collector.candidate_score(
