@@ -28,6 +28,13 @@ internal object LiveMatchTargetRegistry {
 
     fun snapshotBelongsTo(snapshot: LiveSnapshot, target: ScheduledEsportsMatch?): Boolean {
         target ?: return false
+
+        // A stamped frame must belong to this exact schedule series. Never accept a frame carrying
+        // another event/match key just because the same two teams happen to be playing again.
+        val expectedKey = key(target)
+        val frameKey = snapshot.targetKey.trim()
+        if (frameKey.isNotBlank() && expectedKey.isNotBlank() && frameKey != expectedKey) return false
+
         val expected = target.teams.take(2).map(::aliases)
         if (expected.size < 2 || expected.any { it.isEmpty() }) return false
         val actual = listOf(snapshot.blue, snapshot.red).map(::token)
