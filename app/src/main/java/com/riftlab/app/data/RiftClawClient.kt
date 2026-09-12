@@ -14,7 +14,8 @@ import java.util.concurrent.TimeUnit
  * Client for the dedicated RiftClaw companion API, not for generic OpenClaw APIs.
  *
  * RiftLab deliberately speaks a tiny localhost protocol so OpenClaw implementation details and
- * general-purpose agent capabilities are never exposed to the app.
+ * general-purpose agent capabilities are never exposed to the app. The app stores only the
+ * RiftClaw bridge pairing token; the OpenClaw Gateway operator token stays inside RiftClaw.
  */
 internal object RiftClawClient {
     private const val MAX_BODY_BYTES = 512 * 1024L
@@ -33,7 +34,7 @@ internal object RiftClawClient {
         val detail: String
     )
 
-    suspend fun status(endpoint: String = RiftClawContract.DEFAULT_GATEWAY): Result<Status> =
+    suspend fun status(endpoint: String = RiftClawContract.DEFAULT_ENDPOINT): Result<Status> =
         withContext(Dispatchers.IO) {
             runCatching {
                 requireAllowedEndpoint(endpoint)
@@ -49,10 +50,7 @@ internal object RiftClawClient {
                     require(protocol == RiftClawContract.PROTOCOL_VERSION) { "riftclaw_protocol_mismatch" }
                     val caps = root.optJSONArray("capabilities").toStringSet()
                     require("weibo_search" in caps) { "riftclaw_weibo_search_missing" }
-                    // A dedicated companion may expose health/status internally, but RiftLab-facing
-                    // tool capabilities must not grow beyond the explicitly recognized set.
-                    val forbidden = caps - setOf("weibo_search")
-                    require(forbidden.isEmpty()) { "riftclaw_unexpected_capabilities" }
+                    require((caps - setOf("weibo_search")).isEmpty()) { "riftclaw_unexpected_capabilities" }
                     Status(
                         ready = root.optBoolean("ready", false),
                         protocolVersion = protocol,
@@ -65,10 +63,12 @@ internal object RiftClawClient {
 
     suspend fun searchStartingRoster(
         requestData: RiftClawContract.SearchRequest,
-        endpoint: String = RiftClawContract.DEFAULT_GATEWAY
+        endpoint: String = RiftClawContract.DEFAULT_ENDPOINT
     ): Result<RiftClawContract.SearchResponse> = withContext(Dispatchers.IO) {
         runCatching {
             requireAllowedEndpoint(endpoint)
+            val bridgeToken = ProviderCredentialStore.readRiftClawBridgeToken()
+                ?: error("riftclaw_not_paired")
             val validation = RiftClawContract.validate(requestData)
             require(validation is RiftClawContract.Validation.Allow) {
                 (validation as? RiftClawContract.Validation.Deny)?.reason ?: "riftclaw_request_invalid"
@@ -87,6 +87,7 @@ internal object RiftClawClient {
                 .url(endpoint.trimEnd('/') + "/v1/weibo/search")
                 .post(bodyJson.toString().toRequestBody(jsonType))
                 .header("Accept", "application/json")
+                .header("Authorization", "Bearer $bridgeToken")
                 .build()
 
             http.newCall(httpRequest).execute().use { response ->
@@ -103,14 +104,17 @@ internal object RiftClawClient {
                 val hits = buildList {
                     for (i in 0 until rawHits.length()) {
                         val item = rawHits.optJSONObject(i) ?: continue
-                        val hit = RiftClawContract.SearchHit(
-                            title = item.optNullableString("title"),
-                            text = item.optNullableString("text"),
-                            source = item.optNullableString("source"),
-                            scheme = item.optNullableString("scheme"),
-                            publishedAt = item.optNullableString("publishedAt")
+                        add(
+                            RiftClawInjectionGuard.sanitizeHit(
+                                RiftClawContract.SearchHit(
+                                    title = item.optNullableString("title"),
+                                    text = item.optNullableString("text"),
+                                    source = item.optNullableString("source"),
+                                    scheme = item.optNullableString("scheme"),
+                                    publishedAt = item.optNullableString("publishedAt")
+                                )
+                            )
                         )
-                        add(RiftClawInjectionGuard.sanitizeHit(hit))
                     }
                 }
                 RiftClawContract.SearchResponse(
