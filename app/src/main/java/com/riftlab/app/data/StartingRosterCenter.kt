@@ -18,6 +18,9 @@ data class StartingRosterState(
     val right: StartingRosterEvidence? = null,
     val announcements: List<StartingRosterAnnouncement> = emptyList(),
     val deviceOcrTraces: List<RosterDeviceOcrTrace> = emptyList(),
+    val riftClawState: String = "DISABLED",
+    val riftClawHitCount: Int = 0,
+    val riftClawPreview: String = "",
     val lastCheckedEpochMs: Long = 0L,
     val endpointLabel: String = "NONE",
     val usedLastGood: Boolean = false,
@@ -29,13 +32,13 @@ data class StartingRosterState(
 /**
  * Global minute-level official roster watcher.
  *
- * Normalized evidence is preferred, but official announcement metadata is kept
- * independently. If server parsing is incomplete the device may inspect a small
- * bounded set of official images with bundled ML Kit OCR. Device OCR stays a
- * candidate/diagnostic lane until five-role validation is strict enough to
- * promote it into confirmed evidence.
+ * Normalized evidence is preferred. RiftClaw is an optional LPL discovery lane only: when the
+ * official normalized feed has fewer than two teams confirmed, a paired local RiftClaw may query
+ * Weibo. Its text is sanitized and surfaced as discovery diagnostics, never promoted directly into
+ * StartingRosterEvidence. Official-source/date/matchup/5+5 validation remains mandatory.
  */
 object StartingRosterCenter {
+    private const val RIFTCLAW_CACHE_MS = 5 * 60_000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutableState = MutableStateFlow(StartingRosterState())
     val state: StateFlow<StartingRosterState> = mutableState.asStateFlow()
@@ -43,6 +46,16 @@ object StartingRosterCenter {
     private var announcementFeed: StartingRosterAnnouncementFeed? = null
     private var deviceOcrResolver: RosterDeviceOcrResolver? = null
     private var job: Job? = null
+    private var riftClawCacheKey: String = ""
+    private var riftClawCacheAt: Long = 0L
+    private var riftClawCache: RiftClawDiscovery = RiftClawDiscovery("DISABLED", 0, "")
+
+    private data class RiftClawDiscovery(
+        val state: String,
+        val hitCount: Int,
+        val preview: String,
+        val diagnostic: String = state
+    )
 
     fun initialize(context: Context) {
         if (feed == null) feed = StartingRosterFeed(context.applicationContext)
@@ -79,6 +92,9 @@ object StartingRosterCenter {
                         val conflictCount = rows.count { it.conflict }
                         val crossCount = rows.count { it.crossConfirmed }
                         val unparsed = announcements.filter { !it.parsed }
+
+                        val riftClaw = riftClawDiscovery(target, matchKey, count)
+
                         val deviceTraces = if (count < 2 && unparsed.any { it.imageUrls.isNotEmpty() }) {
                             runCatching {
                                 deviceOcrResolver?.inspect(target, unparsed).orEmpty()
@@ -96,6 +112,9 @@ object StartingRosterCenter {
                             right = right,
                             announcements = announcements,
                             deviceOcrTraces = deviceTraces,
+                            riftClawState = riftClaw.state,
+                            riftClawHitCount = riftClaw.hitCount,
+                            riftClawPreview = riftClaw.preview,
                             lastCheckedEpochMs = System.currentTimeMillis(),
                             endpointLabel = result.endpointLabel,
                             usedLastGood = result.usedLastGood,
@@ -105,6 +124,11 @@ object StartingRosterCenter {
                                 if (announcements.isNotEmpty()) {
                                     if (isNotEmpty()) append(" · ")
                                     append("RAW_OFFICIAL:${announcements.size};UNPARSED:${unparsed.size}")
+                                }
+                                if (riftClaw.diagnostic.isNotBlank()) {
+                                    if (isNotEmpty()) append(" · ")
+                                    append("RIFTCLAW:")
+                                    append(riftClaw.diagnostic.take(180))
                                 }
                                 if (deviceTraces.isNotEmpty()) {
                                     if (isNotEmpty()) append(" · ")
@@ -134,6 +158,7 @@ object StartingRosterCenter {
                                 count == 2 && crossCount == 2 -> "OFFICIAL ROSTER · 两队首发已交叉确认 · $transport"
                                 count == 2 -> "OFFICIAL ROSTER · 两队首发已确认 · $transport"
                                 count == 1 -> "OFFICIAL ROSTER · 1/2 队首发已确认 · $transport"
+                                riftClaw.hitCount > 0 -> "OFFICIAL ROSTER · 微博增强已提前命中 · 正在做官方证据/5+5 校验"
                                 ocrUseful > 0 -> "OFFICIAL ROSTER · 官宣已发现 · 本机 OCR 已识别部分位置，继续校验"
                                 announcements.isNotEmpty() -> "OFFICIAL ROSTER · 已发现官方发布 · 自动解析中 · ${announcements.first().account}"
                                 result.endpointLabel == "VALID_NO_MATCH" -> "OFFICIAL ROSTER · 数据源正常，当前比赛暂无匹配官宣"
@@ -153,6 +178,65 @@ object StartingRosterCenter {
                 delay(60_000L)
             }
         }
+    }
+
+    private suspend fun riftClawDiscovery(
+        target: ScheduledEsportsMatch,
+        matchKey: String,
+        confirmedCount: Int
+    ): RiftClawDiscovery {
+        if (confirmedCount >= 2) return RiftClawDiscovery("SKIP_CONFIRMED", 0, "")
+        if (!ProviderCredentialStore.riftClawPaired.value) return RiftClawDiscovery("UNPAIRED", 0, "")
+        val leagueToken = token(target.league)
+        if (leagueToken != "LPL") return RiftClawDiscovery("UNSUPPORTED_LEAGUE", 0, "")
+
+        val matchDate = target.startTimeIso.take(10)
+        if (!Regex("^\\d{4}-\\d{2}-\\d{2}$").matches(matchDate)) {
+            return RiftClawDiscovery("DATE_UNAVAILABLE", 0, "")
+        }
+        val teamA = target.teams[0].code.ifBlank { target.teams[0].slug }.trim()
+        val teamB = target.teams[1].code.ifBlank { target.teams[1].slug }.trim()
+        val safeCode = Regex("^[A-Za-z0-9._+-]{1,48}$")
+        if (!safeCode.matches(teamA) || !safeCode.matches(teamB)) {
+            return RiftClawDiscovery("TEAM_CODE_UNAVAILABLE", 0, "")
+        }
+
+        val cacheKey = "$matchKey|$matchDate|${teamA.uppercase()}|${teamB.uppercase()}"
+        val now = System.currentTimeMillis()
+        if (riftClawCacheKey == cacheKey && now - riftClawCacheAt < RIFTCLAW_CACHE_MS) {
+            return riftClawCache.copy(diagnostic = "CACHE:${riftClawCache.state};HITS:${riftClawCache.hitCount}")
+        }
+
+        val request = RiftClawContract.SearchRequest(
+            requestId = "roster-$matchDate-${teamA.lowercase()}-${teamB.lowercase()}-${now.toString().takeLast(6)}",
+            matchDate = matchDate,
+            league = "LPL",
+            teamA = teamA,
+            teamB = teamB
+        )
+        val discovered = RiftClawClient.searchStartingRoster(request).fold(
+            onSuccess = { response ->
+                val preview = response.hits.firstOrNull()?.text.orEmpty().replace('\n', ' ').take(220)
+                RiftClawDiscovery(
+                    state = if (response.hits.isEmpty()) "NO_CONTENT" else "HIT",
+                    hitCount = response.hits.size,
+                    preview = preview,
+                    diagnostic = "${if (response.hits.isEmpty()) "NO_CONTENT" else "HIT"};HITS:${response.hits.size}"
+                )
+            },
+            onFailure = { error ->
+                RiftClawDiscovery(
+                    state = "ERROR",
+                    hitCount = 0,
+                    preview = "",
+                    diagnostic = "ERROR:${error.message?.take(120) ?: error::class.java.simpleName}"
+                )
+            }
+        )
+        riftClawCacheKey = cacheKey
+        riftClawCacheAt = now
+        riftClawCache = discovered
+        return discovered
     }
 
     fun evidenceFor(team: EsportsTeamRef): StartingRosterEvidence? {
