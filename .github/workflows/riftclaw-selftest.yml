@@ -6,6 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'scripts/riftclaw-bootstrap.sh'
+      - 'scripts/riftclaw-bridge.mjs'
       - 'app/src/main/java/com/riftlab/app/data/RiftClaw*.kt'
       - 'app/src/main/java/com/riftlab/app/data/OpenClawSecurityPolicy.kt'
       - 'docs/riftclaw-*.md'
@@ -16,14 +17,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate bootstrap shell
+      - name: Validate bootstrap and bridge syntax
         shell: bash
         run: |
           set -euo pipefail
           bash -n scripts/riftclaw-bootstrap.sh
-          grep -q 'plugins.allow' scripts/riftclaw-bootstrap.sh
-          grep -q 'weibo-openclaw-plugin' scripts/riftclaw-bootstrap.sh
-          grep -q -- '--link "$FALLBACK_DIR"' scripts/riftclaw-bootstrap.sh
+          node --check scripts/riftclaw-bridge.mjs
+      - name: Validate isolated profile and two-port boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          B=scripts/riftclaw-bootstrap.sh
+          BR=scripts/riftclaw-bridge.mjs
+          grep -q 'PROFILE="riftclaw"' "$B"
+          grep -q '127.0.0.1:18790' "$B"
+          grep -q '127.0.0.1:18791' "$B"
+          grep -q "tools.allow' '\[\"weibo_search\"\]'" "$B"
+          grep -q "channels.weibo.enabled' false" "$B"
+          grep -q 'plugins.allow' "$B"
+          grep -q -- '--link "$FALLBACK_DIR"' "$B"
+          grep -q 'const HOST = "127.0.0.1"' "$BR"
+          grep -q 'tool: "weibo_search"' "$BR"
+          ! grep -Eq 'tool:[[:space:]]*(input|req|body|payload)' "$BR"
       - name: Validate narrow app contract
         shell: bash
         run: |
@@ -31,16 +46,23 @@ jobs:
           CONTRACT=app/src/main/java/com/riftlab/app/data/RiftClawContract.kt
           CLIENT=app/src/main/java/com/riftlab/app/data/RiftClawClient.kt
           POLICY=app/src/main/java/com/riftlab/app/data/OpenClawSecurityPolicy.kt
+          STORE=app/src/main/java/com/riftlab/app/data/ProviderCredentialStore.kt
+          grep -q 'DEFAULT_ENDPOINT = "http://127.0.0.1:18790"' "$CONTRACT"
           grep -q 'enum class Capability { WEIBO_SEARCH }' "$CONTRACT"
           grep -q 'intent: String = "starting_roster"' "$CONTRACT"
           grep -q 'riftclaw_unexpected_capabilities' "$CLIENT"
+          grep -q 'readRiftClawBridgeToken' "$CLIENT"
+          grep -q 'RiftClaw bridge pairing token' "$STORE"
           grep -q 'gateway_must_be_loopback' "$POLICY"
           ! grep -Eq 'Capability\.(SHELL|EXEC|FILESYSTEM|DELETE|INSTALL|PLUGIN)' "$CLIENT"
-      - name: Validate injection guard
+      - name: Validate injection guard and secret separation
         shell: bash
         run: |
           set -euo pipefail
           GUARD=app/src/main/java/com/riftlab/app/data/RiftClawContract.kt
+          CLIENT=app/src/main/java/com/riftlab/app/data/RiftClawClient.kt
           grep -q 'blocked-untrusted-instruction' "$GUARD"
           grep -q 'system\\\\s\*prompt' "$GUARD"
           grep -q 'secret|token|cookie|key|credential' "$GUARD"
+          ! grep -q 'RIFTCLAW_OPENCLAW_TOKEN' "$CLIENT"
+          ! grep -q '/tools/invoke' "$CLIENT"
