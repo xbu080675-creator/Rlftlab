@@ -5,7 +5,8 @@ package com.riftlab.app.data
  *
  * The registry contains only schedule metadata. Providers must resolve their own upstream IDs
  * (Tencent bMatchId, Riot event/game id, etc.) from team/time metadata instead of hardcoding a
- * particular series.
+ * particular series. Identity validation is centralized in MatchIdentityPolicy so every provider,
+ * router, archive and UI uses the same fail-closed rule.
  */
 internal object LiveMatchTargetRegistry {
     @Volatile
@@ -26,33 +27,6 @@ internal object LiveMatchTargetRegistry {
         }
     }.orEmpty()
 
-    fun snapshotBelongsTo(snapshot: LiveSnapshot, target: ScheduledEsportsMatch?): Boolean {
-        target ?: return false
-
-        // A stamped frame must belong to this exact schedule series. Never accept a frame carrying
-        // another event/match key just because the same two teams happen to be playing again.
-        val expectedKey = key(target)
-        val frameKey = snapshot.targetKey.trim()
-        if (frameKey.isNotBlank() && expectedKey.isNotBlank() && frameKey != expectedKey) return false
-
-        val expected = target.teams.take(2).map(::aliases)
-        if (expected.size < 2 || expected.any { it.isEmpty() }) return false
-        val actual = listOf(snapshot.blue, snapshot.red).map(::token)
-        if (actual.any { it.isBlank() }) return false
-        fun matches(value: String, candidates: Set<String>): Boolean = candidates.any { candidate ->
-            value == candidate ||
-                (value.length >= 4 && candidate.length >= 4 && (value.contains(candidate) || candidate.contains(value)))
-        }
-        return actual.all { value -> expected.any { matches(value, it) } } &&
-            expected.all { candidates -> actual.any { matches(it, candidates) } }
-    }
-
-    private fun aliases(team: EsportsTeamRef): Set<String> =
-        listOf(team.code, team.name, team.slug)
-            .map(::token)
-            .filter { it.isNotBlank() }
-            .toSet()
-
-    private fun token(value: String): String =
-        value.uppercase().filter { it.isLetterOrDigit() }
+    fun snapshotBelongsTo(snapshot: LiveSnapshot, target: ScheduledEsportsMatch?): Boolean =
+        target != null && MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)
 }
