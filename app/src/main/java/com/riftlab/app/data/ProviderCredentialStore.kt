@@ -26,6 +26,7 @@ internal object ProviderCredentialStore {
     private const val KEY_CITO = "cito_api_key_v1"
     private const val KEY_WEIBO_APP_ID = "weibo_app_id_v1"
     private const val KEY_WEIBO_APP_SECRET = "weibo_app_secret_v1"
+    private const val KEY_RIFTCLAW_BRIDGE_TOKEN = "riftclaw_bridge_token_v1"
     private const val KEYSTORE_ALIAS = "riftlab_provider_credentials_aes_v1"
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -44,6 +45,9 @@ internal object ProviderCredentialStore {
         readWeiboAppId() != null && readWeiboAppSecret() != null
     )
     val weiboConfigured: StateFlow<Boolean> = _weiboConfigured.asStateFlow()
+
+    private val _riftClawPaired = MutableStateFlow(readRiftClawBridgeToken() != null)
+    val riftClawPaired: StateFlow<Boolean> = _riftClawPaired.asStateFlow()
 
     fun readTachioApiKey(): String? = readCredential(KEY_TACHIO)
 
@@ -93,6 +97,24 @@ internal object ProviderCredentialStore {
             .apply()
         _weiboConfigured.value = false
         WeiboOpenApiClient.invalidateToken()
+    }
+
+    /**
+     * Pairing secret for the narrow RiftClaw bridge (127.0.0.1:18790).
+     * This is NOT the OpenClaw Gateway operator token. RiftLab must never receive that token.
+     */
+    fun readRiftClawBridgeToken(): String? = readCredential(KEY_RIFTCLAW_BRIDGE_TOKEN)
+
+    fun saveRiftClawBridgeToken(value: String) {
+        val normalized = value.trim()
+        require(normalized.length >= 24) { "RiftClaw 配对码长度不足" }
+        require(normalized.length <= 256) { "RiftClaw 配对码过长" }
+        saveCredential(KEY_RIFTCLAW_BRIDGE_TOKEN, normalized) { _riftClawPaired.value = it }
+    }
+
+    fun clearRiftClawBridgeToken() {
+        clearCredential(KEY_RIFTCLAW_BRIDGE_TOKEN)
+        _riftClawPaired.value = false
     }
 
     private fun readCredential(key: String): String? = decrypt(prefs.getString(key, null))
