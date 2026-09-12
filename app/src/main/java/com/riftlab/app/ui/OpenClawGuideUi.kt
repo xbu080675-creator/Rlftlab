@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +22,7 @@ import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,11 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.riftlab.app.data.RiftClawContract
+import com.riftlab.app.data.RiftClawProbe
+import kotlinx.coroutines.launch
 
-private const val INSTALL_PLUGIN = "openclaw plugins install @wecode-ai/weibo-openclaw-plugin"
-private const val SET_APP_ID = "openclaw config set 'channels.weibo.appId' '你的AppID'"
-private const val SET_APP_SECRET = "openclaw config set 'channels.weibo.appSecret' '你的AppSecret'"
-private const val START_GATEWAY = "openclaw gateway"
+private const val BOOTSTRAP =
+    "curl -fL https://raw.githubusercontent.com/xbu080675-creator/Rlftlab/main/scripts/riftclaw-bootstrap.sh -o ~/riftclaw-bootstrap.sh && chmod 700 ~/riftclaw-bootstrap.sh && ~/riftclaw-bootstrap.sh"
+private const val VERIFY_PLUGIN = "openclaw plugins list | grep -i weibo"
+private const val VERIFY_SKILL = "openclaw skills list | grep -i weibo-search"
+private const val DEFAULT_MODEL_ENDPOINT = "http://127.0.0.1:18080/v1"
 
 @Composable
 fun OpenClawGuideHost(content: @Composable () -> Unit) {
@@ -62,16 +67,22 @@ fun OpenClawGuideHost(content: @Composable () -> Unit) {
         ) {
             Icon(Icons.Default.Pets, null, tint = RiftCyan)
             Spacer(Modifier.width(7.dp))
-            Text("养龙虾向导", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Text("RiftClaw", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         }
     }
-    if (open) OpenClawGuideDialog(onClose = { open = false })
+    if (open) RiftClawDeployerDialog(onClose = { open = false })
 }
 
 @Composable
-private fun OpenClawGuideDialog(onClose: () -> Unit) {
+private fun RiftClawDeployerDialog(onClose: () -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf("") }
+    var gatewayStatus by remember { mutableStateOf("未检测") }
+    var gatewayTesting by remember { mutableStateOf(false) }
+    var modelEndpoint by remember { mutableStateOf(DEFAULT_MODEL_ENDPOINT) }
+    var modelStatus by remember { mutableStateOf("可选 · 未检测") }
+    var modelTesting by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onClose,
@@ -86,40 +97,104 @@ private fun OpenClawGuideDialog(onClose: () -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("养龙虾向导", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Text("OPENCLAW + 微博龙虾 · 本机增强首发通道", color = RiftMuted, fontSize = 11.sp)
+                        Text("RiftClaw 外挂部署器", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text("只服务微博检索 · localhost-only · deny-by-default", color = RiftMuted, fontSize = 11.sp)
                     }
                     TextButton(onClick = onClose) { Text("关闭") }
                 }
 
                 Spacer(Modifier.height(14.dp))
                 GuideBlock(
-                    title = "0 / 先理解它",
-                    body = "RiftLab 的官网轮询始终保留。OpenClaw 只是本机增强通道：微博官号先发时，可以比官网更早拿到首发。没有龙虾也能正常用，只是可能晚几分钟。"
+                    title = "它不是通用 Agent",
+                    body = "RiftClaw 只给 RiftLab 提供微博首发发现通道。官网/官方源轮询始终保留；龙虾不可用时直接回退，不会为了恢复功能扩大权限。shell、文件读写/删除、插件管理、root/ADB/Shizuku/Magisk 都不属于 RiftLab 能力。"
                 )
+
+                StatusBlock(
+                    title = "1 / 本地 Gateway",
+                    value = gatewayStatus,
+                    action = if (gatewayTesting) "检测中…" else "检测 ${RiftClawContract.DEFAULT_GATEWAY}",
+                    enabled = !gatewayTesting,
+                    onAction = {
+                        gatewayTesting = true
+                        gatewayStatus = "正在检查回环端口…"
+                        scope.launch {
+                            val result = RiftClawProbe.probeGateway()
+                            gatewayStatus = if (result.reachable) {
+                                "已发现本地 Gateway · ${result.detail}"
+                            } else {
+                                "未连接 · ${result.detail}"
+                            }
+                            gatewayTesting = false
+                        }
+                    }
+                )
+
+                GuideCommand(
+                    title = "2 / 一条命令部署微博专用 RiftClaw",
+                    command = BOOTSTRAP,
+                    copied = copied
+                ) { copied = copy(context, "一键部署", BOOTSTRAP) }
                 GuideBlock(
-                    title = "1 / 准备 OpenClaw Gateway",
-                    body = "推荐在电脑/Linux/WSL2 上运行 Gateway。Android/Termux 属于实验路线，但能在手机本机运行。无论哪种方式，都不要用 root 身份启动 Gateway，也不要给它 su、Magisk、Shizuku 或 ADB shell 权限。"
+                    title = "部署器会自动处理",
+                    body = "检测 OpenClaw → 安装微博插件 → 安装卡住时自动改走持久化 npm pack + tar + --link → plugins.allow 只留微博插件 → 安全输入 AppID/AppSecret → 检查 weibo-search Skill。你刚才踩过的 Extracting 卡死问题已经纳入 fallback。"
                 )
-                GuideCommand("2 / 安装微博插件", INSTALL_PLUGIN, copied) { copied = copy(context, INSTALL_PLUGIN) }
+
+                Spacer(Modifier.height(8.dp))
+                Text("3 / 模型（可选增强）", color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    "微博检索权限与模型分离。模型只允许整理经过清洗的结果，不能新增工具或执行动作。本地 OpenAI-compatible 服务可在这里做预检。",
+                    color = RiftText,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = modelEndpoint,
+                    onValueChange = { modelEndpoint = it; modelStatus = "可选 · 未检测" },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("本地模型 API") },
+                    supportingText = { Text("只接受 localhost / 127.0.0.1 / ::1") }
+                )
+                Spacer(Modifier.height(6.dp))
+                Button(
+                    enabled = !modelTesting,
+                    onClick = {
+                        modelTesting = true
+                        modelStatus = "正在请求 /v1/models…"
+                        scope.launch {
+                            val result = RiftClawProbe.probeOpenAiModel(modelEndpoint)
+                            modelStatus = if (result.reachable) {
+                                val models = result.modelIds.joinToString().takeIf { it.isNotBlank() }
+                                if (models == null) "模型 API 可用" else "模型 API 可用 · $models"
+                            } else {
+                                "模型不可用 · ${result.detail}"
+                            }
+                            modelTesting = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RiftPanelAlt, contentColor = RiftText)
+                ) { Text(if (modelTesting) "检测中…" else "检测本地模型") }
+                Spacer(Modifier.height(5.dp))
+                Text(modelStatus, color = RiftMuted, fontSize = 11.sp)
+                Text("建议：插件较多时至少 16K context；32K 会明显增加 KV Cache 内存。", color = RiftMuted, fontSize = 10.sp)
+
                 GuideBlock(
-                    title = "3 / 获取微博龙虾凭证",
-                    body = "微博登录 → 搜索并关注“微博龙虾助手” → 点击“连接龙虾” → 获取 AppID 和 AppSecret。凭证只配置给你自己的 OpenClaw，不要发到聊天、截图、GitHub 或日志里。"
+                    title = "4 / 防提示注入",
+                    body = "RiftLab 只发送日期、赛区、双方队名和 starting_roster 这类结构化字段，不把任意用户提示交给龙虾。微博正文、评论、OCR、智搜摘要全部视为不可信数据，先经过程序级 sanitizer，再进入任何可选模型。搜索结果仍必须经过官方来源、日期、对阵和 5+5 首发校验。"
                 )
-                GuideCommand("4 / 配置 AppID", SET_APP_ID, copied) { copied = copy(context, SET_APP_ID) }
-                GuideCommand("5 / 配置 AppSecret", SET_APP_SECRET, copied) { copied = copy(context, SET_APP_SECRET) }
-                GuideCommand("6 / 启动 Gateway", START_GATEWAY, copied) { copied = copy(context, START_GATEWAY) }
-                GuideBlock(
-                    title = "7 / RiftLab 安全边界",
-                    body = "RiftLab 只允许回环地址上的 OpenClaw，并且只开放 Gateway 健康检查和微博搜索。shell、exec、文件写入/删除、插件安装、root/su/ADB/Shizuku/Magisk 一律默认拒绝。微博正文也按不可信输入处理。"
-                )
-                GuideBlock(
-                    title = "8 / 数据优先级",
-                    body = "本地龙虾命中且通过日期、对阵、官方账号和 5+5 首发校验后可立即显示；官网轮询继续后台运行，官网随后命中后升级为交叉确认。"
-                )
+
+                GuideCommand("5 / 故障排查 · 插件", VERIFY_PLUGIN, copied) {
+                    copied = copy(context, "验证微博插件", VERIFY_PLUGIN)
+                }
+                GuideCommand("6 / 故障排查 · Skill", VERIFY_SKILL, copied) {
+                    copied = copy(context, "验证微博搜索 Skill", VERIFY_SKILL)
+                }
+
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    if (copied.isBlank()) "点击任意命令即可复制" else "已复制：$copied",
+                    if (copied.isBlank()) "部署时只需要复制第 2 步；其余命令仅用于故障排查。" else "已复制：$copied",
                     color = RiftCyan,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
@@ -127,6 +202,29 @@ private fun OpenClawGuideDialog(onClose: () -> Unit) {
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun StatusBlock(
+    title: String,
+    value: String,
+    action: String,
+    enabled: Boolean,
+    onAction: () -> Unit
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .background(RiftPanelAlt, CutCornerShape(topEnd = 12.dp, bottomStart = 8.dp))
+            .padding(12.dp)
+    ) {
+        Text(title, color = RiftCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(5.dp))
+        Text(value, color = RiftText, fontSize = 12.sp)
+        Spacer(Modifier.height(7.dp))
+        TextButton(enabled = enabled, onClick = onAction) { Text(action) }
     }
 }
 
@@ -159,18 +257,12 @@ private fun GuideCommand(title: String, command: String, copied: String, onCopy:
         Spacer(Modifier.height(6.dp))
         Text(command, color = RiftText, fontSize = 11.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(5.dp))
-        Text(if (copied == title) "已复制" else "点这里复制命令", color = RiftMuted, fontSize = 10.sp)
+        Text(if (copied == title) "已复制" else "点这里复制", color = RiftMuted, fontSize = 10.sp)
     }
 }
 
-private fun copy(context: Context, value: String): String {
+private fun copy(context: Context, label: String, value: String): String {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("RiftLab OpenClaw", value))
-    return when (value) {
-        INSTALL_PLUGIN -> "安装微博插件"
-        SET_APP_ID -> "配置 AppID"
-        SET_APP_SECRET -> "配置 AppSecret"
-        START_GATEWAY -> "启动 Gateway"
-        else -> "命令"
-    }
+    clipboard.setPrimaryClip(ClipData.newPlainText("RiftClaw", value))
+    return label
 }
