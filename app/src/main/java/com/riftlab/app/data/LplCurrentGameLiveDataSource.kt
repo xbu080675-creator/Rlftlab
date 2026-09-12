@@ -24,6 +24,7 @@ import java.net.URLEncoder
  * - LIVE may expose only the game implied by the current series score (scoreA + scoreB + 1).
  * - Completed games are archived and are never reused as the live surface.
  * - A stale status flag on G1/G2 cannot pull an old final snapshot back into the live UI.
+ * - A schedule target change resets every provider-local match/game binding before another frame may emit.
  */
 internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
 
@@ -70,13 +71,24 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
         var ref: MatchRef? = null
         var previous: LiveSnapshot? = null
         var lastExpectedBo = 0
+        var observedTargetKey = ""
 
         while (currentCoroutineContext().isActive) {
             try {
+                val targetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
+                if (targetKey != observedTargetKey) {
+                    observedTargetKey = targetKey
+                    ref = null
+                    previous = null
+                    lastExpectedBo = 0
+                }
+
                 if (ref == null) {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                        message = "正在读取 LPL 官方 LIVE feed…"
+                        message = "正在读取 LPL 官方 LIVE feed…",
+                        eventId = targetEventId(),
+                        lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     ref = fetchCurrentMatch(matchId)
                     if (ref == null) {
@@ -101,9 +113,6 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                 val teamBName = data.optString("teamBName").ifBlank { active.teamBName.ifBlank { "TEAM B" } }
                 val games = parseGames(data.optJSONArray("matchInfos") ?: JSONArray())
 
-                // Post-match backfill is independent from the live frame cache. As soon as
-                // matchDetail contains finished games, rebuild their final snapshots and publish
-                // them to the post surface. This also works when RiftLab is opened after a game.
                 publishCompletedSeries(
                     active = active,
                     seriesStatus = seriesStatus,
@@ -130,16 +139,15 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.BETWEEN_GAMES,
                         message = "LPL 官方 · 系列赛已结束 · bmid=${active.bmid} · $scoreA:$scoreB",
+                        eventId = targetEventId(),
                         gameId = "TJ:${active.bmid}:G${(scoreA + scoreB).coerceAtLeast(1)}",
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     delay(4_000L)
-                    ref = fetchCurrentMatch(matchId)
+                    ref = null
                     continue
                 }
 
-                // Critical rule: never pick an arbitrary status=2 record. Only G(expectedBo) may
-                // become live. Old G1/G2 records are history even if Tencent leaves stale flags.
                 val expectedGame = games.firstOrNull { it.bo == expectedBo }
                 val current = expectedGame?.takeIf {
                     it.status != 3 && (it.status == 2 || it.gameTime > 0 || isMeaningful(it.teams))
@@ -153,6 +161,7 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                     _status.value = LiveSourceStatus(
                         phase = phase,
                         message = "LPL 当前局 · bmid=${active.bmid} · 只等待 G$expectedBo · score=$scoreA:$scoreB · games=[$diagnostic]",
+                        eventId = targetEventId(),
                         gameId = "TJ:${active.bmid}:G$expectedBo",
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
@@ -174,6 +183,7 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
                         message = "LPL 当前局 · G$expectedBo 已出现但数值尚未生效 · status=${current.status} · time=${current.gameTime} · teams=${current.teams.size}",
+                        eventId = targetEventId(),
                         gameId = "TJ:${active.bmid}:G$expectedBo",
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
@@ -214,13 +224,29 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                     redPlayers = red.players,
                     latestEvent = detectEvent(previous, expectedBo, blueName, redName, blue, red),
                     source = "LPL Official · TJStats current-game",
-                    gameId = "TJ:${active.bmid}:G$expectedBo"
+                    gameId = "TJ:${active.bmid}:G$expectedBo",
+                    targetKey = observedTargetKey
                 )
+
+                val target = LiveMatchTargetRegistry.snapshot()
+                if (target == null || !MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)) {
+                    ref = null
+                    previous = null
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "LPL 当前局 · 上游帧身份与当前赛程不一致，已丢弃并重新绑定",
+                        eventId = targetEventId(),
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(POLL_MS)
+                    continue
+                }
 
                 previous = snapshot
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.LIVE,
                     message = "LPL Official · CURRENT G$expectedBo LIVE · bmid=${active.bmid} · status=${current.status} · time=${current.gameTime} · players=${blue.players.size + red.players.size}",
+                    eventId = targetEventId(),
                     gameId = snapshot.gameId,
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
@@ -230,9 +256,12 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.ERROR,
                     message = "LPL 当前局 ERROR · ${t.message?.take(170) ?: t::class.java.simpleName}" + (ref?.let { " · bmid=${it.bmid}" } ?: ""),
+                    eventId = targetEventId(),
                     gameId = ref?.let { "TJ:${it.bmid}" }.orEmpty(),
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
+                ref = null
+                previous = null
                 delay(3_000L)
             }
         }
@@ -328,7 +357,8 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
             redPlayers = red.players,
             latestEvent = "FINAL · G${game.bo}",
             source = "LPL Official · TJStats matchDetail FINAL",
-            gameId = "TJ:$bmid:G${game.bo}"
+            gameId = "TJ:$bmid:G${game.bo}",
+            targetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
         )
     }
 
@@ -453,7 +483,7 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
         if (target != null && target.teams.size >= 2) {
             val ranked = candidates.map { it to matchScore(it, target) }.sortedByDescending { it.second }
             val best = ranked.firstOrNull()
-            if (best != null && best.second > 0) return best.first
+            return best?.takeIf { it.second >= 95 }?.first
         }
 
         return candidates.singleOrNull()
@@ -469,8 +499,6 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
         return when {
             directA && directB -> 100
             swapA && swapB -> 95
-            directA || directB -> 30
-            swapA || swapB -> 25
             else -> 0
         }
     }
@@ -519,6 +547,8 @@ internal class LplCurrentGameLiveDataSource : LiveMatchDataSource {
         }
         return 0
     }
+
+    private fun targetEventId(): String = LiveMatchTargetRegistry.snapshot()?.eventId.orEmpty()
 
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
 
