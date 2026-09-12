@@ -5,9 +5,16 @@ package com.riftlab.app.data
  *
  * RiftClaw is not a general OpenClaw agent. It is a localhost-only Weibo search appliance.
  * The only externally callable capability is WEIBO_SEARCH. Everything else is denied by design.
+ *
+ * Port separation is intentional:
+ * - RiftLab talks only to the narrow RiftClaw bridge on 127.0.0.1:18790.
+ * - The bridge privately talks to its isolated OpenClaw profile/gateway on 127.0.0.1:18791.
+ * RiftLab never receives the OpenClaw operator token and never calls /tools/invoke directly.
  */
 internal object RiftClawContract {
-    const val DEFAULT_GATEWAY = "http://127.0.0.1:18789"
+    const val DEFAULT_ENDPOINT = "http://127.0.0.1:18790"
+    @Deprecated("Use DEFAULT_ENDPOINT; this is the RiftClaw bridge, not the OpenClaw Gateway")
+    const val DEFAULT_GATEWAY = DEFAULT_ENDPOINT
     const val PROTOCOL_VERSION = 1
 
     enum class Capability { WEIBO_SEARCH }
