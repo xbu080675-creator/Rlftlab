@@ -31,7 +31,8 @@ def build_match_search_queries(match_date: str, team_a: str, team_b: str, league
     """Return ordered queries, strongest first.
 
     Rule: date + both teams + lineup intent comes before every broader fallback.
-    This matters most on multi-match days and is safe for single-match days too.
+    Both matchup directions are included because schedule home/away ordering is
+    not guaranteed to match the wording used by an official social post.
     """
     league = (league or "").upper().strip()
     a = str(team_a or "").strip()
@@ -42,21 +43,29 @@ def build_match_search_queries(match_date: str, team_a: str, team_b: str, league
 
     if league == "LPL":
         intents = ["首发名单", "首发", "先发"]
-        matchup_forms = [f"{a} {b}", f"{a}对战{b}", f"{a} vs {b}"]
+        matchup_forms = [
+            f"{a} {b}",
+            f"{a}对战{b}",
+            f"{b}对战{a}",
+            f"{a} vs {b}",
+            f"{b} vs {a}",
+        ]
     elif league == "LCK":
         intents = ["starting lineup", "선발 명단", "라인업", "starting roster"]
-        matchup_forms = [f"{a} vs {b}", f"{a} {b}"]
+        matchup_forms = [f"{a} vs {b}", f"{b} vs {a}", f"{a} {b}"]
     elif league == "LCP":
         intents = ["starting lineup", "首发", "先発", "선발", "roster"]
-        matchup_forms = [f"{a} vs {b}", f"{a} {b}"]
+        matchup_forms = [f"{a} vs {b}", f"{b} vs {a}", f"{a} {b}"]
     else:
         intents = ["starting lineup", "starting roster", "lineup", "roster"]
-        matchup_forms = [f"{a} vs {b}", f"{a} {b}"]
+        matchup_forms = [f"{a} vs {b}", f"{b} vs {a}", f"{a} {b}"]
 
     queries: list[str] = []
-    # Strongest path: match day + exact matchup + lineup intent.
+    # Strongest path: match day + exact matchup + lineup intent. Keep both
+    # directions before broad date-less fallbacks so AL对战IG is still found
+    # when Riot happens to return IG first.
     for dt in dates[:2]:
-        for matchup in matchup_forms[:2]:
+        for matchup in matchup_forms:
             for intent in intents[:2]:
                 queries.append(f"{dt} {matchup} {intent}")
 
