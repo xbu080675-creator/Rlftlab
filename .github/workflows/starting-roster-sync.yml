@@ -14,6 +14,7 @@ on:
       - 'scripts/starting_roster_match_query.py'
       - 'scripts/starting_roster_match_targets.py'
       - 'scripts/starting_roster_match_search_executor.py'
+      - 'scripts/starting_roster_weibo_openapi.py'
       - 'scripts/starting_roster_policy_selftest.py'
       - 'scripts/starting_roster_browser_collector.py'
       - 'scripts/starting_roster_browser_four_lane.py'
@@ -57,14 +58,24 @@ jobs:
         run: |
           python3 scripts/starting_roster_match_targets.py
 
-      - name: Collect social posts with Chromium transport
+      - name: Collect recent social posts as fallback
         continue-on-error: true
         run: |
           rm -rf data/global/starting_roster_browser_media
           mkdir -p data/global/starting_roster_browser_media
-          # Legacy recent-post scan remains fallback.
           python3 scripts/starting_roster_browser_four_lane.py
-          # Match-target search is merged in front of recent posts.
+
+      - name: Discover LPL roster posts through Weibo Open API
+        continue-on-error: true
+        env:
+          WEIBO_APP_ID: ${{ secrets.WEIBO_APP_ID }}
+          WEIBO_APP_SECRET: ${{ secrets.WEIBO_APP_SECRET }}
+        run: |
+          python3 scripts/starting_roster_weibo_openapi.py
+
+      - name: Search match targets through browser fallback
+        continue-on-error: true
+        run: |
           python3 scripts/starting_roster_match_search_executor.py
 
       - name: Collect official starting rosters globally
