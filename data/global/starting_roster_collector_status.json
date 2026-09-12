@@ -1,16 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-12T10:30:45Z",
+  "updatedAt": "2026-09-12T13:47:53Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
     "英雄联盟赛事: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/5756404150:empty;reader:m.weibo.cn/u/5756404150:empty]",
     "LCK: browser_stage=LCK: browser_posts=0 cached_media=0",
-    "LCK: browser_stage=LCK: match_search_begin source=LEAGUE_SOCIAL league=LCK targets=2",
-    "LCK: browser_stage=LCK: match_search query='2026-09-12 HLE vs T1 starting lineup' hits=0",
-    "LCK: browser_stage=LCK: match_search query='2026-09-12 HLE vs T1 선발 명단' hits=0",
-    "LCK: browser_stage=LCK: match_search query='2026-09-12 T1 vs HLE starting lineup' hits=0",
-    "LCK: browser_stage=LCK: match_search query='2026-09-12 T1 vs HLE 선발 명단' hits=0",
+    "LCK: browser_stage=LCK: match_search_begin source=LEAGUE_SOCIAL league=LCK targets=1",
     "LCK: browser_stage=LCK: match_search query='2026-09-13 HLE vs GEN starting lineup' hits=0",
     "LCK: browser_stage=LCK: match_search query='2026-09-13 HLE vs GEN 선발 명단' hits=0",
     "LCK: browser_stage=LCK: match_search query='2026-09-13 GEN vs HLE starting lineup' hits=0",
