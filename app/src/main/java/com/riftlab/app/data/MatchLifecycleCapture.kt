@@ -40,6 +40,8 @@ object MatchLifecycleCapture {
                     .collect { (snapshot, status, center) ->
                         if (status.phase != LiveSourcePhase.LIVE || snapshot.game <= 0) return@collect
                         val match = resolveLiveMatch(center, status) ?: return@collect
+                        val verdict = LiveFrameIdentityGate.validate(snapshot, match, status)
+                        if (!verdict.allowed) return@collect
                         MatchLifecycleArchive.observeLive(match, snapshot)
                     }
             }
@@ -74,7 +76,9 @@ object MatchLifecycleCapture {
     ): ScheduledEsportsMatch? {
         val eventId = status.eventId.trim()
         if (eventId.isNotBlank()) {
-            center.matches.firstOrNull { it.eventId == eventId || it.matchId == eventId }?.let { return it }
+            // A provider that names an event is making an identity claim. If that claim cannot be
+            // resolved in the current schedule we fail closed; never fall through to currentMatch.
+            return center.matches.firstOrNull { it.eventId == eventId || it.matchId == eventId }
         }
         return center.currentMatch
             ?: center.selectedMatch?.takeIf { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.LIVE }
