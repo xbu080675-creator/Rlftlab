@@ -1,0 +1,46 @@
+name: RiftClaw Selftest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/riftclaw-bootstrap.sh'
+      - 'app/src/main/java/com/riftlab/app/data/RiftClaw*.kt'
+      - 'app/src/main/java/com/riftlab/app/data/OpenClawSecurityPolicy.kt'
+      - 'docs/riftclaw-*.md'
+      - '.github/workflows/riftclaw-selftest.yml'
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate bootstrap shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/riftclaw-bootstrap.sh
+          grep -q 'plugins.allow' scripts/riftclaw-bootstrap.sh
+          grep -q 'weibo-openclaw-plugin' scripts/riftclaw-bootstrap.sh
+          grep -q -- '--link "$FALLBACK_DIR"' scripts/riftclaw-bootstrap.sh
+      - name: Validate narrow app contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONTRACT=app/src/main/java/com/riftlab/app/data/RiftClawContract.kt
+          CLIENT=app/src/main/java/com/riftlab/app/data/RiftClawClient.kt
+          POLICY=app/src/main/java/com/riftlab/app/data/OpenClawSecurityPolicy.kt
+          grep -q 'enum class Capability { WEIBO_SEARCH }' "$CONTRACT"
+          grep -q 'intent: String = "starting_roster"' "$CONTRACT"
+          grep -q 'riftclaw_unexpected_capabilities' "$CLIENT"
+          grep -q 'gateway_must_be_loopback' "$POLICY"
+          ! grep -Eq 'Capability\.(SHELL|EXEC|FILESYSTEM|DELETE|INSTALL|PLUGIN)' "$CLIENT"
+      - name: Validate injection guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          GUARD=app/src/main/java/com/riftlab/app/data/RiftClawContract.kt
+          grep -q 'blocked-untrusted-instruction' "$GUARD"
+          grep -q 'system\\\\s\*prompt' "$GUARD"
+          grep -q 'secret|token|cookie|key|credential' "$GUARD"
