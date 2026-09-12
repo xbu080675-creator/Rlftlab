@@ -18,6 +18,9 @@ import requests
 PERSISTED = "https://esports-api.lolesports.com/persisted/gw"
 # Riot's public esports web-client key. Override in CI if Riot rotates it.
 DEFAULT_API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"
+UNRESOLVED_TEAM_TOKENS = {
+    "TBD", "TBA", "TBC", "TBD1", "TBD2", "TBD3", "TBD4", "待定", "待确认", "UNKNOWN", "BYE", "-", "—"
+}
 
 
 def now_iso() -> str:
@@ -72,6 +75,13 @@ def fetch_schedule(api_key: str) -> dict:
     return response.json()
 
 
+def unresolved_team(code: str, name: str) -> bool:
+    values = {str(code or "").strip().upper(), str(name or "").strip().upper()}
+    if values & UNRESOLVED_TEAM_TOKENS:
+        return True
+    return any(value.startswith("TBD") or value.startswith("TBA") for value in values if value)
+
+
 def build_targets(cfg: dict, root: dict, hours_before: int, hours_after: int, limit: int) -> list[dict]:
     now = datetime.now(timezone.utc)
     low, high = now - timedelta(hours=hours_before), now + timedelta(hours=hours_after)
@@ -94,14 +104,17 @@ def build_targets(cfg: dict, root: dict, hours_before: int, hours_after: int, li
             continue
         team_codes = []
         team_names = []
+        unresolved = False
         for team in teams[:2]:
             code = str(team.get("code") or "").strip().upper()
             name = str(team.get("name") or "").strip()
             if not code:
                 code = "".join(ch for ch in name.upper() if ch.isalnum())[:4]
+            if unresolved_team(code, name):
+                unresolved = True
             team_codes.append(code)
             team_names.append(name or code)
-        if any(not code for code in team_codes):
+        if unresolved or any(not code for code in team_codes):
             continue
         tz_name = str(league_rows[league].get("timezone") or "UTC")
         try:
