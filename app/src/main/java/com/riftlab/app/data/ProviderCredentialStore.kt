@@ -24,6 +24,8 @@ internal object ProviderCredentialStore {
     private const val PREFS = "riftlab_provider_credentials"
     private const val KEY_TACHIO = "tachio_api_key_v1"
     private const val KEY_CITO = "cito_api_key_v1"
+    private const val KEY_WEIBO_APP_ID = "weibo_app_id_v1"
+    private const val KEY_WEIBO_APP_SECRET = "weibo_app_secret_v1"
     private const val KEYSTORE_ALIAS = "riftlab_provider_credentials_aes_v1"
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -37,6 +39,11 @@ internal object ProviderCredentialStore {
 
     private val _citoConfigured = MutableStateFlow(readCitoApiKey() != null)
     val citoConfigured: StateFlow<Boolean> = _citoConfigured.asStateFlow()
+
+    private val _weiboConfigured = MutableStateFlow(
+        readWeiboAppId() != null && readWeiboAppSecret() != null
+    )
+    val weiboConfigured: StateFlow<Boolean> = _weiboConfigured.asStateFlow()
 
     fun readTachioApiKey(): String? = readCredential(KEY_TACHIO)
 
@@ -59,6 +66,33 @@ internal object ProviderCredentialStore {
     fun clearCitoApiKey() {
         clearCredential(KEY_CITO)
         _citoConfigured.value = false
+    }
+
+    /** Weibo "龙虾助手" app credentials. Both values stay encrypted on this device. */
+    fun readWeiboAppId(): String? = readCredential(KEY_WEIBO_APP_ID)
+
+    fun readWeiboAppSecret(): String? = readCredential(KEY_WEIBO_APP_SECRET)
+
+    fun saveWeiboCredentials(appId: String, appSecret: String) {
+        val normalizedId = appId.trim()
+        val normalizedSecret = appSecret.trim()
+        require(normalizedId.isNotEmpty()) { "AppID 不能为空" }
+        require(normalizedSecret.isNotEmpty()) { "AppSecret 不能为空" }
+        prefs.edit()
+            .putString(KEY_WEIBO_APP_ID, encrypt(normalizedId))
+            .putString(KEY_WEIBO_APP_SECRET, encrypt(normalizedSecret))
+            .apply()
+        _weiboConfigured.value = true
+        WeiboOpenApiClient.invalidateToken()
+    }
+
+    fun clearWeiboCredentials() {
+        prefs.edit()
+            .remove(KEY_WEIBO_APP_ID)
+            .remove(KEY_WEIBO_APP_SECRET)
+            .apply()
+        _weiboConfigured.value = false
+        WeiboOpenApiClient.invalidateToken()
     }
 
     private fun readCredential(key: String): String? = decrypt(prefs.getString(key, null))
