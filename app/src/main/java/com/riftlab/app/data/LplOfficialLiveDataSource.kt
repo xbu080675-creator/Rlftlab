@@ -19,8 +19,8 @@ import java.time.Instant
  * High-level lifecycle is deliberately separate from provider health.
  *
  * EVENT_LIVE means the broadcast/series has started; GAME_LIVE is only entered after a real,
- * meaningful game frame exists. This prevents the old failure mode where an API saying "live"
- * left RiftLab stuck forever waiting for a gameId/frame while the event was already on air.
+ * meaningful game frame exists. This prevents one provider error from being mistaken for the
+ * event itself being unavailable.
  */
 enum class LiveLifecycleStage {
     SCHEDULED,
@@ -47,16 +47,15 @@ data class LiveLifecycleState(
 /**
  * Global, match-agnostic live provider router.
  *
- * Provider order remains a truth policy:
+ * Truth order:
  * 1) Tencent/LPL comm-match-app realtime data plane (LPL only)
  * 2) Riot LoL Esports LiveStats window feed (global official continuous frames)
  * 3) Cito realtime fabric (global WebSocket primary + REST reconnect/reconcile)
  * 4) TJStats matchDetail current/final-frame fallback (LPL only)
  *
- * dev.80 adds a second rule: Cito-only combat context may enrich a higher-priority canonical
- * scoreboard frame without replacing its core numbers. This is how HP/alive/items/KP/damage/wards
- * travel through the normal MatchSessionStore -> archive -> HUD pipeline even when Riot/Tencent is
- * the selected source of truth for gold, kills and objectives.
+ * Providers may fail independently. A single ERROR never becomes the public router state while
+ * another provider is healthy/waiting for the same target. Frames are accepted only after strict
+ * current-target identity validation.
  */
 internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
@@ -112,8 +111,6 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
             }
         }
 
-        // Provider status callbacks are not guaranteed to arrive while a source is wedged.
-        // The watchdog keeps lifecycle/failover decisions moving even when an upstream is silent.
         scope.launch {
             while (isActive) {
                 synchronized(lock) { refreshLifecycleLocked() }
@@ -127,12 +124,20 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
 
         providers.forEach { provider ->
             launch {
-                provider.source.observe(matchId).collect { snapshot ->
+                provider.source.observe(matchId).collect { rawSnapshot ->
                     var chosen: LiveSnapshot? = null
                     var chosenProvider: Provider? = null
 
                     synchronized(lock) {
-                        providerSnapshots[provider.name] = snapshot
+                        val target = LiveMatchTargetRegistry.snapshot()
+                        val currentKey = LiveMatchTargetRegistry.key(target)
+                        val snapshot = if (rawSnapshot.targetKey.isBlank()) rawSnapshot.copy(targetKey = currentKey) else rawSnapshot
+                        if (target != null && MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)) {
+                            providerSnapshots[provider.name] = snapshot
+                        } else {
+                            providerSnapshots.remove(provider.name)
+                        }
+
                         val now = System.currentTimeMillis()
                         val best = eligibleProvidersLocked()
                             .filter { candidate ->
@@ -157,7 +162,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                                     chosenProvider = best
                                     chosen = fused.copy(
                                         source = "${fused.source} · Router=${best.name}",
-                                        targetKey = LiveMatchTargetRegistry.key(LiveMatchTargetRegistry.snapshot())
+                                        targetKey = currentKey
                                     )
                                 }
                             }
@@ -197,12 +202,13 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         if (now - citoStatus.lastUpdateEpochMs > CITO_SUPPLEMENT_STALE_MS) return primary
         val cito = providerSnapshots[CITO_PROVIDER_NAME] ?: return primary
         val target = LiveMatchTargetRegistry.snapshot() ?: return primary
-        if (!LiveMatchTargetRegistry.snapshotBelongsTo(cito, target)) return primary
+        if (!MatchIdentityPolicy.snapshotBelongsTo(cito, target)) return primary
         return CitoLiveFusion.mergeSupplement(primary, cito)
     }
 
     private fun emissionKey(provider: String, snapshot: LiveSnapshot): String = buildString {
         append(provider).append('|')
+        append(snapshot.targetKey).append('|')
         append(snapshot.gameId).append('|')
         append(snapshot.elapsedSeconds).append('|')
         append(snapshot.blueGold).append('|').append(snapshot.redGold).append('|')
@@ -219,7 +225,7 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
     private fun refreshLifecycleLocked() {
         val now = System.currentTimeMillis()
         val target = LiveMatchTargetRegistry.snapshot()
-        val nextTargetKey = target?.eventId?.ifBlank { target.matchId }.orEmpty()
+        val nextTargetKey = LiveMatchTargetRegistry.key(target)
         if (nextTargetKey != targetKey) {
             targetKey = nextTargetKey
             eventLiveSinceEpochMs = 0L
@@ -250,14 +256,16 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
             return
         }
 
-        val freshLiveProvider = eligibleProvidersLocked().firstOrNull { provider ->
-            val s = providerStatuses[provider.name]
-            s?.phase == LiveSourcePhase.LIVE &&
-                s.lastUpdateEpochMs > 0L &&
-                now - s.lastUpdateEpochMs <= LIVE_STATUS_STALE_MS &&
-                providerMatchesCurrentTargetLocked(provider, requireFrame = true) &&
-                providerSnapshots[provider.name]?.let(::isMeaningful) == true
-        }
+        val freshLiveProvider = eligibleProvidersLocked()
+            .filter { provider ->
+                val s = providerStatuses[provider.name]
+                s?.phase == LiveSourcePhase.LIVE &&
+                    s.lastUpdateEpochMs > 0L &&
+                    now - s.lastUpdateEpochMs <= LIVE_STATUS_STALE_MS &&
+                    providerMatchesCurrentTargetLocked(provider, requireFrame = true) &&
+                    providerSnapshots[provider.name]?.let(::isMeaningful) == true
+            }
+            .minByOrNull { it.priority }
 
         if (freshLiveProvider != null) {
             val snapshot = providerSnapshots.getValue(freshLiveProvider.name)
@@ -278,10 +286,12 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
             return
         }
 
-        val between = eligibleProvidersLocked().firstOrNull { provider ->
-            providerStatuses[provider.name]?.phase == LiveSourcePhase.BETWEEN_GAMES &&
-                providerMatchesCurrentTargetLocked(provider, requireFrame = false)
-        }
+        val between = eligibleProvidersLocked()
+            .filter { provider ->
+                providerStatuses[provider.name]?.phase == LiveSourcePhase.BETWEEN_GAMES &&
+                    providerMatchesCurrentTargetLocked(provider, requireFrame = false)
+            }
+            .minByOrNull { it.priority }
         if (between != null) {
             if (eventLiveSinceEpochMs == 0L) eventLiveSinceEpochMs = now
             setLifecycleLocked(
@@ -322,20 +332,18 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                 )
                 allEligibleProvidersUnhealthyLocked(now) -> setLifecycleLocked(
                     LiveLifecycleStage.DEGRADED,
-                    "EVENT LIVE · 数据源降级 · 不阻塞赛事状态，持续自动重试",
+                    "EVENT LIVE · 所有实时源暂不可用 · 自动重绑/重试中",
                     eventId = target.eventId,
                     now = now
                 )
                 else -> setLifecycleLocked(
                     LiveLifecycleStage.GAME_LOADING,
-                    "EVENT LIVE · GAME LOADING · 20s 无有效帧，已升级多源探测",
+                    "EVENT LIVE · GAME LOADING · 多源并行探测当前小局",
                     eventId = target.eventId,
                     now = now
                 )
             }
 
-            // WAITING is intentional: event is live, but we refuse to call the game LIVE until a
-            // meaningful telemetry frame exists. MatchSessionStore reads lifecycle separately.
             _status.value = chooseProviderStatusLocked(_lifecycle.value.message).copy(
                 phase = LiveSourcePhase.WAITING_FOR_MATCH,
                 eventId = target.eventId.ifBlank { _status.value.eventId },
@@ -356,18 +364,26 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         _status.value = chooseProviderStatusLocked("SCHEDULED · 等待赛事开始")
     }
 
+    /** Prefer healthy/waiting provider diagnostics over a higher-priority provider's ERROR. */
     private fun chooseProviderStatusLocked(prefix: String): LiveSourceStatus {
         val now = System.currentTimeMillis()
-        val eligible = eligibleProvidersLocked()
-        val useful = eligible.firstOrNull { provider ->
-            val s = providerStatuses[provider.name]
-            s != null && s.phase != LiveSourcePhase.IDLE &&
-                providerMatchesCurrentTargetLocked(provider, requireFrame = false) &&
-                (s.lastUpdateEpochMs == 0L || now - s.lastUpdateEpochMs <= PROVIDER_STATUS_MAX_AGE_MS)
-        }
-        val s = useful?.let { providerStatuses[it.name] }
-        return if (s != null && useful != null) {
-            s.copy(message = "$prefix · ${useful.name}: ${s.message}")
+        val useful = eligibleProvidersLocked()
+            .mapNotNull { provider ->
+                val s = providerStatuses[provider.name] ?: return@mapNotNull null
+                if (s.phase == LiveSourcePhase.IDLE) return@mapNotNull null
+                if (!providerMatchesCurrentTargetLocked(provider, requireFrame = false)) return@mapNotNull null
+                if (s.lastUpdateEpochMs > 0L && now - s.lastUpdateEpochMs > PROVIDER_STATUS_MAX_AGE_MS) return@mapNotNull null
+                provider to s
+            }
+            .sortedWith(
+                compareBy<Pair<Provider, LiveSourceStatus>> { phaseRank(it.second.phase) }
+                    .thenBy { it.first.priority }
+            )
+            .firstOrNull()
+
+        return if (useful != null) {
+            val (provider, status) = useful
+            status.copy(message = "$prefix · ${provider.name}: ${status.message}")
         } else {
             LiveSourceStatus(
                 LiveSourcePhase.IDLE,
@@ -376,6 +392,14 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
                 lastUpdateEpochMs = now
             )
         }
+    }
+
+    private fun phaseRank(phase: LiveSourcePhase): Int = when (phase) {
+        LiveSourcePhase.LIVE -> 0
+        LiveSourcePhase.BETWEEN_GAMES -> 1
+        LiveSourcePhase.WAITING_FOR_MATCH -> 2
+        LiveSourcePhase.ERROR -> 3
+        LiveSourcePhase.IDLE -> 4
     }
 
     private fun setLifecycleLocked(
@@ -406,13 +430,11 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
         val providerEventId = status.eventId.trim()
         if (targetEventId.isNotBlank()) {
             if (providerEventId.isNotBlank() && providerEventId != targetEventId) return false
-            if (providerEventId.isBlank() && status.phase in setOf(LiveSourcePhase.LIVE, LiveSourcePhase.BETWEEN_GAMES)) {
-                return false
-            }
+            if (providerEventId.isBlank() && status.phase in setOf(LiveSourcePhase.LIVE, LiveSourcePhase.BETWEEN_GAMES)) return false
         }
         if (!requireFrame) return true
         val snapshot = providerSnapshots[provider.name] ?: return false
-        return LiveMatchTargetRegistry.snapshotBelongsTo(snapshot, target)
+        return MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)
     }
 
     private fun eligibleProvidersLocked(): List<Provider> = providers.filter {
@@ -440,7 +462,8 @@ internal class GlobalOfficialLiveDataSource : LiveMatchDataSource {
     private fun currentTargetIsLpl(): Boolean {
         val target = LiveMatchTargetRegistry.snapshot() ?: return false
         val league = target.league.lowercase()
-        return league == "lpl" || league.contains("league of legends pro league")
+        val slug = target.leagueSlug.lowercase()
+        return league == "lpl" || slug == "lpl" || league.contains("league of legends pro league")
     }
 
     private fun isLive(value: String): Boolean {
