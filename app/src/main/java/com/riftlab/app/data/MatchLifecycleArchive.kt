@@ -51,26 +51,19 @@ data class MatchLifecycleRecord(
     val finalGames: Map<Int, LiveSnapshot> = emptyMap(),
     val updatedAtEpochMs: Long = System.currentTimeMillis()
 ) {
-    fun framesFor(game: Int): List<MatchLifecycleFrame> {
-        val frames = games[game].orEmpty()
-        val terminal = finalGames[game] ?: return frames
-        val canonicalBlue = terminal.blue.trim().takeUnless {
-            it.isBlank() || it == "—" || it.equals("BLUE", ignoreCase = true)
-        } ?: return frames
-        val canonicalRed = terminal.red.trim().takeUnless {
-            it.isBlank() || it == "—" || it.equals("RED", ignoreCase = true)
-        } ?: return frames
-        if (canonicalBlue.equals(canonicalRed, ignoreCase = true)) return frames
-
-        return frames.map { frame ->
-            val snapshot = frame.snapshot
-            if (snapshot.blue == canonicalBlue && snapshot.red == canonicalRed) frame
-            else frame.copy(snapshot = snapshot.copy(blue = canonicalBlue, red = canonicalRed))
+    /**
+     * Never rewrite frame identities to make them look like the terminal series. Legacy builds did
+     * that and could cosmetically turn a foreign frame into the selected matchup. Invalid frames
+     * are now discarded instead.
+     */
+    fun framesFor(game: Int): List<MatchLifecycleFrame> =
+        games[game].orEmpty().filter { frame ->
+            LiveFrameIdentityGate.validate(frame.snapshot, match).allowed
         }
-    }
 
     fun latestGame(game: Int): LiveSnapshot? =
-        framesFor(game).lastOrNull()?.snapshot ?: finalGames[game]
+        framesFor(game).lastOrNull()?.snapshot
+            ?: finalGames[game]?.takeIf { LiveFrameIdentityGate.validate(it, match).allowed }
 }
 
 object MatchLifecycleArchive {
@@ -130,6 +123,7 @@ object MatchLifecycleArchive {
     /** Append a real provider frame. We never synthesize an intermediate state. */
     fun observeLive(match: ScheduledEsportsMatch, snapshot: LiveSnapshot) {
         if (snapshot.game <= 0 || snapshot.elapsedSeconds < 0) return
+        if (!LiveFrameIdentityGate.validate(snapshot, match).allowed) return
         val key = keyFor(match)
         val now = System.currentTimeMillis()
         val updated = synchronized(lock) {
@@ -166,7 +160,9 @@ object MatchLifecycleArchive {
     fun observeCompletedSeries(match: ScheduledEsportsMatch, series: CompletedSeriesSnapshot) {
         val key = keyFor(match)
         val now = System.currentTimeMillis()
-        val finals = series.games.filter { it.game > 0 }.associateBy { it.game }
+        val finals = series.games
+            .filter { it.game > 0 && LiveFrameIdentityGate.validate(it, match).allowed }
+            .associateBy { it.game }
         val updated = synchronized(lock) {
             val current = _records.value[key]
             val next = MatchLifecycleRecord(
@@ -190,14 +186,29 @@ object MatchLifecycleArchive {
         match: ScheduledEsportsMatch,
         source: Map<String, MatchLifecycleRecord> = _records.value
     ): MatchLifecycleRecord? {
-        source[keyFor(match)]?.let { return it }
-        val wantedTeams = match.teams.take(2).map { teamToken(it.code.ifBlank { it.name }) }.toSet()
+        val direct = source[keyFor(match)]
+        if (direct != null && sameSeriesIdentity(match, direct.match)) return direct
+
+        // If the selected match has a provider/official series identity, a miss is a miss. Never
+        // recover by choosing another historical series merely because the same two teams played.
+        val hasStableIdentity = match.eventId.isNotBlank() || match.matchId.isNotBlank()
+        if (hasStableIdentity) return null
+
+        // Legacy no-id records may still be recovered, but only inside the same league + date +
+        // matchup. This keeps old local archives usable without reopening the cross-event bug.
+        val wantedTeams = teamSet(match)
         if (wantedTeams.size < 2) return null
+        val wantedLeague = leagueToken(match)
+        val wantedDay = match.startTimeIso.take(10)
+        if (wantedLeague.isBlank() || wantedDay.length != 10) return null
+
         return source.values
             .filter { record ->
-                record.match.teams.take(2)
-                    .map { teamToken(it.code.ifBlank { it.name }) }
-                    .toSet() == wantedTeams
+                record.match.eventId.isBlank() &&
+                    record.match.matchId.isBlank() &&
+                    teamSet(record.match) == wantedTeams &&
+                    leagueToken(record.match) == wantedLeague &&
+                    record.match.startTimeIso.take(10) == wantedDay
             }
             .maxByOrNull { it.updatedAtEpochMs }
     }
@@ -207,6 +218,29 @@ object MatchLifecycleArchive {
             val teams = match.teams.take(2).joinToString("_") { teamToken(it.code.ifBlank { it.name }) }
             "$teams@${match.startTimeIso}"
         }
+
+    private fun sameSeriesIdentity(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
+        val aEvent = a.eventId.trim()
+        val bEvent = b.eventId.trim()
+        if (aEvent.isNotBlank() || bEvent.isNotBlank()) return aEvent.isNotBlank() && aEvent == bEvent
+
+        val aMatch = a.matchId.trim()
+        val bMatch = b.matchId.trim()
+        if (aMatch.isNotBlank() || bMatch.isNotBlank()) return aMatch.isNotBlank() && aMatch == bMatch
+
+        return teamSet(a) == teamSet(b) &&
+            leagueToken(a) == leagueToken(b) &&
+            a.startTimeIso.take(10) == b.startTimeIso.take(10)
+    }
+
+    private fun teamSet(match: ScheduledEsportsMatch): Set<String> =
+        match.teams.take(2)
+            .map { teamToken(it.code.ifBlank { it.name }) }
+            .filter { it.isNotBlank() }
+            .toSet()
+
+    private fun leagueToken(match: ScheduledEsportsMatch): String =
+        teamToken(match.leagueSlug.ifBlank { match.leagueId.ifBlank { match.league } })
 
     private fun phaseFor(match: ScheduledEsportsMatch): ScheduleMatchPhase {
         val state = match.state.trim().lowercase()
