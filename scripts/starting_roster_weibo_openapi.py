@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Discover LPL starting-roster posts through Weibo's Open API.
 
-This adapter is based on the public API contract demonstrated by wangcch/weibo-mcp
-(MIT, Copyright (c) 2026 wangcch). RiftLab keeps its own normalized output and
-uses the API only as a discovery transport; official-source, matchup, date and
-roster validation still happen in RiftLab.
+Search transport semantics are intentionally aligned with wangcch/weibo-mcp
+(MIT, Copyright (c) 2026 wangcch): app_id/app_secret -> ws_token, then
+GET /open/wis/search_query?query=...&token=.... RiftLab keeps the raw intelligent
+search response (msg/msg_json/scheme/reference metadata), resolves any cited
+canonical official posts it can find, and only then hands media to RiftLab's
+existing OCR/evidence validator.
 """
 from __future__ import annotations
 
@@ -14,7 +16,7 @@ import os
 import re
 import time
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -24,8 +26,12 @@ SOURCES = Path("data/global/starting_roster_sources.json")
 TARGETS = Path("data/global/starting_roster_match_targets.json")
 SPOOL = Path("data/global/starting_roster_browser_posts.json")
 TOKEN_ENDPOINT = os.environ.get("WEIBO_TOKEN_ENDPOINT", "https://open-im.api.weibo.com/open/auth/ws_token")
+REFRESH_TOKEN_ENDPOINT = os.environ.get("WEIBO_REFRESH_TOKEN_ENDPOINT", "https://open-im.api.weibo.com/open/auth/refresh_token")
 SEARCH_ENDPOINT = os.environ.get("WEIBO_SEARCH_ENDPOINT", "https://open-im.api.weibo.com/open/wis/search_query")
 REQUEST_TIMEOUT = 15
+TOKEN_EXPIRE_FALLBACK_SECONDS = 7200
+TOKEN_REFRESH_BUFFER_SECONDS = 60
+TRANSIENT_STATUS = {408, 425, 429, 500, 502, 503, 504}
 
 
 def load_module(name: str, path: Path):
@@ -39,6 +45,119 @@ def load_module(name: str, path: Path):
 wrapper = load_module("rift_browser_four_lane_openapi", ROOT / "starting_roster_browser_four_lane.py")
 browser = wrapper.browser
 query_builder = load_module("rift_match_query_openapi", ROOT / "starting_roster_match_query.py")
+
+
+class WeiboOpenApiClient:
+    """Small Python port of the relevant weibo-mcp client behavior."""
+
+    def __init__(self, app_id: str, app_secret: str):
+        self.app_id = app_id
+        self.app_secret = app_secret
+        self.session = requests.Session()
+        self.token: str | None = None
+        self.token_acquired_at = 0.0
+        self.token_expires_in = TOKEN_EXPIRE_FALLBACK_SECONDS
+
+    def _token_valid(self) -> bool:
+        if not self.token:
+            return False
+        expires_at = self.token_acquired_at + self.token_expires_in - TOKEN_REFRESH_BUFFER_SECONDS
+        return time.time() < expires_at
+
+    def _request_with_retry(self, method: str, url: str, **kwargs):
+        last = None
+        for attempt in range(3):
+            try:
+                response = self.session.request(method, url, timeout=REQUEST_TIMEOUT, **kwargs)
+                if response.status_code in TRANSIENT_STATUS and attempt < 2:
+                    time.sleep(min(1.0 * (2 ** attempt), 4.0))
+                    continue
+                return response
+            except requests.RequestException as exc:
+                last = exc
+                if attempt >= 2:
+                    raise
+                time.sleep(min(1.0 * (2 ** attempt), 4.0))
+        if last:
+            raise last
+        raise RuntimeError("weibo_request_retry_exhausted")
+
+    def get_token(self, force_refresh: bool = False) -> str:
+        if not force_refresh and self._token_valid():
+            assert self.token
+            return self.token
+        response = self._request_with_retry(
+            "POST",
+            TOKEN_ENDPOINT,
+            json={"app_id": self.app_id, "app_secret": self.app_secret},
+            headers={"Content-Type": "application/json"},
+        )
+        if not response.ok:
+            text = response.text[:300] if response.text else ""
+            raise RuntimeError(f"token_http_{response.status_code}:{text}")
+        body = response.json()
+        data = body.get("data") if isinstance(body, dict) else None
+        token = data.get("token") if isinstance(data, dict) else None
+        if not token:
+            raise RuntimeError("token_response_missing_data.token")
+        expires = data.get("expire_in") if isinstance(data, dict) else None
+        self.token = str(token)
+        self.token_acquired_at = time.time()
+        try:
+            self.token_expires_in = max(60, int(expires)) if expires is not None else TOKEN_EXPIRE_FALLBACK_SECONDS
+        except Exception:
+            self.token_expires_in = TOKEN_EXPIRE_FALLBACK_SECONDS
+        return self.token
+
+    def refresh_token(self) -> bool:
+        if not self.token:
+            return False
+        try:
+            response = self._request_with_retry(
+                "POST",
+                REFRESH_TOKEN_ENDPOINT,
+                json={"token": self.token},
+                headers={"Content-Type": "application/json"},
+            )
+            if not response.ok:
+                return False
+            body = response.json()
+            data = body.get("data") if isinstance(body, dict) else None
+            new_token = data.get("token") if isinstance(data, dict) else None
+            if new_token:
+                self.token = str(new_token)
+                self.token_acquired_at = time.time()
+                expires = data.get("expire_in")
+                if expires is not None:
+                    self.token_expires_in = max(60, int(expires))
+            return True
+        except Exception:
+            return False
+
+    def search(self, query: str) -> dict:
+        token = self.get_token()
+        response = self._request_with_retry(
+            "GET",
+            SEARCH_ENDPOINT,
+            params={"query": query, "token": token},
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status_code in {401, 403}:
+            self.token = None
+            token = self.get_token(force_refresh=True)
+            response = self._request_with_retry(
+                "GET",
+                SEARCH_ENDPOINT,
+                params={"query": query, "token": token},
+                headers={"Content-Type": "application/json"},
+            )
+        if not response.ok:
+            text = response.text[:300] if response.text else ""
+            raise RuntimeError(f"search_http_{response.status_code}:{text}")
+        body = response.json()
+        if not isinstance(body, dict):
+            raise RuntimeError("search_response_not_object")
+        return body
 
 
 def source_key(src: dict) -> str:
@@ -100,16 +219,46 @@ def iter_strings(value):
             yield from iter_strings(child)
 
 
+def decode_msg_json(data: dict) -> object | None:
+    raw = data.get("msg_json")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def normalize_search_result(payload: dict) -> dict:
+    """Preserve the same search semantics exposed by weibo-mcp instead of pretending it is a status list."""
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    return {
+        "code": payload.get("code"),
+        "message": payload.get("message"),
+        "completed": data.get("completed"),
+        "analyzing": data.get("analyzing"),
+        "noContent": data.get("noContent"),
+        "refused": data.get("refused"),
+        "content": data.get("msg") if isinstance(data.get("msg"), str) else "",
+        "contentFormat": data.get("msg_format"),
+        "referenceCount": data.get("reference_num"),
+        "scheme": data.get("scheme") if isinstance(data.get("scheme"), str) else "",
+        "status": data.get("status"),
+        "statusStage": data.get("status_stage"),
+        "version": data.get("version"),
+        "callTime": data.get("callTime"),
+        "source": data.get("source"),
+        "msgJson": decode_msg_json(data),
+    }
+
+
 def response_strings(payload: dict) -> list[str]:
-    values = list(iter_strings(payload))
     data = payload.get("data") if isinstance(payload, dict) else None
+    values = list(iter_strings(payload))
     if isinstance(data, dict):
-        raw = data.get("msg_json")
-        if isinstance(raw, str) and raw.strip():
-            try:
-                values.extend(iter_strings(json.loads(raw)))
-            except Exception:
-                pass
+        decoded = decode_msg_json(data)
+        if decoded is not None:
+            values.extend(iter_strings(decoded))
     return values
 
 
@@ -126,33 +275,43 @@ def extract_source_posts(payload: dict, src: dict) -> list[tuple[str, str]]:
     return out
 
 
-def acquire_token(app_id: str, app_secret: str) -> str:
-    response = requests.post(
-        TOKEN_ENDPOINT,
-        json={"app_id": app_id, "app_secret": app_secret},
-        headers={"Content-Type": "application/json"},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    body = response.json()
-    token = ((body.get("data") or {}).get("token") if isinstance(body, dict) else None)
-    if not token:
-        raise RuntimeError("token_response_missing_data.token")
-    return str(token)
+def scheme_candidates(scheme: str, src: dict) -> list[tuple[str, str]]:
+    if not scheme:
+        return []
+    hit = canonical_post(scheme, src)
+    if hit:
+        return [hit]
+    parsed = urlparse(scheme)
+    qs = parse_qs(parsed.query)
+    for key in ("url", "scheme", "link"):
+        for value in qs.get(key, []):
+            hit = canonical_post(value, src)
+            if hit:
+                return [hit]
+    return []
 
 
-def search(query: str, token: str) -> dict:
-    response = requests.get(
-        SEARCH_ENDPOINT,
-        params={"query": query, "token": token},
-        headers={"Accept": "application/json"},
-        timeout=REQUEST_TIMEOUT,
-    )
-    response.raise_for_status()
-    body = response.json()
-    if not isinstance(body, dict):
-        raise RuntimeError("search_response_not_object")
-    return body
+def discover_official_links_from_page(page, url: str, src: dict, diagnostics: list[str], label: str) -> list[tuple[str, str]]:
+    if not url.startswith(("http://", "https://")):
+        return []
+    try:
+        page.goto(url, wait_until="domcontentloaded", timeout=25000)
+        page.wait_for_timeout(1200)
+    except Exception as exc:
+        diagnostics.append(f"{label}: openapi_scheme_open_{type(exc).__name__}")
+        return []
+    out, seen = [], set()
+    anchors = page.locator("a[href]")
+    for i in range(min(anchors.count(), 300)):
+        try:
+            href = anchors.nth(i).get_attribute("href") or ""
+        except Exception:
+            continue
+        hit = canonical_post(href, src)
+        if hit and hit[0] not in seen:
+            seen.add(hit[0])
+            out.append(hit)
+    return out[:12]
 
 
 def hydrate(page, context, url: str, post_id: str, metadata: dict, diagnostics: list[str], label: str) -> dict | None:
@@ -202,6 +361,7 @@ def main() -> None:
     app_secret = os.environ.get("WEIBO_APP_SECRET", "").strip()
     if not app_id or not app_secret:
         diagnostics.append("weibo_openapi=disabled_missing_credentials")
+        spool["weiboOpenApi"] = {"enabled": False, "reason": "missing_credentials"}
         SPOOL.write_text(json.dumps(spool, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"enabled": False, "reason": "missing_credentials"}, ensure_ascii=False))
         return
@@ -209,13 +369,16 @@ def main() -> None:
     targets = [t for t in (targets_doc.get("targets") or []) if str(t.get("league") or "").upper() == "LPL"]
     sources = [s for s in list(cfg.get("leagues", [])) + list(cfg.get("teams", [])) if str(s.get("kind") or "") == "WEIBO_MOBILE"]
     diagnostics.append(f"weibo_openapi=enabled targets={len(targets)} sources={len(sources)}")
+    client = WeiboOpenApiClient(app_id, app_secret)
     try:
-        token = acquire_token(app_id, app_secret)
+        client.get_token()
     except Exception as exc:
         diagnostics.append(f"weibo_openapi_token_{type(exc).__name__}:{str(exc)[:160]}")
+        spool["weiboOpenApi"] = {"enabled": True, "tokenReady": False, "error": str(exc)[:240]}
         SPOOL.write_text(json.dumps(spool, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         raise
 
+    raw_results = []
     with sync_playwright() as playwright:
         chromium = playwright.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
         context = chromium.new_context(locale="zh-CN", timezone_id="Asia/Shanghai", viewport={"width": 1440, "height": 1400})
@@ -235,22 +398,59 @@ def main() -> None:
                     queries = query_builder.build_match_search_queries(target.get("matchDateLocal", ""), teams[0], teams[1], "LPL")[:6]
                     for query in queries:
                         try:
-                            body = search(query, token)
+                            body = client.search(query)
                         except Exception as exc:
-                            diagnostics.append(f"{label}: openapi_search_{type(exc).__name__}:{str(exc)[:120]}")
+                            diagnostics.append(f"{label}: openapi_search_{type(exc).__name__}:{str(exc)[:160]}")
+                            continue
+                        normalized = normalize_search_result(body)
+                        raw_results.append({
+                            "sourceKey": key,
+                            "account": label,
+                            "query": query,
+                            "targetEventId": target.get("eventId", ""),
+                            "targetMatchDateLocal": target.get("matchDateLocal", ""),
+                            "targetTeams": teams[:2],
+                            **normalized,
+                        })
+                        code = normalized.get("code")
+                        if code not in (0, "0", None):
+                            diagnostics.append(f"{label}: openapi_search_api_error code={code} message={str(normalized.get('message') or '')[:120]}")
+                            continue
+                        if normalized.get("refused"):
+                            diagnostics.append(f"{label}: openapi_search_refused query='{query}'")
                             continue
                         hits = extract_source_posts(body, src)
-                        data = body.get("data") or {}
+                        for hit in scheme_candidates(str(normalized.get("scheme") or ""), src):
+                            if hit not in hits:
+                                hits.append(hit)
+                        if not hits and normalized.get("scheme"):
+                            hits.extend(discover_official_links_from_page(page, str(normalized.get("scheme") or ""), src, diagnostics, label))
+                        # Deduplicate after raw msg/msg_json/scheme discovery.
+                        deduped = []
+                        seen = set()
+                        for hit in hits:
+                            if hit[0] not in seen:
+                                seen.add(hit[0])
+                                deduped.append(hit)
+                        hits = deduped
                         diagnostics.append(
-                            f"{label}: openapi_search query='{query}' refs={len(hits)} code={body.get('code')} "
-                            f"completed={data.get('completed')} noContent={data.get('noContent')} refused={data.get('refused')}"
+                            f"{label}: openapi_search query='{query}' refs={len(hits)} code={code} "
+                            f"completed={normalized.get('completed')} analyzing={normalized.get('analyzing')} "
+                            f"noContent={normalized.get('noContent')} refused={normalized.get('refused')} "
+                            f"referenceCount={normalized.get('referenceCount')} source={str(normalized.get('source') or '')[:40]}"
                         )
+                        content = str(normalized.get("content") or "")
+                        if content:
+                            diagnostics.append(f"{label}: openapi_content='{browser.clean(content)[:180]}'")
                         for url, post_id in hits:
                             hydrated = hydrate(page, context, url, post_id, {
                                 "searchQuery": query,
                                 "targetEventId": target.get("eventId", ""),
                                 "targetMatchDateLocal": target.get("matchDateLocal", ""),
                                 "targetTeams": teams[:2],
+                                "openApiReferenceCount": normalized.get("referenceCount"),
+                                "openApiCallTime": normalized.get("callTime"),
+                                "openApiSource": normalized.get("source"),
                             }, diagnostics, label)
                             if hydrated:
                                 found.append(hydrated)
@@ -269,10 +469,16 @@ def main() -> None:
         context.close()
         chromium.close()
 
-    spool["schemaVersion"] = max(int(spool.get("schemaVersion") or 0), 4)
-    spool["weiboOpenApi"] = {"enabled": True, "priority": "OPEN_API_FIRST_BROWSER_SEARCH_FALLBACK"}
+    spool["schemaVersion"] = max(int(spool.get("schemaVersion") or 0), 5)
+    spool["weiboOpenApi"] = {
+        "enabled": True,
+        "tokenReady": True,
+        "priority": "OPEN_API_FIRST_BROWSER_SEARCH_FALLBACK",
+        "resultSemantics": "WEIBO_INTELLIGENT_SEARCH",
+        "results": raw_results[:80],
+    }
     SPOOL.write_text(json.dumps(spool, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"enabled": True, "targets": len(targets)}, ensure_ascii=False))
+    print(json.dumps({"enabled": True, "targets": len(targets), "searchResults": len(raw_results)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
