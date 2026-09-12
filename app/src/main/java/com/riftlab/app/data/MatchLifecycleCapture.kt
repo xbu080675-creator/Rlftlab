@@ -10,9 +10,9 @@ import kotlinx.coroutines.launch
 /**
  * Connects schedule/live/final/detail flows to [MatchLifecycleArchive].
  *
- * Nothing here depends on which screen is currently open. Once MatchSessionStore starts, every
- * schedule revision and every chosen live-provider frame is archived automatically. Opening an old
- * completed match also feeds its resolved final series into the same lifecycle archive.
+ * Nothing here depends on which screen is currently open. Every join is identity-gated: a final
+ * from the current series must not attach to an older series merely because the same two teams met
+ * before.
  */
 object MatchLifecycleCapture {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -52,7 +52,7 @@ object MatchLifecycleCapture {
                 MatchSessionStore.completedSeries.collect { series ->
                     series ?: return@collect
                     val center = MatchSessionStore.scheduleCenter.value
-                    val match = resolveSeriesMatch(center.matches, series) ?: return@collect
+                    val match = resolveSeriesMatch(center, series) ?: return@collect
                     MatchLifecycleArchive.observeCompletedSeries(match, series)
                 }
             }
@@ -76,8 +76,6 @@ object MatchLifecycleCapture {
     ): ScheduledEsportsMatch? {
         val eventId = status.eventId.trim()
         if (eventId.isNotBlank()) {
-            // A provider that names an event is making an identity claim. If that claim cannot be
-            // resolved in the current schedule we fail closed; never fall through to currentMatch.
             return center.matches.firstOrNull { it.eventId == eventId || it.matchId == eventId }
         }
         return center.currentMatch
@@ -85,24 +83,27 @@ object MatchLifecycleCapture {
     }
 
     private fun resolveSeriesMatch(
-        matches: List<ScheduledEsportsMatch>,
+        center: ScheduleCenterState,
         series: CompletedSeriesSnapshot
     ): ScheduledEsportsMatch? {
-        val seriesTeams = setOf(teamToken(series.teamA), teamToken(series.teamB)).filter { it.isNotBlank() }.toSet()
-        if (seriesTeams.size < 2) return null
-        return matches.asSequence()
-            .filter { match ->
-                match.teams.take(2)
-                    .map { teamToken(it.code.ifBlank { it.name }) }
-                    .filter { it.isNotBlank() }
-                    .toSet() == seriesTeams
-            }
-            .sortedWith(
-                compareByDescending<ScheduledEsportsMatch> {
-                    MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED
-                }.thenByDescending { it.startTimeIso }
-            )
-            .firstOrNull()
+        fun teamsMatch(match: ScheduledEsportsMatch): Boolean {
+            val seriesTeams = setOf(teamToken(series.teamA), teamToken(series.teamB)).filter { it.isNotBlank() }.toSet()
+            val scheduled = match.teams.take(2)
+                .map { teamToken(it.code.ifBlank { it.name }) }
+                .filter { it.isNotBlank() }
+                .toSet()
+            return seriesTeams.size == 2 && seriesTeams == scheduled
+        }
+
+        center.currentMatch?.takeIf(::teamsMatch)?.let { return it }
+        center.selectedMatch?.takeIf(::teamsMatch)?.let { return it }
+
+        // Historical fallback is allowed only when there is no active/selected matching series.
+        // Pick the newest completed schedule row, never an arbitrary older same-team meeting.
+        return center.matches.asSequence()
+            .filter(::teamsMatch)
+            .filter { MatchSessionStore.schedulePhase(it) == ScheduleMatchPhase.COMPLETED }
+            .maxByOrNull { it.startTimeIso }
     }
 
     private fun teamToken(value: String): String =
