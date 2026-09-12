@@ -9,12 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.time.Instant
 
 internal class LolEsportsScheduleDataSource(
@@ -77,11 +74,6 @@ internal class LolEsportsScheduleDataSource(
             .filter { it.isNotBlank() }
             .toSet()
 
-    /**
-     * Riot's schedule endpoint can transiently mark a not-yet-played series completed.
-     * Treat the series score as the completion proof: BO5 requires 3 wins, BO3 requires 2.
-     * Outcome flags are intentionally ignored because they can appear before play begins.
-     */
     private fun verifySeriesCompletion(match: ScheduledEsportsMatch): ScheduledEsportsMatch {
         val normalized = normalizeState(match.state)
         val claimsCompleted = normalized.contains("complete") || normalized == "finished"
@@ -90,11 +82,7 @@ internal class LolEsportsScheduleDataSource(
         val requiredWins = if (match.bestOf > 0) match.bestOf / 2 + 1 else 1
         val maxGameWins = match.teams.maxOfOrNull { it.gameWins } ?: 0
 
-        return if (maxGameWins >= requiredWins) {
-            match
-        } else {
-            match.copy(state = "unstarted")
-        }
+        return if (maxGameWins >= requiredWins) match else match.copy(state = "unstarted")
     }
 
     private fun normalizeState(value: String): String =
@@ -122,9 +110,6 @@ internal class LolEsportsStandingsDataSource(
     }
 
     override suspend fun fetchStandings(tournamentId: String): TournamentStandings? {
-        // Provider-only international events currently contribute schedule / participants / results,
-        // not a fabricated standings table. Keep Standings explicitly unavailable until a verified
-        // provider standings feed is added.
         if (tournamentId.startsWith("rft-event:")) return null
 
         val riot = runCatching { client.fetchTournamentStandings(tournamentId) }.getOrNull()
@@ -180,11 +165,6 @@ internal class LolEsportsLiveDataSource(
     )
     val status: StateFlow<LiveSourceStatus> = _status.asStateFlow()
 
-    /**
-     * Riot's LPL EventDetails can keep every game as "unstarted" even while G1 is already live.
-     * Therefore EventDetails supplies game ids/sides, while a non-empty LiveStats window proves
-     * that the game has actually started. getLive and game.state remain hints/fallbacks only.
-     */
     override fun observe(matchId: String): Flow<LiveSnapshot> = flow {
         var currentEvent: LiveEventRef? = null
         var knownGames: List<LiveGameRef> = emptyList()
@@ -244,7 +224,8 @@ internal class LolEsportsLiveDataSource(
                         lockedFromSchedule = false
                         _status.value = LiveSourceStatus(
                             phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                            message = "正在等待全球 LoL Esports 实时比赛…"
+                            message = "正在等待全球 LoL Esports 实时比赛…",
+                            lastUpdateEpochMs = System.currentTimeMillis()
                         )
                         currentEvent = client.findLiveEvent(preferredMatchId = matchId)
                     }
@@ -261,30 +242,25 @@ internal class LolEsportsLiveDataSource(
                 }
 
                 val event = currentEvent ?: continue
-                if (knownGames.isEmpty()) {
-                    knownGames = fetchEventGames(event)
-                }
+                if (knownGames.isEmpty()) knownGames = fetchEventGames(event)
 
-                // State is only a hint. Prefer it if Riot happens to update it correctly.
                 val stateGame = knownGames.firstOrNull { isInProgress(it.state) }
-
-                // Once a game is active, only probe the next numbered game for a newer window.
                 val newerWindowGame = currentGame?.let { active ->
                     knownGames
                         .filter { it.gameNumber > active.gameNumber }
                         .minByOrNull { it.gameNumber }
-                        ?.takeIf { hasAnyLiveFrames(it.gameId) }
+                        ?.takeIf { hasAnyLiveFrames(event, it) }
                 }
 
                 val discovered = stateGame
                     ?: newerWindowGame
                     ?: currentGame
-                    ?: findHighestStartedGame(knownGames)
+                    ?: findHighestStartedGame(event, knownGames)
 
                 if (discovered == null) {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
-                        message = "赛事已锁定，等待 Riot LiveStats 出现有效游戏帧",
+                        message = "赛事已锁定，正在用多游标探测 Riot LiveStats 游戏帧",
                         eventId = event.eventId,
                         gameId = "",
                         lastUpdateEpochMs = System.currentTimeMillis()
@@ -292,6 +268,8 @@ internal class LolEsportsLiveDataSource(
                     delay(2_000)
                     if (!lockedFromSchedule) {
                         currentEvent = client.findLiveEvent(preferredMatchId = matchId) ?: event
+                    } else {
+                        knownGames = fetchEventGames(event)
                     }
                     continue
                 }
@@ -303,7 +281,23 @@ internal class LolEsportsLiveDataSource(
                 }
 
                 val game = currentGame ?: continue
-                val snapshot = fetchLatestSnapshot(event, game, previous)
+                val raw = fetchLatestSnapshot(event, game, previous)
+                val snapshot = raw.copy(targetKey = observedTargetKey)
+                val target = LiveMatchTargetRegistry.snapshot()
+                if (target == null || !MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)) {
+                    currentGame = null
+                    currentGameId = ""
+                    previous = null
+                    knownGames = emptyList()
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "Riot LiveStats · 帧身份与当前赛程不一致，已丢弃并重新解析 EventDetails",
+                        eventId = event.eventId,
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(2_000)
+                    continue
+                }
                 previous = snapshot
 
                 _status.value = LiveSourceStatus(
@@ -318,7 +312,7 @@ internal class LolEsportsLiveDataSource(
             } catch (t: Throwable) {
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.ERROR,
-                    message = "实时源暂时不可用：${t.message?.take(120) ?: t::class.java.simpleName}",
+                    message = "Riot LiveStats 暂时不可用：${t.message?.take(120) ?: t::class.java.simpleName}",
                     eventId = currentEvent?.eventId.orEmpty(),
                     gameId = currentGameId,
                     lastUpdateEpochMs = System.currentTimeMillis()
@@ -372,26 +366,30 @@ internal class LolEsportsLiveDataSource(
         }.sortedBy { it.gameNumber }
     }
 
-    /** Find the highest-numbered game whose LiveStats endpoint has started returning frames. */
-    private suspend fun findHighestStartedGame(games: List<LiveGameRef>): LiveGameRef? {
+    private suspend fun findHighestStartedGame(event: LiveEventRef, games: List<LiveGameRef>): LiveGameRef? {
         for (game in games.sortedByDescending { it.gameNumber }) {
-            if (hasAnyLiveFrames(game.gameId)) return game
+            if (hasAnyLiveFrames(event, game)) return game
         }
         return null
     }
 
-    private suspend fun hasAnyLiveFrames(gameId: String): Boolean = try {
-        val root = getJson("${LolEsportsConfig.LIVE_BASE}/window/$gameId")
-        (root.optJSONArray("frames")?.length() ?: 0) > 0
-    } catch (_: Throwable) {
-        false
+    /**
+     * LiveStats window is cursor-sensitive. The old no-cursor discovery probe could report "no
+     * frames" while the exact same game became readable as soon as fetchLatestSnapshot supplied a
+     * startingTime. Discovery now uses the same wall-clock cursor ladder as the real reader.
+     */
+    private suspend fun hasAnyLiveFrames(event: LiveEventRef, game: LiveGameRef): Boolean {
+        val now = Instant.now()
+        val lagsSeconds = longArrayOf(15, 30, 60, 120, 300, 600)
+        for (lag in lagsSeconds) {
+            val cursorEvent = event.copy(startTimeIso = now.minusSeconds(lag).toString())
+            val snapshot = runCatching { client.fetchLiveWindow(cursorEvent, game, null) }.getOrNull()
+            if (snapshot != null && isMeaningful(snapshot)) return true
+        }
+        val fallback = runCatching { client.fetchLiveWindow(event.copy(startTimeIso = ""), game, null) }.getOrNull()
+        return fallback != null && isMeaningful(fallback)
     }
 
-    /**
-     * The window endpoint is cursor based. Using Schedule.startTime is wrong for delayed starts
-     * and can return no JSON for delayed series. Query near wall-clock "now" instead,
-     * with progressively wider safety lags, and accept the first meaningful current snapshot.
-     */
     private suspend fun fetchLatestSnapshot(
         event: LiveEventRef,
         game: LiveGameRef,
@@ -411,8 +409,6 @@ internal class LolEsportsLiveDataSource(
             }
         }
 
-        // No-cursor response is useful as a final proof/debug fallback, but Riot can return
-        // only initialization frames (all-zero stats), so never promote those to live data.
         try {
             val fallback = client.fetchLiveWindow(event.copy(startTimeIso = ""), game, previous)
             if (isMeaningful(fallback)) return fallback
