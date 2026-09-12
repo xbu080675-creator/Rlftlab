@@ -23,7 +23,9 @@ internal object RiftClawClient {
     private val jsonType = "application/json; charset=utf-8".toMediaType()
     private val http = OkHttpClient.Builder()
         .connectTimeout(2, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
+        // The bridge may try two concrete matchup orientations. Keep the bound well below the
+        // minute roster polling cadence while allowing Weibo search to finish without an Agent.
+        .readTimeout(45, TimeUnit.SECONDS)
         .writeTimeout(3, TimeUnit.SECONDS)
         .build()
 
