@@ -28,8 +28,13 @@ internal object MatchIdentityPolicy {
         return sameTimeWindow(a.startTimeIso, b.startTimeIso)
     }
 
-    fun sameTeams(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean =
-        teamAliasSets(a) == teamAliasSets(b) && teamAliasSets(a).size == 2
+    fun sameTeams(a: ScheduledEsportsMatch, b: ScheduledEsportsMatch): Boolean {
+        val left = a.teams.take(2).map(::aliases)
+        val right = b.teams.take(2).map(::aliases)
+        if (left.size < 2 || right.size < 2 || left.any { it.isEmpty() } || right.any { it.isEmpty() }) return false
+        return left.all { aTeam -> right.any { bTeam -> aliasesOverlap(aTeam, bTeam) } } &&
+            right.all { bTeam -> left.any { aTeam -> aliasesOverlap(aTeam, bTeam) } }
+    }
 
     fun snapshotBelongsTo(snapshot: LiveSnapshot, target: ScheduledEsportsMatch): Boolean {
         if (snapshot.targetKey.isNotBlank() && snapshot.targetKey != LiveMatchTargetRegistry.key(target)) return false
@@ -73,13 +78,15 @@ internal object MatchIdentityPolicy {
         return ad.isNotBlank() && ad == bd
     }
 
-    private fun teamAliasSets(match: ScheduledEsportsMatch): Set<String> =
-        match.teams.take(2)
-            .mapNotNull { team ->
-                aliases(team).sorted().firstOrNull()
+    private fun aliasesOverlap(a: Set<String>, b: Set<String>): Boolean {
+        if (a.intersect(b).isNotEmpty()) return true
+        return a.any { left ->
+            b.any { right ->
+                left.length >= 4 && right.length >= 4 &&
+                    (left.contains(right) || right.contains(left))
             }
-            .filter { it.isNotBlank() }
-            .toSet()
+        }
+    }
 
     private fun aliases(team: EsportsTeamRef): Set<String> =
         listOf(team.code, team.name, team.slug)
