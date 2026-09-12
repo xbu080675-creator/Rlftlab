@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,22 +29,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.riftlab.app.data.CitoApiConfig
 import com.riftlab.app.data.ProviderCredentialStore
+import com.riftlab.app.data.WeiboOpenApiClient
 import com.riftlab.app.overlay.DraftHudSimulation
 import com.riftlab.app.overlay.TacticalHudSimulation
 import com.riftlab.app.stream.StreamLauncher
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val citoConfigured by ProviderCredentialStore.citoConfigured.collectAsState()
     val tachioConfigured by ProviderCredentialStore.tachioConfigured.collectAsState()
+    val weiboConfigured by ProviderCredentialStore.weiboConfigured.collectAsState()
     val draftSim by DraftHudSimulation.state.collectAsState()
     val tacticalSim by TacticalHudSimulation.state.collectAsState()
 
     var citoDraft by remember { mutableStateOf("") }
     var tachioDraft by remember { mutableStateOf("") }
+    var weiboAppIdDraft by remember { mutableStateOf("") }
+    var weiboAppSecretDraft by remember { mutableStateOf("") }
     var revealCito by remember { mutableStateOf(false) }
     var revealTachio by remember { mutableStateOf(false) }
+    var revealWeiboSecret by remember { mutableStateOf(false) }
+    var weiboTesting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -180,6 +189,105 @@ internal fun RealtimeSourceSettingsDialog(onClose: () -> Unit) {
                         ) { Text("清除") }
                     }
                 }
+
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    "微博龙虾 · WEIBO OPEN API",
+                    color = RiftCyan,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (weiboConfigured) {
+                        "微博龙虾 AppID / AppSecret 已保存在本机。RiftLab 可直接请求 ws_token 与微博智搜；凭证不会进入 GitHub 或远程首发同步任务。"
+                    } else {
+                        "在微博关注“微博龙虾助手”→连接龙虾→获取 AppID / AppSecret，然后在这里本机配置。"
+                    },
+                    color = RiftMuted,
+                    fontSize = 11.sp,
+                    lineHeight = 17.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("TOKEN  ${WeiboOpenApiClient.TOKEN_ENDPOINT}", color = RiftMuted, fontSize = 11.sp)
+                Text("SEARCH ${WeiboOpenApiClient.SEARCH_ENDPOINT}", color = RiftMuted, fontSize = 11.sp)
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = weiboAppIdDraft,
+                    onValueChange = { weiboAppIdDraft = it; statusText = "" },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Weibo AppID") },
+                    placeholder = { Text(if (weiboConfigured) "已配置 · 留空不覆盖" else "粘贴 AppID") },
+                    singleLine = true
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = weiboAppSecretDraft,
+                    onValueChange = { weiboAppSecretDraft = it; statusText = "" },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Weibo AppSecret") },
+                    placeholder = { Text(if (weiboConfigured) "••••••••  已配置" else "粘贴 AppSecret") },
+                    singleLine = true,
+                    visualTransformation = if (revealWeiboSecret) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(onClick = { revealWeiboSecret = !revealWeiboSecret }) {
+                            Text(if (revealWeiboSecret) "隐藏" else "显示")
+                        }
+                    }
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val appId = weiboAppIdDraft.trim()
+                            val appSecret = weiboAppSecretDraft.trim()
+                            if (appId.isNotEmpty() && appSecret.isNotEmpty()) {
+                                runCatching { ProviderCredentialStore.saveWeiboCredentials(appId, appSecret) }
+                                    .onSuccess {
+                                        weiboAppIdDraft = ""
+                                        weiboAppSecretDraft = ""
+                                        revealWeiboSecret = false
+                                        statusText = "微博龙虾凭证已加密保存到本机"
+                                    }
+                                    .onFailure { statusText = "保存失败 · ${it.message ?: "未知错误"}" }
+                            } else {
+                                statusText = if (weiboConfigured) "现有微博凭证保持不变" else "AppID 和 AppSecret 都需要填写"
+                            }
+                        }
+                    ) { Text("保存微博") }
+                    TextButton(
+                        enabled = weiboConfigured && !weiboTesting,
+                        onClick = {
+                            weiboTesting = true
+                            statusText = "正在请求微博 ws_token…"
+                            scope.launch {
+                                val result = WeiboOpenApiClient.verifyCredentials()
+                                statusText = result.fold(
+                                    onSuccess = { "微博龙虾连接成功 · token 获取正常" },
+                                    onFailure = { "微博连接失败 · ${it.message?.take(90) ?: it::class.java.simpleName}" }
+                                )
+                                weiboTesting = false
+                            }
+                        }
+                    ) { Text(if (weiboTesting) "测试中…" else "测试连接") }
+                    if (weiboConfigured) {
+                        TextButton(
+                            onClick = {
+                                ProviderCredentialStore.clearWeiboCredentials()
+                                weiboAppIdDraft = ""
+                                weiboAppSecretDraft = ""
+                                statusText = "微博龙虾凭证已从本机清除"
+                            }
+                        ) { Text("清除") }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "本地接口：WeiboOpenApiClient.search(query)。首发模块后续只把搜索结果当发现通道，仍需官方账号、日期、对阵和 5+5 结构校验后才能发布。",
+                    color = RiftMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 15.sp
+                )
 
                 Spacer(Modifier.height(22.dp))
                 Text(
