@@ -51,8 +51,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 92
-        versionName = "1.0.0-dev.92"
+        versionCode = 93
+        versionName = "1.0.0-dev.93"
         buildConfigField("String", "GITHUB_ACCELERATOR_BASE_URLS", "\"$githubAcceleratorBaseUrlsLiteral\"")
     }
 
@@ -104,18 +104,13 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-svg:2.7.0")
 
-    // dev.87+: real optional on-device runtime. The model remains a user-downloaded asset,
-    // never bundled into the APK. Pin the runtime so model verification/benchmark behavior is stable.
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.17.0")
 
-    // dev.92 four-lane roster vision. OCR models are bundled so the basic fallback works
-    // without Google Play Services or a first-run model download.
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
     implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
     implementation("com.google.mlkit:text-recognition-korean:16.0.1")
 
-    // Optional system-AI lane (AICore / Gemini Nano). Unsupported devices simply skip it.
     implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
@@ -123,4 +118,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.92: four-lane roster acquisition + device-local Weibo Open API credentials/search interface.
+// dev.93: local OpenClaw policy gate + in-app deployment guide; website polling remains the universal baseline.
