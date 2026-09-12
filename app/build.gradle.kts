@@ -51,8 +51,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 93
-        versionName = "1.0.0-dev.93"
+        versionCode = 94
+        versionName = "1.0.0-dev.94"
         buildConfigField("String", "GITHUB_ACCELERATOR_BASE_URLS", "\"$githubAcceleratorBaseUrlsLiteral\"")
     }
 
@@ -118,4 +118,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.93: local OpenClaw policy gate + in-app deployment guide; website polling remains the universal baseline.
+// dev.94: RiftClaw Weibo-only companion contract, injection guard, hardened bootstrap and local preflight UI.
