@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import com.riftlab.app.overlay.RiftOverlayService
 import com.riftlab.app.stream.StreamLauncher
+import com.riftlab.app.ui.OpenClawGuideHost
 import com.riftlab.app.ui.RiftLabLiveRoot
 import com.riftlab.app.ui.RiftTheme
 
@@ -15,7 +16,9 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
         setContent {
             RiftTheme {
-                RiftLabLiveRoot()
+                OpenClawGuideHost {
+                    RiftLabLiveRoot()
+                }
             }
         }
     }
