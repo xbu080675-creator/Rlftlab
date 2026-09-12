@@ -100,7 +100,8 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
                         message = "COMM · 正在解析当前 LPL 系列赛…",
-                        eventId = targetEventId()
+                        eventId = targetEventId(),
+                        lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     ref = fetchCurrentMatch(matchId)
                     if (ref == null) {
@@ -129,7 +130,7 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     delay(4_000L)
-                    ref = fetchCurrentMatch(matchId)
+                    ref = null
                     continue
                 }
 
@@ -155,13 +156,26 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                 val topData = unwrapData(topRoot)
                 val teams = topData?.let(::parseTeams).orEmpty()
                 if (teams.size < 2 || !teams.any { it.gold > 0 || it.kills > 0 || it.towers > 0 || it.dragons > 0 || it.barons > 0 }) {
-                    // Route may have become stale at a game transition. Rediscover on next loop.
                     cachedRoute = null
                     _status.value = LiveSourceStatus(
                         phase = LiveSourcePhase.WAITING_FOR_MATCH,
                         message = "COMM · G${series.expectedBo} 路由已命中但实时数值尚未生效 · ${route.label}",
                         eventId = targetEventId(),
                         gameId = "COMM:${active.bmid}:G${series.expectedBo}",
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(POLL_MS)
+                    continue
+                }
+
+                if (!realtimeTeamsMatchTarget(teams)) {
+                    cachedRoute = null
+                    ref = null
+                    previous = null
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "COMM · realtime 队伍身份与当前赛程不一致，已丢弃并重新绑定",
+                        eventId = targetEventId(),
                         lastUpdateEpochMs = System.currentTimeMillis()
                     )
                     delay(POLL_MS)
@@ -199,8 +213,24 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                     redPlayers = redPlayers,
                     latestEvent = detectEvent(previous, blue, red),
                     source = "LPL Comm Realtime · ${route.label}",
-                    gameId = "COMM:${active.bmid}:G${series.expectedBo}"
+                    gameId = "COMM:${active.bmid}:G${series.expectedBo}",
+                    targetKey = observedTargetKey
                 )
+
+                val target = LiveMatchTargetRegistry.snapshot()
+                if (target == null || !MatchIdentityPolicy.snapshotBelongsTo(snapshot, target)) {
+                    cachedRoute = null
+                    ref = null
+                    previous = null
+                    _status.value = LiveSourceStatus(
+                        phase = LiveSourcePhase.WAITING_FOR_MATCH,
+                        message = "COMM · 状态帧未通过赛事身份校验，已重新探测",
+                        eventId = targetEventId(),
+                        lastUpdateEpochMs = System.currentTimeMillis()
+                    )
+                    delay(POLL_MS)
+                    continue
+                }
 
                 previous = snapshot
                 _status.value = LiveSourceStatus(
@@ -214,11 +244,12 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
                 delay(POLL_MS)
             } catch (t: Throwable) {
                 cachedRoute = null
+                ref = null
+                previous = null
                 _status.value = LiveSourceStatus(
                     phase = LiveSourcePhase.ERROR,
-                    message = "COMM ERROR · ${t.message?.take(170) ?: t::class.java.simpleName}" + (ref?.let { " · bmid=${it.bmid}" } ?: ""),
+                    message = "COMM ERROR · ${t.message?.take(170) ?: t::class.java.simpleName}",
                     eventId = targetEventId(),
-                    gameId = ref?.let { "COMM:${it.bmid}" }.orEmpty(),
                     lastUpdateEpochMs = System.currentTimeMillis()
                 )
                 delay(DISCOVERY_RETRY_MS)
@@ -294,7 +325,7 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
             if (root.has("success") && !root.optBoolean("success", false)) continue
             val data = unwrapData(root) ?: continue
             val teams = parseTeams(data)
-            if (teams.size >= 2) return route
+            if (teams.size >= 2 && realtimeTeamsMatchTarget(teams)) return route
         }
         return null
     }
@@ -459,7 +490,7 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
         if (target != null && target.teams.size >= 2) {
             val ranked = candidates.map { it to matchScore(it, target) }.sortedByDescending { it.second }
             val best = ranked.firstOrNull()
-            if (best != null && best.second > 0) return best.first
+            return best?.takeIf { it.second >= 95 }?.first
         }
         return candidates.singleOrNull()
     }
@@ -472,10 +503,31 @@ internal class LplCommRealtimeDataSource : LiveMatchDataSource {
         return when {
             direct -> 100
             swapped -> 95
-            teamMatches(ref.teamAName, left) || teamMatches(ref.teamBName, right) -> 30
-            teamMatches(ref.teamAName, right) || teamMatches(ref.teamBName, left) -> 25
             else -> 0
         }
+    }
+
+    private fun realtimeTeamsMatchTarget(teams: List<TeamRealtime>): Boolean {
+        val target = LiveMatchTargetRegistry.snapshot() ?: return false
+        if (target.teams.size < 2 || teams.size < 2) return false
+        val targetAliases = target.teams.take(2).map { team ->
+            listOf(team.code, team.name, team.slug).map(::teamKey).filter { it.isNotBlank() }.toSet()
+        }
+        val upstream = teams.take(2).map { teamKey(it.name) }.filter { it.isNotBlank() }
+        if (upstream.size < 2) {
+            val expectedIds = setOfNotNull(
+                target.teams.getOrNull(0)?.id?.toIntOrNull(),
+                target.teams.getOrNull(1)?.id?.toIntOrNull()
+            )
+            val upstreamIds = teams.map { it.teamId }.filter { it > 0 }.toSet()
+            return expectedIds.size == 2 && expectedIds == upstreamIds
+        }
+        fun matches(value: String, aliases: Set<String>): Boolean = aliases.any { alias ->
+            value == alias || (value.length >= 4 && alias.length >= 4 &&
+                (value.contains(alias) || alias.contains(value)))
+        }
+        return upstream.all { value -> targetAliases.any { matches(value, it) } } &&
+            targetAliases.all { aliases -> upstream.any { matches(it, aliases) } }
     }
 
     private fun teamMatches(upstreamName: String, team: EsportsTeamRef): Boolean {
