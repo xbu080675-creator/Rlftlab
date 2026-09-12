@@ -12,6 +12,8 @@ on:
       - 'scripts/starting_roster_fast_global_collector.py'
       - 'scripts/starting_roster_four_lane_collector.py'
       - 'scripts/starting_roster_match_query.py'
+      - 'scripts/starting_roster_match_targets.py'
+      - 'scripts/starting_roster_match_search_executor.py'
       - 'scripts/starting_roster_policy_selftest.py'
       - 'scripts/starting_roster_browser_collector.py'
       - 'scripts/starting_roster_browser_four_lane.py'
@@ -51,12 +53,19 @@ jobs:
         run: |
           python3 scripts/starting_roster_policy_selftest.py
 
+      - name: Derive imminent match search targets
+        run: |
+          python3 scripts/starting_roster_match_targets.py
+
       - name: Collect social posts with Chromium transport
         continue-on-error: true
         run: |
           rm -rf data/global/starting_roster_browser_media
           mkdir -p data/global/starting_roster_browser_media
+          # Legacy recent-post scan remains fallback.
           python3 scripts/starting_roster_browser_four_lane.py
+          # Match-target search is merged in front of recent posts.
+          python3 scripts/starting_roster_match_search_executor.py
 
       - name: Collect official starting rosters globally
         timeout-minutes: 5
@@ -69,6 +78,7 @@ jobs:
         with:
           name: starting-roster-ocr-trace
           path: |
+            data/global/starting_roster_match_targets.json
             data/global/starting_roster_ocr_trace.json
             data/global/starting_roster_browser_posts.json
             data/global/starting_roster_collector_status.json
