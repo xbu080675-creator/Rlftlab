@@ -81,21 +81,28 @@ def canonical_weibo_post(url: str, src: dict) -> tuple[str, str] | None:
     return f"https://weibo.com/{owner}/{post_id}", post_id
 
 
-def collect_weibo_search(page, context, src: dict, target: dict, diagnostics: list[str], max_queries: int = 2) -> list[dict]:
+def collect_weibo_search(page, context, src: dict, target: dict, diagnostics: list[str], max_queries: int = 6) -> list[dict]:
     teams = target.get("teams") or []
     if len(teams) < 2:
         return []
-    queries = query_builder.build_match_search_queries(target.get("matchDateLocal", ""), teams[0], teams[1], target.get("league", ""))[:max_queries]
+    queries = query_builder.build_match_search_queries(
+        target.get("matchDateLocal", ""), teams[0], teams[1], target.get("league", "")
+    )[:max_queries]
     posts = []
     for query in queries:
-        search_url = f"https://s.weibo.com/weibo?q={quote(query)}"
+        # s.weibo.com is the public search surface users see manually. Use the
+        # realtime/general result page and then verify the canonical owner UID.
+        search_url = f"https://s.weibo.com/weibo?q={quote(query)}&xsort=time&Refer=g"
         try:
             page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(2500)
-            anchors = page.locator("a[href]")
+            page.wait_for_timeout(3000)
+            # Result cards commonly expose the canonical date/status anchor.
+            candidate_anchors = page.locator(
+                'a[node-type="feed_list_item_date"], a[href*="weibo.com/"], a[href^="//weibo.com/"]'
+            )
             before = len(posts)
-            for index in range(min(anchors.count(), 350)):
-                anchor = anchors.nth(index)
+            for index in range(min(candidate_anchors.count(), 450)):
+                anchor = candidate_anchors.nth(index)
                 hit = canonical_weibo_post(anchor.get_attribute("href") or "", src)
                 if not hit:
                     continue
@@ -134,12 +141,14 @@ def collect_weibo_search(page, context, src: dict, target: dict, diagnostics: li
     return browser.dedupe(posts)[:4]
 
 
-def collect_x_search(page, context, src: dict, target: dict, diagnostics: list[str], max_queries: int = 2) -> list[dict]:
+def collect_x_search(page, context, src: dict, target: dict, diagnostics: list[str], max_queries: int = 4) -> list[dict]:
     teams = target.get("teams") or []
     handle = str(src.get("handle") or "").lstrip("@")
     if len(teams) < 2 or not handle:
         return []
-    queries = query_builder.build_match_search_queries(target.get("matchDateLocal", ""), teams[0], teams[1], target.get("league", ""))[:max_queries]
+    queries = query_builder.build_match_search_queries(
+        target.get("matchDateLocal", ""), teams[0], teams[1], target.get("league", "")
+    )[:max_queries]
     posts = []
     for query in queries:
         scoped = f"{query} from:{handle}"
@@ -210,9 +219,14 @@ def main() -> None:
         spool_path.write_text(json.dumps(spool, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return
 
+    # League sources first: one official league post often contains both teams
+    # and is the best source for atomic 5+5 roster evidence.
     sources = list(cfg.get("leagues", [])) + list(cfg.get("teams", []))
     with sync_playwright() as playwright:
-        chromium = playwright.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-dev-shm-usage"])
+        chromium = playwright.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-dev-shm-usage"],
+        )
         context = chromium.new_context(
             locale="en-US",
             timezone_id="UTC",
@@ -225,6 +239,10 @@ def main() -> None:
             if not applicable:
                 continue
             key = source_key(src)
+            label = src.get("account", key)
+            diagnostics.append(
+                f"{label}: match_search_begin source={src.get('source','')} league={src.get('league','')} targets={len(applicable)}"
+            )
             search_posts = []
             page = context.new_page()
             try:
@@ -242,14 +260,14 @@ def main() -> None:
             existing = spool["sources"].get(key) or []
             merged = browser.dedupe(search_posts + existing)
             spool["sources"][key] = merged[:24]
-            diagnostics.append(f"{src.get('account',key)}: match_search_posts={len(search_posts)} merged_posts={len(merged[:24])}")
+            diagnostics.append(f"{label}: match_search_posts={len(search_posts)} merged_posts={len(merged[:24])}")
         context.close()
         chromium.close()
 
     spool["schemaVersion"] = max(int(spool.get("schemaVersion") or 0), 3)
     spool["matchTargetSearch"] = {"targets": targets, "priority": "SEARCH_FIRST_RECENT_FALLBACK"}
     spool_path.write_text(json.dumps(spool, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"targets": len(targets), "diagnostics": diagnostics[-20:]}, ensure_ascii=False))
+    print(json.dumps({"targets": len(targets), "diagnostics": diagnostics[-30:]}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
