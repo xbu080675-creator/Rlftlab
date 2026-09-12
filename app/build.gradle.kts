@@ -51,8 +51,8 @@ android {
         applicationId = "com.riftlab.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 91
-        versionName = "1.0.0-dev.91"
+        versionCode = 92
+        versionName = "1.0.0-dev.92"
         buildConfigField("String", "GITHUB_ACCELERATOR_BASE_URLS", "\"$githubAcceleratorBaseUrlsLiteral\"")
     }
 
@@ -123,4 +123,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
-// dev.92: four-lane roster acquisition = remote normalized feed + bundled OCR + optional system AI + optional local vision.
+// dev.92: four-lane roster acquisition + device-local Weibo Open API credentials/search interface.
