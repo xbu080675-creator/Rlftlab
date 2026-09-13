@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T21:00:06Z",
+  "generatedAt": "2026-09-13T20:52:55Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -208,7 +208,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "",
+              "code": "ZSK",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 2,
@@ -217,7 +217,7 @@
             {
               "id": "11638",
               "name": "我超威",
-              "code": "",
+              "code": "wcw",
               "slug": "wo-chao-wei",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
               "wins": 0,
@@ -238,7 +238,7 @@
             {
               "id": "11636",
               "name": "Ocean & Kimi Tournament Alliance",
-              "code": "",
+              "code": "OKE",
               "slug": "ocean-kimi-tournament-alliance",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
               "wins": 2,
@@ -247,7 +247,7 @@
             {
               "id": "11637",
               "name": "小爬虫",
-              "code": "",
+              "code": "XPC",
               "slug": "xiao-pa-chong",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
               "wins": 0,
@@ -268,7 +268,7 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "",
+              "code": "EDG.Y",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 1,
@@ -277,7 +277,7 @@
             {
               "id": "5941",
               "name": "Bilibili Gaming Junior",
-              "code": "",
+              "code": "BLG.J",
               "slug": "bilibili-gaming-junior",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
               "wins": 2,
@@ -298,7 +298,7 @@
             {
               "id": "1354",
               "name": "Weibo Gaming Youth Team",
-              "code": "",
+              "code": "WBG.Y",
               "slug": "weibo-gaming-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
               "wins": 1,
@@ -307,7 +307,7 @@
             {
               "id": "5938",
               "name": "Top Esports Challenger",
-              "code": "",
+              "code": "TES.C",
               "slug": "top-esports-challenger",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 2,
@@ -328,7 +328,7 @@
             {
               "id": "5938",
               "name": "Top Esports Challenger",
-              "code": "",
+              "code": "TES.C",
               "slug": "top-esports-challenger",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 0,
@@ -337,7 +337,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "",
+              "code": "ZSK",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 2,
@@ -637,7 +637,7 @@
             {
               "id": "1354",
               "name": "Weibo Gaming Youth Team",
-              "code": "",
+              "code": "WBG.Y",
               "slug": "weibo-gaming-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
               "wins": 1,
@@ -646,7 +646,7 @@
             {
               "id": "5938",
               "name": "Top Esports Challenger",
-              "code": "",
+              "code": "TES.C",
               "slug": "top-esports-challenger",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 2,
@@ -667,7 +667,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "",
+              "code": "ZSK",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 2,
@@ -676,7 +676,7 @@
             {
               "id": "11636",
               "name": "Ocean & Kimi Tournament Alliance",
-              "code": "",
+              "code": "OKE",
               "slug": "ocean-kimi-tournament-alliance",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
               "wins": 0,
@@ -697,7 +697,7 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "",
+              "code": "EDG.Y",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 2,
@@ -706,7 +706,7 @@
             {
               "id": "5938",
               "name": "Top Esports Challenger",
-              "code": "",
+              "code": "TES.C",
               "slug": "top-esports-challenger",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 0,
@@ -727,7 +727,7 @@
             {
               "id": "5938",
               "name": "Top Esports Challenger",
-              "code": "",
+              "code": "TES.C",
               "slug": "top-esports-challenger",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 0,
@@ -736,7 +736,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "",
+              "code": "ZSK",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 2,
@@ -749,7 +749,7 @@
           "providerMatchId": "83715",
           "slug": "bushido-wildcats-vs-movistar-koi-fenix-2026-09-13",
           "scheduledAt": "2026-09-13T15:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 5,
           "stage": "EMEA Qualifier",
           "sourceUrl": "https://rft.gg/match/83715-bushido-wildcats-vs-movistar-koi-fenix-2026-09-13",
@@ -757,20 +757,20 @@
             {
               "id": "666",
               "name": "Bushido Wildcats",
-              "code": "",
+              "code": "BW",
               "slug": "bushido-wildcats",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bushido-wildcats-2026.webp",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "",
+              "code": "MKF",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 3,
+              "outcome": "win"
             }
           ]
         }
