@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-13T20:52:55Z",
+  "generatedAt": "2026-09-18T16:26:50Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -208,7 +208,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "ZSK",
+              "code": "",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 2,
@@ -217,7 +217,7 @@
             {
               "id": "11638",
               "name": "我超威",
-              "code": "wcw",
+              "code": "",
               "slug": "wo-chao-wei",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
               "wins": 0,
@@ -761,6 +761,36 @@
               "slug": "bushido-wildcats",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bushido-wildcats-2026.webp",
               "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "8351",
+              "name": "Movistar KOI Fénix",
+              "code": "MKF",
+              "slug": "movistar-koi-fenix",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
+              "wins": 3,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:83716",
+          "providerMatchId": "83716",
+          "slug": "2026-world-star-challengers-invitational-emea-qualifier-finals-1",
+          "scheduledAt": "2026-09-14T16:00:00.000Z",
+          "state": "completed",
+          "bestOf": 5,
+          "stage": "EMEA Qualifier",
+          "sourceUrl": "https://rft.gg/match/83716-2026-world-star-challengers-invitational-emea-qualifier-finals-1",
+          "teams": [
+            {
+              "id": "1104",
+              "name": "BIG",
+              "code": "BIG",
+              "slug": "big",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/big-2020.webp",
+              "wins": 2,
               "outcome": "loss"
             },
             {
