@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-21T12:52:50Z",
+  "generatedAt": "2026-09-21T22:00:15Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -166,36 +166,6 @@
           ]
         },
         {
-          "id": "rft:76052",
-          "providerMatchId": "76052",
-          "slug": "bilibili-gaming-junior-vs-zsk-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 1,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76052-bilibili-gaming-junior-vs-zsk-2026-08-25",
-          "teams": [
-            {
-              "id": "5941",
-              "name": "Bilibili Gaming Junior",
-              "code": "",
-              "slug": "bilibili-gaming-junior",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
-              "wins": 1,
-              "outcome": "win"
-            },
-            {
-              "id": "11635",
-              "name": "ZSK",
-              "code": "",
-              "slug": "zsk",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
           "id": "rft:76053",
           "providerMatchId": "76053",
           "slug": "wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
@@ -256,36 +226,6 @@
           ]
         },
         {
-          "id": "rft:76055",
-          "providerMatchId": "76055",
-          "slug": "edg-youth-team-vs-xiao-pa-chong-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 1,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76055-edg-youth-team-vs-xiao-pa-chong-2026-08-25",
-          "teams": [
-            {
-              "id": "875",
-              "name": "EDG Youth Team",
-              "code": "",
-              "slug": "edg-youth-team",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
-              "wins": 1,
-              "outcome": "win"
-            },
-            {
-              "id": "11637",
-              "name": "小爬虫",
-              "code": "",
-              "slug": "xiao-pa-chong",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
           "id": "rft:76056",
           "providerMatchId": "76056",
           "slug": "bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25",
@@ -310,36 +250,6 @@
               "code": "",
               "slug": "weibo-gaming-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
-          "id": "rft:76057",
-          "providerMatchId": "76057",
-          "slug": "edg-youth-team-vs-top-esports-challenger-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 3,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76057-edg-youth-team-vs-top-esports-challenger-2026-08-25",
-          "teams": [
-            {
-              "id": "875",
-              "name": "EDG Youth Team",
-              "code": "",
-              "slug": "edg-youth-team",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
-              "wins": 2,
-              "outcome": "win"
-            },
-            {
-              "id": "5938",
-              "name": "Top Esports Challenger",
-              "code": "",
-              "slug": "top-esports-challenger",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
               "wins": 0,
               "outcome": "loss"
             }
@@ -466,36 +376,6 @@
           ]
         },
         {
-          "id": "rft:76058",
-          "providerMatchId": "76058",
-          "slug": "zsk-vs-wo-chao-wei-2026-08-26",
-          "scheduledAt": "2026-08-26T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 3,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76058-zsk-vs-wo-chao-wei-2026-08-26",
-          "teams": [
-            {
-              "id": "11635",
-              "name": "ZSK",
-              "code": "",
-              "slug": "zsk",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
-              "wins": 2,
-              "outcome": "win"
-            },
-            {
-              "id": "11638",
-              "name": "我超威",
-              "code": "",
-              "slug": "wo-chao-wei",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
           "id": "rft:76059",
           "providerMatchId": "76059",
           "slug": "ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
@@ -522,36 +402,6 @@
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
               "wins": 0,
               "outcome": "loss"
-            }
-          ]
-        },
-        {
-          "id": "rft:76060",
-          "providerMatchId": "76060",
-          "slug": "edg-youth-team-vs-bilibili-gaming-junior-2026-08-26",
-          "scheduledAt": "2026-08-26T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 3,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76060-edg-youth-team-vs-bilibili-gaming-junior-2026-08-26",
-          "teams": [
-            {
-              "id": "875",
-              "name": "EDG Youth Team",
-              "code": "",
-              "slug": "edg-youth-team",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
-              "wins": 1,
-              "outcome": "loss"
-            },
-            {
-              "id": "5941",
-              "name": "Bilibili Gaming Junior",
-              "code": "",
-              "slug": "bilibili-gaming-junior",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
-              "wins": 2,
-              "outcome": "win"
             }
           ]
         },
@@ -684,36 +534,6 @@
           "bestOf": 3,
           "stage": "China Qualifier",
           "sourceUrl": "https://rft.gg/match/83714-top-esports-challenger-vs-zsk-2026-08-27-2",
-          "teams": [
-            {
-              "id": "5938",
-              "name": "Top Esports Challenger",
-              "code": "",
-              "slug": "top-esports-challenger",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
-              "wins": 0,
-              "outcome": "loss"
-            },
-            {
-              "id": "11635",
-              "name": "ZSK",
-              "code": "",
-              "slug": "zsk",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
-              "wins": 2,
-              "outcome": "win"
-            }
-          ]
-        },
-        {
-          "id": "rft:76064",
-          "providerMatchId": "76064",
-          "slug": "top-esports-challenger-vs-zsk-2026-08-27",
-          "scheduledAt": "2026-08-27T11:00:00.000Z",
-          "state": "completed",
-          "bestOf": 3,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76064-top-esports-challenger-vs-zsk-2026-08-27",
           "teams": [
             {
               "id": "5938",
@@ -1199,7 +1019,7 @@
           "providerMatchId": "107657",
           "slug": "solary-vs-galions-2026-09-21",
           "scheduledAt": "2026-09-21T13:00:00.000Z",
-          "state": "inProgress",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107657-solary-vs-galions-2026-09-21",
@@ -1207,20 +1027,20 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "SLY",
+              "code": "",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "8990",
               "name": "Galions",
-              "code": "GL",
+              "code": "",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1447,7 +1267,7 @@
             {
               "id": "489",
               "name": "Fuego",
-              "code": "",
+              "code": "FUE",
               "slug": "fuego",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
               "wins": 0,
@@ -1456,7 +1276,7 @@
             {
               "id": "853",
               "name": "SOOPers Challengers",
-              "code": "",
+              "code": "DNS.C",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
               "wins": 0,
@@ -1477,7 +1297,7 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "",
+              "code": "SLY",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
               "wins": 0,
@@ -1486,7 +1306,7 @@
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "",
+              "code": "SW",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
@@ -2198,8 +2018,8 @@
           "providerMatchId": "76050",
           "slug": "bushido-wildcats-vs-movistar-koi-fenix-2026-09-13-2",
           "scheduledAt": "2026-09-13T15:00:00.000Z",
-          "state": "unstarted",
-          "bestOf": 0,
+          "state": "completed",
+          "bestOf": 5,
           "stage": "EMEA Qualifier",
           "sourceUrl": "https://rft.gg/match/76050-bushido-wildcats-vs-movistar-koi-fenix-2026-09-13-2",
           "teams": [
@@ -2210,7 +2030,7 @@
               "slug": "bushido-wildcats",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bushido-wildcats-2026.webp",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "8351",
@@ -2218,8 +2038,8 @@
               "code": "",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 3,
+              "outcome": "win"
             }
           ]
         },
@@ -2266,7 +2086,7 @@
             {
               "id": "1104",
               "name": "BIG",
-              "code": "BIG",
+              "code": "",
               "slug": "big",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/big-2020.webp",
               "wins": 0,
@@ -2275,7 +2095,7 @@
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "MKF",
+              "code": "",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 0,
@@ -2325,22 +2145,13 @@
         {
           "id": "rft:107690",
           "providerMatchId": "107690",
-          "slug": "fuego-vs-9z-team-2026-09-16",
+          "slug": "9z-team-vs-fuego-2026-09-16",
           "scheduledAt": "2026-09-16T19:00:00.000Z",
           "state": "completed",
           "bestOf": 5,
           "stage": "Americas Qualifier",
-          "sourceUrl": "https://rft.gg/match/107690-fuego-vs-9z-team-2026-09-16",
+          "sourceUrl": "https://rft.gg/match/107690-9z-team-vs-fuego-2026-09-16",
           "teams": [
-            {
-              "id": "489",
-              "name": "Fuego",
-              "code": "",
-              "slug": "fuego",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
-              "wins": 3,
-              "outcome": "win"
-            },
             {
               "id": "517",
               "name": "9z Team",
@@ -2349,6 +2160,15 @@
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/9z-team.png",
               "wins": 0,
               "outcome": "loss"
+            },
+            {
+              "id": "489",
+              "name": "Fuego",
+              "code": "",
+              "slug": "fuego",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
+              "wins": 3,
+              "outcome": "win"
             }
           ]
         }
