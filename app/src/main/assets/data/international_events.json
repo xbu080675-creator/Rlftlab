@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-20T20:51:14Z",
+  "generatedAt": "2026-09-21T12:52:50Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -989,7 +989,7 @@
           "providerMatchId": "107650",
           "slug": "keyd-stars-academy-vs-dplus-challengers-2026-09-21",
           "scheduledAt": "2026-09-21T06:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107650-keyd-stars-academy-vs-dplus-challengers-2026-09-21",
@@ -997,20 +997,20 @@
             {
               "id": "4935",
               "name": "Keyd Stars Academy",
-              "code": "VKS.A",
+              "code": "",
               "slug": "keyd-stars-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/keyd-stars-academy.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "2752",
               "name": "Dplus Challengers",
-              "code": "DK.C",
+              "code": "",
               "slug": "dplus-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/dplus-challengers-orig.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1019,7 +1019,7 @@
           "providerMatchId": "107651",
           "slug": "fennel-vs-cupid-esports-2026-09-21",
           "scheduledAt": "2026-09-21T07:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107651-fennel-vs-cupid-esports-2026-09-21",
@@ -1027,20 +1027,20 @@
             {
               "id": "5052",
               "name": "FENNEL",
-              "code": "FL",
+              "code": "",
               "slug": "fennel",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fennel.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "2915",
               "name": "Cupid eSports",
-              "code": "CPD",
+              "code": "",
               "slug": "cupid-esports",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/cupid-esports.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1049,7 +1049,7 @@
           "providerMatchId": "107652",
           "slug": "galions-vs-saigon-warriors-2026-09-21",
           "scheduledAt": "2026-09-21T08:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107652-galions-vs-saigon-warriors-2026-09-21",
@@ -1057,20 +1057,20 @@
             {
               "id": "8990",
               "name": "Galions",
-              "code": "GL",
+              "code": "",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "SW",
+              "code": "",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1079,7 +1079,7 @@
           "providerMatchId": "107653",
           "slug": "solary-vs-zsk-2026-09-21",
           "scheduledAt": "2026-09-21T09:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107653-solary-vs-zsk-2026-09-21",
@@ -1087,20 +1087,20 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "SLY",
+              "code": "",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "ZSK",
+              "code": "",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1109,7 +1109,7 @@
           "providerMatchId": "107654",
           "slug": "cupid-esports-vs-dplus-challengers-2026-09-21",
           "scheduledAt": "2026-09-21T10:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107654-cupid-esports-vs-dplus-challengers-2026-09-21",
@@ -1117,20 +1117,20 @@
             {
               "id": "2915",
               "name": "Cupid eSports",
-              "code": "CPD",
+              "code": "",
               "slug": "cupid-esports",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/cupid-esports.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "2752",
               "name": "Dplus Challengers",
-              "code": "DK.C",
+              "code": "",
               "slug": "dplus-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/dplus-challengers-orig.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1139,7 +1139,7 @@
           "providerMatchId": "107655",
           "slug": "fennel-vs-keyd-stars-academy-2026-09-21",
           "scheduledAt": "2026-09-21T11:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107655-fennel-vs-keyd-stars-academy-2026-09-21",
@@ -1147,20 +1147,20 @@
             {
               "id": "5052",
               "name": "FENNEL",
-              "code": "FL",
+              "code": "",
               "slug": "fennel",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fennel.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "4935",
               "name": "Keyd Stars Academy",
-              "code": "VKS.A",
+              "code": "",
               "slug": "keyd-stars-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/keyd-stars-academy.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1169,7 +1169,7 @@
           "providerMatchId": "107656",
           "slug": "zsk-vs-saigon-warriors-2026-09-21",
           "scheduledAt": "2026-09-21T12:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107656-zsk-vs-saigon-warriors-2026-09-21",
@@ -1177,20 +1177,20 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "ZSK",
+              "code": "",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "SW",
+              "code": "",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1199,7 +1199,7 @@
           "providerMatchId": "107657",
           "slug": "solary-vs-galions-2026-09-21",
           "scheduledAt": "2026-09-21T13:00:00.000Z",
-          "state": "unstarted",
+          "state": "inProgress",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107657-solary-vs-galions-2026-09-21",
@@ -1237,7 +1237,7 @@
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "",
+              "code": "MKF",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 0,
@@ -1246,7 +1246,7 @@
             {
               "id": "5941",
               "name": "Bilibili Gaming Junior",
-              "code": "",
+              "code": "BLG.J",
               "slug": "bilibili-gaming-junior",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
               "wins": 0,
@@ -1267,7 +1267,7 @@
             {
               "id": "5986",
               "name": "CTBC Flying Oyster Academy",
-              "code": "",
+              "code": "CFO.A",
               "slug": "ctbc-flying-oyster-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ctbc-flying-oyster-academy.png",
               "wins": 0,
@@ -1276,7 +1276,7 @@
             {
               "id": "2753",
               "name": "KT Rolster Challengers",
-              "code": "",
+              "code": "KT.C",
               "slug": "kt-rolster-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/kt-rolster-challengers-2026.png",
               "wins": 0,
@@ -1297,7 +1297,7 @@
             {
               "id": "489",
               "name": "Fuego",
-              "code": "",
+              "code": "FUE",
               "slug": "fuego",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
               "wins": 0,
@@ -1306,7 +1306,7 @@
             {
               "id": "2749",
               "name": "T1 Esports Academy",
-              "code": "",
+              "code": "T1.EA",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
               "wins": 0,
@@ -1327,7 +1327,7 @@
             {
               "id": "853",
               "name": "SOOPers Challengers",
-              "code": "",
+              "code": "DNS.C",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
               "wins": 0,
@@ -1336,7 +1336,7 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "",
+              "code": "EDG.Y",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 0,
@@ -1357,7 +1357,7 @@
             {
               "id": "2753",
               "name": "KT Rolster Challengers",
-              "code": "",
+              "code": "KT.C",
               "slug": "kt-rolster-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/kt-rolster-challengers-2026.png",
               "wins": 0,
@@ -1366,7 +1366,7 @@
             {
               "id": "5941",
               "name": "Bilibili Gaming Junior",
-              "code": "",
+              "code": "BLG.J",
               "slug": "bilibili-gaming-junior",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
               "wins": 0,
@@ -1387,7 +1387,7 @@
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "",
+              "code": "MKF",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 0,
@@ -1396,7 +1396,7 @@
             {
               "id": "5986",
               "name": "CTBC Flying Oyster Academy",
-              "code": "",
+              "code": "CFO.A",
               "slug": "ctbc-flying-oyster-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ctbc-flying-oyster-academy.png",
               "wins": 0,
@@ -1417,7 +1417,7 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "",
+              "code": "EDG.Y",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 0,
@@ -1426,7 +1426,7 @@
             {
               "id": "2749",
               "name": "T1 Esports Academy",
-              "code": "",
+              "code": "T1.EA",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
               "wins": 0,
@@ -2310,6 +2310,45 @@
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 3,
               "outcome": "win"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rft-event:3448",
+      "name": "WSCI 2026 - China Qualifier",
+      "slug": "wsci-2026-china-qualifier",
+      "source": "RFT.gg public event page",
+      "sourceUrl": "https://rft.gg/event/wsci-2026-china-qualifier",
+      "matches": [
+        {
+          "id": "rft:107690",
+          "providerMatchId": "107690",
+          "slug": "fuego-vs-9z-team-2026-09-16",
+          "scheduledAt": "2026-09-16T19:00:00.000Z",
+          "state": "completed",
+          "bestOf": 5,
+          "stage": "Americas Qualifier",
+          "sourceUrl": "https://rft.gg/match/107690-fuego-vs-9z-team-2026-09-16",
+          "teams": [
+            {
+              "id": "489",
+              "name": "Fuego",
+              "code": "",
+              "slug": "fuego",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
+              "wins": 3,
+              "outcome": "win"
+            },
+            {
+              "id": "517",
+              "name": "9z Team",
+              "code": "",
+              "slug": "9z-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/9z-team.png",
+              "wins": 0,
+              "outcome": "loss"
             }
           ]
         }
