@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-22T11:42:44Z",
+  "generatedAt": "2026-09-22T16:59:17Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1139,7 +1139,7 @@
           "providerMatchId": "107661",
           "slug": "soopers-challengers-vs-edg-youth-team-2026-09-22",
           "scheduledAt": "2026-09-22T09:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107661-soopers-challengers-vs-edg-youth-team-2026-09-22",
@@ -1147,20 +1147,20 @@
             {
               "id": "853",
               "name": "SOOPers Challengers",
-              "code": "DNS.C",
+              "code": "",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "EDG.Y",
+              "code": "",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1229,7 +1229,7 @@
           "providerMatchId": "107664",
           "slug": "edg-youth-team-vs-t1-esports-academy-2026-09-22",
           "scheduledAt": "2026-09-22T12:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107664-edg-youth-team-vs-t1-esports-academy-2026-09-22",
@@ -1237,20 +1237,20 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "EDG.Y",
+              "code": "",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "2749",
               "name": "T1 Esports Academy",
-              "code": "T1.EA",
+              "code": "",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1259,7 +1259,7 @@
           "providerMatchId": "107665",
           "slug": "fuego-vs-soopers-challengers-2026-09-22",
           "scheduledAt": "2026-09-22T13:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107665-fuego-vs-soopers-challengers-2026-09-22",
@@ -1267,20 +1267,20 @@
             {
               "id": "489",
               "name": "Fuego",
-              "code": "FUE",
+              "code": "",
               "slug": "fuego",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "853",
               "name": "SOOPers Challengers",
-              "code": "DNS.C",
+              "code": "",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1477,7 +1477,7 @@
             {
               "id": "4935",
               "name": "Keyd Stars Academy",
-              "code": "",
+              "code": "VKS.A",
               "slug": "keyd-stars-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/keyd-stars-academy.png",
               "wins": 0,
@@ -1486,7 +1486,7 @@
             {
               "id": "2752",
               "name": "Dplus Challengers",
-              "code": "",
+              "code": "DK.C",
               "slug": "dplus-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/dplus-challengers-orig.png",
               "wins": 0,
@@ -1507,7 +1507,7 @@
             {
               "id": "5052",
               "name": "FENNEL",
-              "code": "",
+              "code": "FL",
               "slug": "fennel",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fennel.png",
               "wins": 0,
@@ -1516,7 +1516,7 @@
             {
               "id": "2915",
               "name": "Cupid eSports",
-              "code": "",
+              "code": "CPD",
               "slug": "cupid-esports",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/cupid-esports.png",
               "wins": 0,
@@ -1537,7 +1537,7 @@
             {
               "id": "853",
               "name": "SOOPers Challengers",
-              "code": "",
+              "code": "DNS.C",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
               "wins": 0,
@@ -1546,7 +1546,7 @@
             {
               "id": "2749",
               "name": "T1 Esports Academy",
-              "code": "",
+              "code": "T1.EA",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
               "wins": 0,
