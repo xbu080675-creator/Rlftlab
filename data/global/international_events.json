@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-22T16:59:17Z",
+  "generatedAt": "2026-09-23T11:41:30Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1289,7 +1289,7 @@
           "providerMatchId": "107666",
           "slug": "solary-vs-saigon-warriors-2026-09-23",
           "scheduledAt": "2026-09-23T06:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107666-solary-vs-saigon-warriors-2026-09-23",
@@ -1297,20 +1297,20 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "SLY",
+              "code": "",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "SW",
+              "code": "",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1319,7 +1319,7 @@
           "providerMatchId": "107667",
           "slug": "zsk-vs-galions-2026-09-23",
           "scheduledAt": "2026-09-23T07:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107667-zsk-vs-galions-2026-09-23",
@@ -1327,20 +1327,20 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "ZSK",
+              "code": "",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "8990",
               "name": "Galions",
-              "code": "GL",
+              "code": "",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1439,7 +1439,7 @@
           "providerMatchId": "107671",
           "slug": "solary-vs-zsk-2026-09-23",
           "scheduledAt": "2026-09-23T11:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107671-solary-vs-zsk-2026-09-23",
@@ -1447,20 +1447,20 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "SLY",
+              "code": "",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "ZSK",
+              "code": "",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1567,7 +1567,7 @@
             {
               "id": "489",
               "name": "Fuego",
-              "code": "",
+              "code": "FUE",
               "slug": "fuego",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/fuego.png",
               "wins": 0,
@@ -1576,7 +1576,7 @@
             {
               "id": "875",
               "name": "EDG Youth Team",
-              "code": "",
+              "code": "EDG.Y",
               "slug": "edg-youth-team",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/edward-gaming-youth-team.png",
               "wins": 0,
@@ -1597,7 +1597,7 @@
             {
               "id": "5986",
               "name": "CTBC Flying Oyster Academy",
-              "code": "",
+              "code": "CFO.A",
               "slug": "ctbc-flying-oyster-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ctbc-flying-oyster-academy.png",
               "wins": 0,
@@ -1606,7 +1606,7 @@
             {
               "id": "5941",
               "name": "Bilibili Gaming Junior",
-              "code": "",
+              "code": "BLG.J",
               "slug": "bilibili-gaming-junior",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
               "wins": 0,
@@ -1627,7 +1627,7 @@
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "",
+              "code": "MKF",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 0,
@@ -1636,7 +1636,7 @@
             {
               "id": "2753",
               "name": "KT Rolster Challengers",
-              "code": "",
+              "code": "KT.C",
               "slug": "kt-rolster-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/kt-rolster-challengers-2026.png",
               "wins": 0,
