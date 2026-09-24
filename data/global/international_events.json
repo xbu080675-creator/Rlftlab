@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-24T11:50:03Z",
+  "generatedAt": "2026-09-24T17:14:16Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1709,7 +1709,7 @@
           "providerMatchId": "107680",
           "slug": "movistar-koi-fenix-vs-bilibili-gaming-junior-2026-09-24",
           "scheduledAt": "2026-09-24T12:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107680-movistar-koi-fenix-vs-bilibili-gaming-junior-2026-09-24",
@@ -1717,20 +1717,20 @@
             {
               "id": "8351",
               "name": "Movistar KOI Fénix",
-              "code": "MKF",
+              "code": "",
               "slug": "movistar-koi-fenix",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/koi-fenix-2024.webp",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "5941",
               "name": "Bilibili Gaming Junior",
-              "code": "BLG.J",
+              "code": "",
               "slug": "bilibili-gaming-junior",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/bilibili-gaming-junior-2022.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1739,7 +1739,7 @@
           "providerMatchId": "107681",
           "slug": "ctbc-flying-oyster-academy-vs-kt-rolster-challengers-2026-09-24",
           "scheduledAt": "2026-09-24T13:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107681-ctbc-flying-oyster-academy-vs-kt-rolster-challengers-2026-09-24",
@@ -1747,20 +1747,20 @@
             {
               "id": "5986",
               "name": "CTBC Flying Oyster Academy",
-              "code": "CFO.A",
+              "code": "",
               "slug": "ctbc-flying-oyster-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/ctbc-flying-oyster-academy.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "2753",
               "name": "KT Rolster Challengers",
-              "code": "KT.C",
+              "code": "",
               "slug": "kt-rolster-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/kt-rolster-challengers-2026.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1987,7 +1987,7 @@
             {
               "id": "11635",
               "name": "ZSK",
-              "code": "",
+              "code": "ZSK",
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
@@ -1996,7 +1996,7 @@
             {
               "id": "8990",
               "name": "Galions",
-              "code": "",
+              "code": "GL",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
               "wins": 0,
