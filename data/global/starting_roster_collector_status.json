@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-24T12:21:44Z",
+  "updatedAt": "2026-09-24T17:33:16Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -8,7 +8,7 @@
     "LCK: browser_stage=LCK: browser_posts=0 cached_media=0",
     "LCK: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
     "LEC: browser_stage=LEC: browser_posts=0 cached_media=0",
-    "LEC: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:HTTPError]",
+    "LEC: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
     "LCS: browser_stage=LCS: browser_posts=0 cached_media=0",
     "LCS: browser_stage=LCS: match_search_begin source=LEAGUE_SOCIAL league=LCS targets=1",
     "LCS: browser_stage=LCS: match_search query='2026-09-25 SR vs FLY starting lineup' hits=0",
