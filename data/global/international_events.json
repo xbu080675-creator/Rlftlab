@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T11:54:23Z",
+  "generatedAt": "2026-09-25T17:14:55Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1919,7 +1919,7 @@
           "providerMatchId": "107687",
           "slug": "cupid-esports-vs-keyd-stars-academy-2026-09-25",
           "scheduledAt": "2026-09-25T11:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107687-cupid-esports-vs-keyd-stars-academy-2026-09-25",
@@ -1927,20 +1927,20 @@
             {
               "id": "2915",
               "name": "Cupid eSports",
-              "code": "CPD",
+              "code": "",
               "slug": "cupid-esports",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/cupid-esports.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "4935",
               "name": "Keyd Stars Academy",
-              "code": "VKS.A",
+              "code": "",
               "slug": "keyd-stars-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/keyd-stars-academy.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1949,7 +1949,7 @@
           "providerMatchId": "107688",
           "slug": "solary-vs-saigon-warriors-2026-09-25",
           "scheduledAt": "2026-09-25T12:00:00.000Z",
-          "state": "unstarted",
+          "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
           "sourceUrl": "https://rft.gg/match/107688-solary-vs-saigon-warriors-2026-09-25",
@@ -1957,20 +1957,20 @@
             {
               "id": "761",
               "name": "Solary",
-              "code": "SLY",
+              "code": "",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             },
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "SW",
+              "code": "",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             }
           ]
         },
@@ -1991,7 +1991,7 @@
               "slug": "zsk",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "8990",
@@ -1999,8 +1999,8 @@
               "code": "",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         }
