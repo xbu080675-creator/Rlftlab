@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-25T17:14:55Z",
+  "generatedAt": "2026-09-25T21:37:07Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1858,7 +1858,7 @@
           "id": "rft:107685",
           "providerMatchId": "107685",
           "slug": "solary-vs-galions-2026-09-25",
-          "scheduledAt": "2026-09-25T09:00:00.000Z",
+          "scheduledAt": "2026-09-25T08:00:00.000Z",
           "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
@@ -1888,7 +1888,7 @@
           "id": "rft:107686",
           "providerMatchId": "107686",
           "slug": "fennel-vs-dplus-challengers-2026-09-25",
-          "scheduledAt": "2026-09-25T10:00:00.000Z",
+          "scheduledAt": "2026-09-25T09:00:00.000Z",
           "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
@@ -1918,7 +1918,7 @@
           "id": "rft:107687",
           "providerMatchId": "107687",
           "slug": "cupid-esports-vs-keyd-stars-academy-2026-09-25",
-          "scheduledAt": "2026-09-25T11:00:00.000Z",
+          "scheduledAt": "2026-09-25T10:00:00.000Z",
           "state": "completed",
           "bestOf": 1,
           "stage": "Group Stage",
@@ -1941,6 +1941,36 @@
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/keyd-stars-academy.png",
               "wins": 0,
               "outcome": "loss"
+            }
+          ]
+        },
+        {
+          "id": "rft:107689",
+          "providerMatchId": "107689",
+          "slug": "zsk-vs-galions-2026-09-25",
+          "scheduledAt": "2026-09-25T11:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "Group Stage",
+          "sourceUrl": "https://rft.gg/match/107689-zsk-vs-galions-2026-09-25",
+          "teams": [
+            {
+              "id": "11635",
+              "name": "ZSK",
+              "code": "",
+              "slug": "zsk",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "8990",
+              "name": "Galions",
+              "code": "",
+              "slug": "galions",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
+              "wins": 1,
+              "outcome": "win"
             }
           ]
         },
@@ -1971,36 +2001,6 @@
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
               "outcome": "loss"
-            }
-          ]
-        },
-        {
-          "id": "rft:107689",
-          "providerMatchId": "107689",
-          "slug": "zsk-vs-galions-2026-09-25",
-          "scheduledAt": "2026-09-25T13:00:00.000Z",
-          "state": "completed",
-          "bestOf": 1,
-          "stage": "Group Stage",
-          "sourceUrl": "https://rft.gg/match/107689-zsk-vs-galions-2026-09-25",
-          "teams": [
-            {
-              "id": "11635",
-              "name": "ZSK",
-              "code": "",
-              "slug": "zsk",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/zsk.png",
-              "wins": 0,
-              "outcome": "loss"
-            },
-            {
-              "id": "8990",
-              "name": "Galions",
-              "code": "",
-              "slug": "galions",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions-orig.webp",
-              "wins": 1,
-              "outcome": "win"
             }
           ]
         }
