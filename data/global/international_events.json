@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T17:00:13Z",
+  "generatedAt": "2026-09-28T14:00:17Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -2069,28 +2069,28 @@
           "providerMatchId": "107637",
           "slug": "t1-esports-academy-vs-cupid-esports-2026-09-28",
           "scheduledAt": "2026-09-28T06:00:00.000Z",
-          "state": "unstarted",
-          "bestOf": 0,
+          "state": "completed",
+          "bestOf": 5,
           "stage": "Knockout Stage",
           "sourceUrl": "https://rft.gg/match/107637-t1-esports-academy-vs-cupid-esports-2026-09-28",
           "teams": [
             {
               "id": "2749",
               "name": "T1 Esports Academy",
-              "code": "T1.EA",
+              "code": "",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 3,
+              "outcome": "win"
             },
             {
               "id": "2915",
               "name": "Cupid eSports",
-              "code": "CPD",
+              "code": "",
               "slug": "cupid-esports",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/cupid-esports.png",
-              "wins": 0,
-              "outcome": ""
+              "wins": 1,
+              "outcome": "loss"
             }
           ]
         },
@@ -2099,28 +2099,28 @@
           "providerMatchId": "107638",
           "slug": "kt-rolster-challengers-vs-galions-2026-09-28",
           "scheduledAt": "2026-09-28T09:00:00.000Z",
-          "state": "unstarted",
-          "bestOf": 0,
+          "state": "completed",
+          "bestOf": 5,
           "stage": "Knockout Stage",
           "sourceUrl": "https://rft.gg/match/107638-kt-rolster-challengers-vs-galions-2026-09-28",
           "teams": [
             {
               "id": "2753",
               "name": "KT Rolster Challengers",
-              "code": "KT.C",
+              "code": "",
               "slug": "kt-rolster-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/kt-rolster-challengers-2026.png",
               "wins": 0,
-              "outcome": ""
+              "outcome": "loss"
             },
             {
               "id": "8990",
               "name": "Galions",
-              "code": "GL",
+              "code": "",
               "slug": "galions",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions.webp",
-              "wins": 0,
-              "outcome": ""
+              "wins": 3,
+              "outcome": "win"
             }
           ]
         },
@@ -2149,6 +2149,36 @@
               "code": "DNS.C",
               "slug": "soopers-challengers",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "wins": 0,
+              "outcome": ""
+            }
+          ]
+        },
+        {
+          "id": "rft:107640",
+          "providerMatchId": "107640",
+          "slug": "lp-wsci26plof-r02-m002",
+          "scheduledAt": "2026-09-30T09:00:00.000Z",
+          "state": "unstarted",
+          "bestOf": 0,
+          "stage": "Knockout Stage",
+          "sourceUrl": "https://rft.gg/match/107640-lp-wsci26plof-r02-m002",
+          "teams": [
+            {
+              "id": "2749",
+              "name": "T1 Esports Academy",
+              "code": "T1.EA",
+              "slug": "t1-esports-academy",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
+              "wins": 0,
+              "outcome": ""
+            },
+            {
+              "id": "8990",
+              "name": "Galions",
+              "code": "GL",
+              "slug": "galions",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/galions.webp",
               "wins": 0,
               "outcome": ""
             }
