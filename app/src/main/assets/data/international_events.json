@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-28T14:00:17Z",
+  "generatedAt": "2026-09-29T22:18:26Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -2130,7 +2130,7 @@
           "slug": "solary-vs-soopers-challengers-2026-09-30",
           "scheduledAt": "2026-09-30T06:00:00.000Z",
           "state": "unstarted",
-          "bestOf": 0,
+          "bestOf": 5,
           "stage": "Knockout Stage",
           "sourceUrl": "https://rft.gg/match/107639-solary-vs-soopers-challengers-2026-09-30",
           "teams": [
@@ -2157,12 +2157,12 @@
         {
           "id": "rft:107640",
           "providerMatchId": "107640",
-          "slug": "lp-wsci26plof-r02-m002",
+          "slug": "t1-esports-academy-vs-galions-2026-09-30",
           "scheduledAt": "2026-09-30T09:00:00.000Z",
           "state": "unstarted",
-          "bestOf": 0,
+          "bestOf": 5,
           "stage": "Knockout Stage",
-          "sourceUrl": "https://rft.gg/match/107640-lp-wsci26plof-r02-m002",
+          "sourceUrl": "https://rft.gg/match/107640-t1-esports-academy-vs-galions-2026-09-30",
           "teams": [
             {
               "id": "2749",
