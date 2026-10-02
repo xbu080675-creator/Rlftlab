@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-01T10:09:44+00:00",
+  "updatedAt": "2026-10-02T09:47:36+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -1833,18 +1833,18 @@
     },
     "MGNVIKINGSESPORTS": {
       "name": "MGN Vikings Esports",
-      "short": "MVKE",
+      "short": "MVK",
       "page": "",
       "aliases": [
         "MGN Vikings Esports",
-        "MVKE"
+        "MVK"
       ],
       "regions": [
         "LCP"
       ],
       "management": [
         {
-          "name": "MVKE 官方战队联系人",
+          "name": "MVK 官方战队联系人",
           "realName": "lily@vikingsesports.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
