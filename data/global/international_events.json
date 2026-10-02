@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-30T12:38:53Z",
+  "generatedAt": "2026-10-02T12:40:28Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -2189,7 +2189,7 @@
           "providerMatchId": "107641",
           "slug": "lp-wsci26plof-r03-m001",
           "scheduledAt": "2026-10-02T09:00:00.000Z",
-          "state": "unstarted",
+          "state": "inProgress",
           "bestOf": 5,
           "stage": "Knockout Stage",
           "sourceUrl": "https://rft.gg/match/107641-lp-wsci26plof-r03-m001",
@@ -2200,7 +2200,7 @@
               "code": "SLY",
               "slug": "solary",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/solary.webp",
-              "wins": 0,
+              "wins": 2,
               "outcome": ""
             },
             {
@@ -2209,7 +2209,7 @@
               "code": "T1.EA",
               "slug": "t1-esports-academy",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/t1-esports-academy-orig.png",
-              "wins": 0,
+              "wins": 2,
               "outcome": ""
             }
           ]
