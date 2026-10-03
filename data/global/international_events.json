@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-02T22:16:37Z",
+  "generatedAt": "2026-10-03T16:20:06Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -2187,12 +2187,12 @@
         {
           "id": "rft:107641",
           "providerMatchId": "107641",
-          "slug": "lp-wsci26plof-r03-m001",
+          "slug": "solary-vs-t1-esports-academy-2026-10-02",
           "scheduledAt": "2026-10-02T09:00:00.000Z",
           "state": "completed",
           "bestOf": 5,
           "stage": "Knockout Stage",
-          "sourceUrl": "https://rft.gg/match/107641-lp-wsci26plof-r03-m001",
+          "sourceUrl": "https://rft.gg/match/107641-solary-vs-t1-esports-academy-2026-10-02",
           "teams": [
             {
               "id": "761",
