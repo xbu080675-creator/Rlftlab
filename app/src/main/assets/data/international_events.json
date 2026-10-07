@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-06T06:25:00Z",
+  "generatedAt": "2026-10-07T23:07:25Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -46,6 +46,66 @@
           ]
         },
         {
+          "id": "rft:76053",
+          "providerMatchId": "76053",
+          "slug": "wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
+          "scheduledAt": "2026-08-25T06:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76053-wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
+          "teams": [
+            {
+              "id": "11638",
+              "name": "我超威",
+              "code": "",
+              "slug": "wo-chao-wei",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
+              "wins": 0,
+              "outcome": "loss"
+            },
+            {
+              "id": "1354",
+              "name": "Weibo Gaming Youth Team",
+              "code": "",
+              "slug": "weibo-gaming-youth-team",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
+              "wins": 1,
+              "outcome": "win"
+            }
+          ]
+        },
+        {
+          "id": "rft:76054",
+          "providerMatchId": "76054",
+          "slug": "top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
+          "scheduledAt": "2026-08-25T07:00:00.000Z",
+          "state": "completed",
+          "bestOf": 1,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76054-top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
+          "teams": [
+            {
+              "id": "5938",
+              "name": "Top Esports Challenger",
+              "code": "",
+              "slug": "top-esports-challenger",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
+              "wins": 1,
+              "outcome": "win"
+            },
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
           "id": "rft:83705",
           "providerMatchId": "83705",
           "slug": "edg-youth-team-vs-xiao-pa-chong-2026-08-25-2",
@@ -76,70 +136,10 @@
           ]
         },
         {
-          "id": "rft:76053",
-          "providerMatchId": "76053",
-          "slug": "wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 1,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76053-wo-chao-wei-vs-weibo-gaming-youth-team-2026-08-25",
-          "teams": [
-            {
-              "id": "11638",
-              "name": "我超威",
-              "code": "",
-              "slug": "wo-chao-wei",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/wo-chao-wei.png",
-              "wins": 0,
-              "outcome": "loss"
-            },
-            {
-              "id": "1354",
-              "name": "Weibo Gaming Youth Team",
-              "code": "",
-              "slug": "weibo-gaming-youth-team",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/weibo-gaming-youth-team.png",
-              "wins": 1,
-              "outcome": "win"
-            }
-          ]
-        },
-        {
-          "id": "rft:76054",
-          "providerMatchId": "76054",
-          "slug": "top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 1,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76054-top-esports-challenger-vs-ocean-kimi-tournament-alliance-2026-08-25",
-          "teams": [
-            {
-              "id": "5938",
-              "name": "Top Esports Challenger",
-              "code": "",
-              "slug": "top-esports-challenger",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/top-esports-challenger.png",
-              "wins": 1,
-              "outcome": "win"
-            },
-            {
-              "id": "11636",
-              "name": "Ocean & Kimi Tournament Alliance",
-              "code": "",
-              "slug": "ocean-kimi-tournament-alliance",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
           "id": "rft:76056",
           "providerMatchId": "76056",
           "slug": "bilibili-gaming-junior-vs-weibo-gaming-youth-team-2026-08-25",
-          "scheduledAt": "2026-08-25T10:00:00.000Z",
+          "scheduledAt": "2026-08-25T09:00:00.000Z",
           "state": "completed",
           "bestOf": 3,
           "stage": "China Qualifier",
@@ -226,6 +226,36 @@
           ]
         },
         {
+          "id": "rft:76059",
+          "providerMatchId": "76059",
+          "slug": "ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
+          "scheduledAt": "2026-08-26T07:00:00.000Z",
+          "state": "completed",
+          "bestOf": 3,
+          "stage": "China Qualifier",
+          "sourceUrl": "https://rft.gg/match/76059-ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
+          "teams": [
+            {
+              "id": "11636",
+              "name": "Ocean & Kimi Tournament Alliance",
+              "code": "",
+              "slug": "ocean-kimi-tournament-alliance",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
+              "wins": 2,
+              "outcome": "win"
+            },
+            {
+              "id": "11637",
+              "name": "小爬虫",
+              "code": "",
+              "slug": "xiao-pa-chong",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
+              "wins": 0,
+              "outcome": "loss"
+            }
+          ]
+        },
+        {
           "id": "rft:83710",
           "providerMatchId": "83710",
           "slug": "bilibili-gaming-junior-vs-edg-youth-team-2026-08-26",
@@ -256,40 +286,10 @@
           ]
         },
         {
-          "id": "rft:76059",
-          "providerMatchId": "76059",
-          "slug": "ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
-          "scheduledAt": "2026-08-26T10:00:00.000Z",
-          "state": "completed",
-          "bestOf": 3,
-          "stage": "China Qualifier",
-          "sourceUrl": "https://rft.gg/match/76059-ocean-kimi-tournament-alliance-vs-xiao-pa-chong-2026-08-26",
-          "teams": [
-            {
-              "id": "11636",
-              "name": "Ocean & Kimi Tournament Alliance",
-              "code": "",
-              "slug": "ocean-kimi-tournament-alliance",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/ocean-kimi-tournament-alliance.png",
-              "wins": 2,
-              "outcome": "win"
-            },
-            {
-              "id": "11637",
-              "name": "小爬虫",
-              "code": "",
-              "slug": "xiao-pa-chong",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/xiao-pa-chong.png",
-              "wins": 0,
-              "outcome": "loss"
-            }
-          ]
-        },
-        {
           "id": "rft:76061",
           "providerMatchId": "76061",
           "slug": "weibo-gaming-youth-team-vs-top-esports-challenger-2026-08-26",
-          "scheduledAt": "2026-08-26T10:00:00.000Z",
+          "scheduledAt": "2026-08-26T11:00:00.000Z",
           "state": "completed",
           "bestOf": 3,
           "stage": "China Qualifier",
@@ -468,7 +468,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 1,
               "outcome": "win"
             }
@@ -549,7 +549,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 0,
               "outcome": "loss"
             },
@@ -999,7 +999,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 1,
               "outcome": "win"
             },
@@ -1128,7 +1128,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 0,
               "outcome": "loss"
             }
@@ -1389,7 +1389,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 0,
               "outcome": "loss"
             },
@@ -1539,7 +1539,7 @@
               "name": "SOOPers Challengers",
               "code": "",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 1,
               "outcome": "win"
             },
@@ -1908,7 +1908,7 @@
               "name": "SOOPers Challengers",
               "code": "DNS.C",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 3,
               "outcome": "win"
             }
@@ -1998,7 +1998,7 @@
               "name": "SOOPers Challengers",
               "code": "DNS.C",
               "slug": "soopers-challengers",
-              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers-2026.png",
+              "imageUrl": "https://uploads.rft.gg/images/esport/teams/soopers-challengers.webp",
               "wins": 0,
               "outcome": "loss"
             }
