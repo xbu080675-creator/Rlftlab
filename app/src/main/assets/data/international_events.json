@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-07T23:07:25Z",
+  "generatedAt": "2026-10-10T05:56:16Z",
   "provider": "RFT.gg",
   "sourcePages": [
     "https://rft.gg/event/wsci-2026",
@@ -1846,7 +1846,7 @@
             {
               "id": "5676",
               "name": "Saigon Warriors",
-              "code": "SW",
+              "code": "SGW",
               "slug": "saigon-warriors",
               "imageUrl": "https://uploads.rft.gg/images/esport/teams/saigon-warriors.png",
               "wins": 0,
