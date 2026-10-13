@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-12T10:51:45+00:00",
+  "updatedAt": "2026-10-13T10:37:42+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -2715,6 +2715,27 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
+    },
+    "TEAMGROMP": {
+      "name": "Team Gromp",
+      "short": "TGM",
+      "page": "",
+      "aliases": [
+        "TGM",
+        "Team Gromp"
+      ],
+      "regions": [
+        "LCP"
+      ],
+      "management": [
+        {
+          "name": "TGM 官方战队联系人",
+          "realName": "quinkore@gmail.com",
+          "role": "TEAM_CONTACT",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        }
+      ],
+      "staff": []
     },
     "TEAMHERETICS": {
       "name": "Team Heretics",
