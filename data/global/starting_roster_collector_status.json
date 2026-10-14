@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-13T21:31:57Z",
+  "updatedAt": "2026-10-14T00:38:08Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -38,7 +38,7 @@
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=11 text='SUMMER 2¢ 028, OLCS CONGRATULATIONS DISGUISED 2026 LCS PROMOTION TOURNAMENT CHAMPIONS'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
-    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/13 images_per_post<=2 timeout=10s basis=LOW_CONFIDENCE,LOW_CONFIDENCE,LOW_CONFIDENCE",
+    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/9 images_per_post<=2 timeout=10s basis=LOW_CONFIDENCE,LOW_CONFIDENCE,LOW_CONFIDENCE",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1638x2048->1638x2048 words=37 text='if} nA Wie ia) | NS N_1 \\\\y 에 = ㄴ 3) ン 』 aa) iS DX NN IE 4 もこ 。 af rs i 2; < 一 ) “ g = 万) で CNNNN ~ 9071'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1638x2048->1638x2048 words=37 text='if} nA Wie ia) | NS N_1 \\\\y 에 = ㄴ 3) ン 』 aa) iS DX NN IE 4 もこ 。 af rs i 2; < 一 ) “ g = 万) で CNNNN ~ 9071'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1638x2048->1638x2048 words=37 text='if} nA Wie ia) | NS N_1 \\\\y 에 = ㄴ 3) ン 』 aa) iS DX NN IE 4 もこ 。 af rs i 2; < 一 ) “ g = 万) で CNNNN ~ 9071'",
