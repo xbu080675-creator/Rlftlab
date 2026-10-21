@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-20T08:33:44+00:00",
+  "updatedAt": "2026-10-21T08:35:50+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -1971,6 +1971,27 @@
         {
           "name": "New Meta 官方战队联系人",
           "realName": "miyoshi@newmeta.co.jp",
+          "role": "TEAM_CONTACT",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        }
+      ],
+      "staff": []
+    },
+    "NOTHINHERE": {
+      "name": "Nothin'Here",
+      "short": "NTH",
+      "page": "",
+      "aliases": [
+        "NTH",
+        "Nothin'Here"
+      ],
+      "regions": [
+        "LCP"
+      ],
+      "management": [
+        {
+          "name": "NTH 官方战队联系人",
+          "realName": "maaaanop12345@gmail.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
