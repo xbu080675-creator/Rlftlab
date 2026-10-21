@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-21T17:02:07Z",
+  "updatedAt": "2026-10-21T20:36:01Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
     "英雄联盟赛事: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/5756404150:empty;reader:m.weibo.cn/u/5756404150:empty]",
     "LCK: browser_stage=LCK: browser_posts=0 cached_media=0",
-    "LCK: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:empty,twitter.com:HTTPError]",
+    "LCK: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:empty,twitter.com:empty]",
     "LEC: browser_stage=LEC: browser_posts=0 cached_media=0",
     "LEC: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/6 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA",
     "LEC: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1440->1080x1440 words=66 text=\"MATGH SCHEDULE LEG AT WORLDS A WATCH AT THIS IS OUR MOMENT at aaa r 4 2b / VK sla BEST OF 1 OCTOBER 23 - 9PM CEST VS BLG OL S| MKOI BEST OF 1 OCTOBER 23 - 10PM CEST VS ®& KE AS Anyone's Legend BEST OF 1 OCTOBER 23 - 11PM…\"",
@@ -28,7 +28,7 @@
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=21 text='EXPERIENCE IT enter as TOGETHER IN THEATERS Ne NOV 14 2026 ts YD iKS BOOK YOUR THEATER Il Mies m LOLINCINEMAS.COM'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
-    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:empty,twitter.com:HTTPError]",
+    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:empty,twitter.com:empty]",
     "iG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/2099708877:empty;reader:m.weibo.cn/u/2099708877:empty]",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=9",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=9",
