@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-10-22T08:38:02+00:00",
+  "updatedAt": "2026-10-23T08:33:42+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -138,26 +138,6 @@
         {
           "name": "BILIBILI GAMING 官方战队联系人",
           "realName": "LINQING@BILIBILI.COM",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ],
-      "staff": []
-    },
-    "BLUEOTTER": {
-      "name": "Blue Otter",
-      "short": "",
-      "page": "",
-      "aliases": [
-        "Blue Otter"
-      ],
-      "regions": [
-        "AME"
-      ],
-      "management": [
-        {
-          "name": "Blue Otter 官方战队联系人",
-          "realName": "Brad Kurtz - bradk@blueottersolutions.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -451,6 +431,26 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
+    },
+    "DIGNITAS": {
+      "name": "Dignitas",
+      "short": "",
+      "page": "",
+      "aliases": [
+        "Dignitas"
+      ],
+      "regions": [
+        "AME"
+      ],
+      "management": [
+        {
+          "name": "Dignitas 官方战队联系人",
+          "realName": "Jonathon McDaniel <jonathon@dignitas.gg>",
+          "role": "TEAM_CONTACT",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        }
+      ],
+      "staff": []
     },
     "DISGUISED": {
       "name": "Disguised",
