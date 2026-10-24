@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-24T00:50:10Z",
+  "updatedAt": "2026-10-24T05:12:42Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -35,13 +35,13 @@
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1920x1080->1920x1080 words=39 text='\\\\GUE OF LEGENDS — f= ae Py Ki woe “4 fal | wt \\\\ al! ENW RE »iit it | 3PM PT / 6PM ET im \\\\ 5PM PT / 8PM ET eo 2 Ca @ TOBER— NOVEMBER $Cineme'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
-    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/13 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA",
+    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/20 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='2b LC x 』 ty. We SS みず >! \\\\ NS \\\\ 人 ALIENWARE VS Gy F | 5AMICT 16AM TST | 7AM JST IMICT | 8AM TST | 9AM JST'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='2b LC x 』 ty. We SS みず >! \\\\ NS \\\\ 人 ALIENWARE VS Gy F | 5AMICT 16AM TST | 7AM JST IMICT | 8AM TST | 9AM JST'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='2b LC x 』 ty. We SS みず >! \\\\ NS \\\\ 人 ALIENWARE VS Gy F | 5AMICT 16AM TST | 7AM JST IMICT | 8AM TST | 9AM JST'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='2b LC x 』 ty. We SS みず >! \\\\ NS \\\\ 人 ALIENWARE VS Gy F | 5AMICT 16AM TST | 7AM JST IMICT | 8AM TST | 9AM JST'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='2b LC x 』 ty. We SS みず >! \\\\ NS \\\\ 人 ALIENWARE VS Gy F | 5AMICT 16AM TST | 7AM JST IMICT | 8AM TST | 9AM JST'",
-    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=33 text='‘OCTOBER — NOVEMBER, Shorts 2 LYON ング 2 に 上 ~ レダ = ング < ^ ^ 2 N 46 『 ASS 기 山 ToW 2 中 omrs ‘OCTOBER — NOVEMBER. 8 0'",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=102 text=\"Bracket Update ー _ 00 October 24 TODAY'S UPDATE BOI 1-0 ROUND 2 2-0 BOI 0-0 ROUND 1 ®& th vs MO & |v GEN 1-0 IG ® mvs ⑯ > HE 1-018 @ 50 때 VS HE = BOI 1-1 [e+ os & 5 1 VS K == [에 as BIG 0700 谨 | BOI 0-1 ROUND 2 니 @ 上 2 01…\"",
     "LCP: transport=x_syndication:posts=6",
     "iG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/2099708877:empty;reader:m.weibo.cn/u/2099708877:empty]",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=10",
