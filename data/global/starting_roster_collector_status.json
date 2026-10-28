@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-10-28T01:51:10Z",
+  "updatedAt": "2026-10-28T08:12:43Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -38,7 +38,7 @@
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=69 text='a as +4 7 bo be \\\\ ¥ eS Ne ony | ae i] © EN ce arcs V2 05 Vey PR VA < i\" ‘x | & Lae NT > ON AGAINST THE WORLD GAME 1 - VICTORY GAME 2 - VICTORY GAME 3 - DEFEAT NEXT OPPONENT vs TSW | | VS KC | | VS GEN.G [LCK] Ww TI oc LO…'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
-    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:empty | x_reader_failed:x.com:empty,twitter.com:empty]",
+    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:empty,twitter.com:empty]",
     "iG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/2099708877:empty;reader:m.weibo.cn/u/2099708877:empty]",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=10",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=10",
