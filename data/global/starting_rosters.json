@@ -1,6 +1,6 @@
 {
   "schemaVersion": 3,
-  "updatedAt": "2026-10-30T09:06:45Z",
+  "updatedAt": "2026-10-30T16:01:58Z",
   "policy": "official team/league social and official websites are equal-trust evidence; website publication never gates first visibility; conflicting official evidence is surfaced instead of silently overwritten",
   "delivery": {
     "canonical": "GitHub",
@@ -47,7 +47,7 @@
   ],
   "collector": {
     "mode": "official-social-text-plus-image-ocr",
-    "lastRunAt": "2026-10-30T09:06:45Z",
+    "lastRunAt": "2026-10-30T16:01:58Z",
     "freshEvidence": 0,
     "sourceCount": 10
   },
@@ -60,9 +60,9 @@
       "platform": "OFFICIAL",
       "account": "BLG电子竞技俱乐部",
       "publishedAt": "",
-      "observedAt": "2026-10-30T09:06:45Z",
+      "observedAt": "2026-10-30T16:01:58Z",
       "sourceUrl": "https://weibo.com/5926660141/L5dQFtmAt",
-      "textSnippet": "返回 BLG电子竞技俱乐部 346.4万粉丝 437关注 1034.7万转评赞 关注 客服 白银超话 电竞周榜No.67 英雄联盟S16 S16战力值 78.19 BLG电子竞技俱乐部官方微博 微博 视频 相册 超话 全部微博 前方有点拥堵，请登录后使用",
+      "textSnippet": "返回 BLG电子竞技俱乐部 346.4万粉丝 437关注 1034.9万转评赞 关注 客服 白银超话 电竞周榜No.67 英雄联盟S16 S16战力值 78.19 BLG电子竞技俱乐部官方微博 微博 视频 相册 超话 全部微博 前方有点拥堵，请登录后使用",
       "imageCount": 2,
       "imageUrls": [
         "https://wx4.sinaimg.cn/mw2000/006t5F2Bgy1iicefn06knj318g18g14n.jpg",
