@@ -2,12 +2,13 @@
   "schemaVersion": 1,
   "initialized": true,
   "initializedAt": "2026-09-09T02:02:31Z",
-  "lastRunAt": "2026-10-30T18:03:23Z",
+  "lastRunAt": "2026-11-02T11:19:45Z",
   "seen": {
     "AL": [],
     "BLG": [],
     "TES": [
-      "5627743d115fa890be9e7bab"
+      "5627743d115fa890be9e7bab",
+      "d19a5aa35c0c27eefcebd3bd"
     ],
     "JDG": [],
     "LGD": [],
@@ -27,6 +28,17 @@
       "title": "滔搏电子竞技俱乐部的微博_微博",
       "url": "https://www.weibo.com/5449734852",
       "published": "Fri, 30 Oct 2026 08:31:00 GMT",
+      "autoApplied": false,
+      "changes": [],
+      "needsReview": true
+    },
+    {
+      "id": "d19a5aa35c0c27eefcebd3bd",
+      "team": "TES",
+      "detectedAt": "2026-11-02T11:19:45Z",
+      "title": "滔搏电子竞技俱乐部的微博_微博",
+      "url": "https://weibo.com/p/1006065449734852",
+      "published": "Mon, 02 Nov 2026 00:49:00 GMT",
       "autoApplied": false,
       "changes": [],
       "needsReview": true
