@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-02T11:10:45+00:00",
+  "updatedAt": "2026-11-03T10:53:52+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -157,8 +157,14 @@
       "management": [],
       "staff": [
         {
-          "name": "Key",
-          "realName": "Hangi Kim",
+          "name": "Edo",
+          "realName": "Junseok Park",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Rather",
+          "realName": "Hyoungsub Shin",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -169,14 +175,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Edo",
-          "realName": "Junseok Park",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Rather",
-          "realName": "Hyoungsub Shin",
+          "name": "Key",
+          "realName": "Hangi Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -499,6 +499,12 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
+          "name": "Minit",
+          "realName": "Hyunmin Yang",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
           "name": "Millimas",
           "realName": "Geonwoo Kim",
           "role": "COACHING_STAFF",
@@ -513,12 +519,6 @@
         {
           "name": "Cube",
           "realName": "Changsung Kim",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Minit",
-          "realName": "Hyunmin Yang",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -538,7 +538,7 @@
       "management": [
         {
           "name": "DK 官方战队联系人",
-          "realName": "jin@dpluskia.gg",
+          "realName": "rain@dpluskia.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -551,26 +551,26 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Hachani",
-          "realName": "Seungchan Ha",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Sungmin",
-          "realName": "Sungmin Ko",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
           "name": "PoohManDu",
           "realName": "JEONG HYEON LEE",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
+          "name": "Hachani",
+          "realName": "Seungchan Ha",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
           "name": "Woong",
           "realName": "Sun Woong Kim",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Sungmin",
+          "realName": "Sungmin Ko",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1092,7 +1092,7 @@
       "management": [
         {
           "name": "GEN 官方战队联系人",
-          "realName": "jhlee@geng.gg",
+          "realName": "hshan@geng.gg",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1105,8 +1105,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Jerry",
-          "realName": "Sungjun Kang",
+          "name": "Lyn",
+          "realName": "DABIN KIM",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -1117,8 +1117,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Lyn",
-          "realName": "DABIN KIM",
+          "name": "Jerry",
+          "realName": "Sungjun Kang",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1253,8 +1253,8 @@
       ],
       "staff": [
         {
-          "name": "Ssumday",
-          "realName": "Chanho Kim",
+          "name": "Ssong",
+          "realName": "Sangsu Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -1265,14 +1265,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Ssong",
-          "realName": "Sangsu Kim",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Cheoni",
-          "realName": "Seungmo Jo",
+          "name": "Ssumday",
+          "realName": "Chanho Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1305,12 +1299,6 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Sensation",
-          "realName": "Donghyun Kim",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
           "name": "Sin",
           "realName": "Hyeongmo Yeon",
           "role": "COACHING_STAFF",
@@ -1319,6 +1307,12 @@
         {
           "name": "Mowgli",
           "realName": "Jaeha Lee",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Sensation",
+          "realName": "Donghyun Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1601,8 +1595,20 @@
       ],
       "staff": [
         {
-          "name": "Catch",
-          "realName": "Sangho Yoon",
+          "name": "Joker",
+          "realName": "Jaeeup Jo",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Naehyun",
+          "realName": "Naehyun Yoo",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Saroo",
+          "realName": "Jongwon Lee",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -1619,14 +1625,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Joker",
-          "realName": "Jaeeup Jo",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Naehyun",
-          "realName": "Naehyun Yoo",
+          "name": "Catch",
+          "realName": "Sangho Yoon",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1646,7 +1646,7 @@
       "management": [
         {
           "name": "KT 官方战队联系人",
-          "realName": "wonil.lee@kt.com",
+          "realName": "brad.park@kt.com",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -1655,12 +1655,6 @@
         {
           "name": "Score",
           "realName": "Dongbin Ko",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Lilac",
-          "realName": "Hojin Jeon",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -1679,6 +1673,12 @@
         {
           "name": "Spark",
           "realName": "Byungryul Kang",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Lilac",
+          "realName": "Hojin Jeon",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -2051,14 +2051,14 @@
       "management": [],
       "staff": [
         {
-          "name": "Chelly",
-          "realName": "Seongjin Park",
+          "name": "DanDy",
+          "realName": "Ingyu Choi",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "bonO",
-          "realName": "Kibum Kim",
+          "name": "Chelly",
+          "realName": "Seongjin Park",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -2069,8 +2069,8 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Dandy",
-          "realName": "Ingyu Choi",
+          "name": "bonO",
+          "realName": "Kibum Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -2700,20 +2700,14 @@
       ],
       "staff": [
         {
-          "name": "Easyhoon",
-          "realName": "Jihoon Lee",
-          "role": "COACHING_STAFF",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
           "name": "kkOma",
           "realName": "Jeonggyun Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "DooTi",
-          "realName": "Duseong Choi",
+          "name": "Tom",
+          "realName": "Jaehyun Lim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -2724,14 +2718,20 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Nagne",
-          "realName": "Sangmoon Kim",
+          "name": "Easyhoon",
+          "realName": "Jihoon Lee",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
-          "name": "Tom",
-          "realName": "Jaehyun Lim",
+          "name": "DooTi",
+          "realName": "Duseong Choi",
+          "role": "COACHING_STAFF",
+          "source": "Riot LoL Global Contract Database (GCD)"
+        },
+        {
+          "name": "Nagne",
+          "realName": "Sangmoon Kim",
           "role": "COACHING_STAFF",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
