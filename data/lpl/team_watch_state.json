@@ -2,13 +2,14 @@
   "schemaVersion": 1,
   "initialized": true,
   "initializedAt": "2026-09-09T02:02:31Z",
-  "lastRunAt": "2026-11-02T11:19:45Z",
+  "lastRunAt": "2026-11-04T23:44:09Z",
   "seen": {
     "AL": [],
     "BLG": [],
     "TES": [
       "5627743d115fa890be9e7bab",
-      "d19a5aa35c0c27eefcebd3bd"
+      "d19a5aa35c0c27eefcebd3bd",
+      "9046330afcabd805b3c16141"
     ],
     "JDG": [],
     "LGD": [],
@@ -39,6 +40,17 @@
       "title": "滔搏电子竞技俱乐部的微博_微博",
       "url": "https://weibo.com/p/1006065449734852",
       "published": "Mon, 02 Nov 2026 00:49:00 GMT",
+      "autoApplied": false,
+      "changes": [],
+      "needsReview": true
+    },
+    {
+      "id": "9046330afcabd805b3c16141",
+      "team": "TES",
+      "detectedAt": "2026-11-04T23:44:09Z",
+      "title": "在办理赴境外参与S16赛事相关签证过程中，... 来自滔搏电子竞技俱乐部 - 微博",
+      "url": "https://www.weibo.com/5449734852/Rlp1a8DYO",
+      "published": "Mon, 02 Nov 2026 21:20:00 GMT",
       "autoApplied": false,
       "changes": [],
       "needsReview": true
