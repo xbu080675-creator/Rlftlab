@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "initialized": true,
   "initializedAt": "2026-09-09T02:02:31Z",
-  "lastRunAt": "2026-11-04T23:44:09Z",
+  "lastRunAt": "2026-11-10T14:58:24Z",
   "seen": {
     "AL": [],
     "BLG": [],
@@ -12,7 +12,9 @@
       "9046330afcabd805b3c16141"
     ],
     "JDG": [],
-    "LGD": [],
+    "LGD": [
+      "27f011d7dc7d509a837d5edb"
+    ],
     "EDG": [],
     "TT": [],
     "IG": [],
@@ -51,6 +53,17 @@
       "title": "在办理赴境外参与S16赛事相关签证过程中，... 来自滔搏电子竞技俱乐部 - 微博",
       "url": "https://www.weibo.com/5449734852/Rlp1a8DYO",
       "published": "Mon, 02 Nov 2026 21:20:00 GMT",
+      "autoApplied": false,
+      "changes": [],
+      "needsReview": true
+    },
+    {
+      "id": "27f011d7dc7d509a837d5edb",
+      "team": "LGD",
+      "detectedAt": "2026-11-10T14:58:24Z",
+      "title": "LGD电子竞技俱乐部的微博_微博",
+      "url": "https://www.weibo.com/teamlgd",
+      "published": "Mon, 09 Nov 2026 23:13:00 GMT",
       "autoApplied": false,
       "changes": [],
       "needsReview": true
