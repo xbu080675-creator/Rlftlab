@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-10T21:59:34Z",
+  "updatedAt": "2026-11-11T01:52:43Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -38,7 +38,15 @@
     "LCP: browser_stage=LCP: match_search query='2026-11-12 NTH vs SGW starting lineup' hits=0",
     "LCP: browser_stage=LCP: match_search query='2026-11-12 NTH vs SGW 首发' hits=0",
     "LCP: browser_stage=LCP: match_search_posts=0 merged_posts=0",
-    "LCP: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/15 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=11 text='MATCH 66 소기 A =. Le GN FAK FRHNG GZ ='",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=11 text='MATCH 66 소기 A =. Le GN FAK FRHNG GZ ='",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=11 text='MATCH 66 소기 A =. Le GN FAK FRHNG GZ ='",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=11 text='MATCH 66 소기 A =. Le GN FAK FRHNG GZ ='",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=42 text='= ^ > =~ ple ICP PROMOTION SERIES FFA1 NOV 10 v FL NOV 12 FFA3 NOV 13 FFA4 A NTH is NTH < DFM NOV 10 FFA2 WIN FFA3 @ scw 《 TeM RM NOV 11 @ ez Ss FRANK FAK'",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=11 text='MATCH 66 소기 A =. Le GN FAK FRHNG GZ ='",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=42 text='= ^ > =~ ple ICP PROMOTION SERIES FFA1 NOV 10 v FL NOV 12 FFA3 NOV 13 FFA4 A NTH is NTH < DFM NOV 10 FFA2 WIN FFA3 @ scw 《 TeM RM NOV 11 @ ez Ss FRANK FAK'",
+    "LCP: transport=x_syndication:posts=6",
     "iG电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/2099708877:empty;reader:m.weibo.cn/u/2099708877:empty]",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=10",
     "BLG电子竞技俱乐部: browser_stage=BLG电子竞技俱乐部: rejected_common_media=10",
@@ -71,7 +79,7 @@
     "BLG电子竞技俱乐部: trace ocr adapter=LPL_DAILY_ROSTER lang=eng+chi_sim psm=11 size=1920x1080->1920x1080 words=15 text='Dees erL ee fk inal SL an + Ble aa yer 4g 起 Ml pay'",
     "BLG电子竞技俱乐部: transport=browser:posts=1",
     "JDG京东电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6174976862:empty;reader:m.weibo.cn/u/6174976862:empty]",
-    "NIP电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6420953344:empty;reader:m.weibo.cn/u/6420953344:ConnectionError]",
+    "NIP电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6420953344:empty;reader:m.weibo.cn/u/6420953344:empty]",
     "WE电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/1869429662:empty;reader:m.weibo.cn/u/1869429662:empty]"
   ]
 }
