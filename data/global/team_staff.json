@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-17T11:53:16+00:00",
+  "updatedAt": "2026-11-18T11:43:45+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -400,26 +400,6 @@
         {
           "name": "Dignitas 官方战队联系人",
           "realName": "Jonathon McDaniel <jonathon@dignitas.gg>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ],
-      "staff": []
-    },
-    "DISGUISED": {
-      "name": "Disguised",
-      "short": "",
-      "page": "",
-      "aliases": [
-        "Disguised"
-      ],
-      "regions": [
-        "AME"
-      ],
-      "management": [
-        {
-          "name": "Disguised 官方战队联系人",
-          "realName": "Chris Yong <chris@disguised.gg>",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
@@ -2250,26 +2230,6 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
-    },
-    "SHOPIFYREBELLION": {
-      "name": "Shopify Rebellion",
-      "short": "",
-      "page": "",
-      "aliases": [
-        "Shopify Rebellion"
-      ],
-      "regions": [
-        "AME"
-      ],
-      "management": [
-        {
-          "name": "Shopify Rebellion 官方战队联系人",
-          "realName": "David Han<david.han@shopify.com>",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ],
-      "staff": []
     },
     "SILLYSILLYGAMING": {
       "name": "SillySilly Gaming",
