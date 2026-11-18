@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-18T17:33:39Z",
+  "updatedAt": "2026-11-18T23:37:08Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -25,7 +25,14 @@
     "LEC: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=2048x1152->2048x1152 words=37 text='RAY whe — \"A \\\\ LEAGUE ITS % ~™ iN | | Ss, he: wai S a Bcd a. 15: 12 75-43, lee ‘Al ARCELON (ar = a led GET TICKETS N = aS WWW.REDBULL.COM/LOIO = |-'",
     "LEC: transport=x_syndication:posts=6",
     "LCS: browser_stage=LCS: browser_posts=0 cached_media=0",
-    "LCS: X_SYNDICATION RuntimeError: x_all_routes_failed[syndication:429:1.5s | syndication:429:3.0s | syndication:429:4.5s | x_reader_failed:x.com:HTTPError,twitter.com:empty]",
+    "LCS: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/15 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,LOW_CONFIDENCE",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
+    "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
     "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/18 images_per_post<=2 timeout=10s basis=LOW_CONFIDENCE,LOW_CONFIDENCE,LOW_CONFIDENCE",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=53 text='” ud ーー * mm A | ーー Pe < 1239 ed iN NN 후 이네 a = 746 [ ¥ の < 」 그가 » 上 / ks a Oy. Mey 6 제 | a, = sf x 4 テコ Lo BAe \\\\ whe . 6 . 4 0 체 0 매트'",
