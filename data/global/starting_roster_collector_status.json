@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-19T14:01:07Z",
+  "updatedAt": "2026-11-19T22:08:43Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -25,7 +25,7 @@
     "LEC: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=2048x1152->2048x1152 words=37 text='RAY whe — \"A \\\\ LEAGUE ITS % ~™ iN | | Ss, he: wai S a Bcd a. 15: 12 75-43, lee ‘Al ARCELON (ar = a led GET TICKETS N = aS WWW.REDBULL.COM/LOIO = |-'",
     "LEC: transport=x_syndication:posts=6",
     "LCS: browser_stage=LCS: browser_posts=0 cached_media=0",
-    "LCS: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/15 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,LOW_CONFIDENCE",
+    "LCS: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/14 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,LOW_CONFIDENCE",
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
@@ -72,7 +72,7 @@
     "BLG电子竞技俱乐部: trace ocr adapter=LPL_DAILY_ROSTER lang=eng+chi_sim psm=11 size=1920x1080->1920x1080 words=15 text='Dees erL ee fk inal SL an + Ble aa yer 4g 起 Ml pay'",
     "BLG电子竞技俱乐部: transport=browser:posts=1",
     "JDG京东电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6174976862:empty;reader:m.weibo.cn/u/6174976862:empty]",
-    "NIP电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6420953344:empty;reader:m.weibo.cn/u/6420953344:ConnectionError]",
+    "NIP电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/6420953344:empty;reader:m.weibo.cn/u/6420953344:empty]",
     "WE电子竞技俱乐部: fetch RuntimeError: weibo_all_routes_failed[mobile:empty | desktop:non_json:200:text/html | reader:reader:weibo.com/u/1869429662:empty;reader:m.weibo.cn/u/1869429662:empty]"
   ]
 }
