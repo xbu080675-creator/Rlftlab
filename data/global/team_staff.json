@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-19T11:41:22+00:00",
+  "updatedAt": "2026-11-20T11:41:26+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -2217,12 +2217,6 @@
         }
       ],
       "staff": [
-        {
-          "name": "Striker",
-          "realName": "Yanis Kella",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
         {
           "name": "MenQ",
           "realName": "Marek Dziemian",
