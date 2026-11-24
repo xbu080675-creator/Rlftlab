@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-23T13:07:27Z",
+  "updatedAt": "2026-11-24T00:58:36Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -22,11 +22,11 @@
     "LEC: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=2048x1152->2048x1152 words=37 text='RAY whe — \"A \\\\ LEAGUE ITS % ~™ iN | | Ss, he: wai S a Bcd a. 15: 12 75-43, lee ‘Al ARCELON (ar = a led GET TICKETS N = aS WWW.REDBULL.COM/LOIO = |-'",
     "LEC: transport=x_syndication:posts=6",
     "LCS: browser_stage=LCS: browser_posts=0 cached_media=0",
-    "LCS: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/13 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,MATCH_TARGET_MEDIA,LOW_CONFIDENCE",
+    "LCS: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/13 images_per_post<=2 timeout=10s basis=MATCH_TARGET_MEDIA,LOW_CONFIDENCE,LOW_CONFIDENCE",
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
-    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1080->1080x1080 words=30 text='Sania e~ om & or 4 % Fi fe. hd al (A ane Piaf Re = ol NOR | EXPERIENCE IT TOGETHER IN THEATERS M mes LOLINCINEMAS.COM PIECE of MAGIC'",
-    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=1080x1350->1080x1350 words=5 text='wi Eu OPTIC | &'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=561x106->561x106 words=11 text='oe DSG scarra @ and 16 others followed you - 2m'",
+    "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=561x106->561x106 words=11 text='oe DSG scarra @ and 16 others followed you - 2m'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
     "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/15 images_per_post<=2 timeout=10s basis=LOW_CONFIDENCE,LOW_CONFIDENCE,LOW_CONFIDENCE",
