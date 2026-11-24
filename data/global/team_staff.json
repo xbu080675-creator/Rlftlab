@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-23T12:44:24+00:00",
+  "updatedAt": "2026-11-24T13:44:22+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -1722,26 +1722,6 @@
         {
           "name": "NOVEX 官方战队联系人",
           "realName": "rikukomuro16@gmail.com",
-          "role": "TEAM_CONTACT",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ],
-      "staff": []
-    },
-    "NRG": {
-      "name": "NRG",
-      "short": "",
-      "page": "",
-      "aliases": [
-        "NRG"
-      ],
-      "regions": [
-        "AME"
-      ],
-      "management": [
-        {
-          "name": "NRG 官方战队联系人",
-          "realName": "James Kandel < james@nrg.gg >",
           "role": "TEAM_CONTACT",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
