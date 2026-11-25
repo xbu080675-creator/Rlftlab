@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-24T13:44:22+00:00",
+  "updatedAt": "2026-11-25T12:57:31+00:00",
   "source": "Riot LoL Global Contract Database (GCD)",
   "officialSource": "https://competitiveops.riotgames.com/en-US/league-of-legends",
   "teams": {
@@ -759,20 +759,7 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ],
-      "staff": [
-        {
-          "name": "GrabbZ",
-          "realName": "Fabian Lohmann",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Gaax",
-          "realName": "Pablo Pérez",
-          "role": "STRATEGIC_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ]
+      "staff": []
     },
     "FRANKESPORTS": {
       "name": "FRANK Esports",
@@ -857,12 +844,6 @@
         {
           "name": "Rodrigo",
           "realName": "Rodrigo Oliveira",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Memento",
-          "realName": "Jonas Elmarghichi",
           "role": "ASSISTANT_COACH",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
@@ -959,26 +940,7 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ],
-      "staff": [
-        {
-          "name": "Guilhoto",
-          "realName": "André Pereira Guilhoto",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Rhuckz",
-          "realName": "Ruben Alexandre Barbosa Neves",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Maxlore",
-          "realName": "Nubar Manoug Sarafian",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ]
+      "staff": []
     },
     "GIANTXITERO": {
       "name": "Giantx Itero",
@@ -1281,12 +1243,6 @@
       ],
       "staff": [
         {
-          "name": "Reapered",
-          "realName": "Hangyu Bok",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
           "name": "Zeph",
           "realName": "Quentin Viguié",
           "role": "ASSISTANT_COACH",
@@ -1586,18 +1542,6 @@
           "realName": "Tomas Campelos Fernandez",
           "role": "HEAD_COACH",
           "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Alphari",
-          "realName": "Barney Morris",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Independent",
-          "realName": "Eric Ruiz Bogurina",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
     },
@@ -1651,18 +1595,6 @@
           "name": "TheRock",
           "realName": "Vasilis Voltis",
           "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Fredy122",
-          "realName": "Simon Payne",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "GotoOne",
-          "realName": "Adrien Picard",
-          "role": "ASSISTANT_COACH",
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
@@ -2196,14 +2128,7 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ],
-      "staff": [
-        {
-          "name": "MenQ",
-          "realName": "Marek Dziemian",
-          "role": "ASSISTANT_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ]
+      "staff": []
     },
     "SILLYSILLYGAMING": {
       "name": "SillySilly Gaming",
@@ -2249,12 +2174,6 @@
           "name": "Own3r",
           "realName": "David Rodriguez De La torre",
           "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Duffman",
-          "realName": "Christopher Duff",
-          "role": "ASSISTANT_COACH",
           "source": "Riot LoL Global Contract Database (GCD)"
         },
         {
@@ -2409,12 +2328,6 @@
           "realName": "Erlend Våtevik Holm",
           "role": "HEAD_COACH",
           "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Mithy",
-          "realName": "Alfonso Aguirre Rodriguez",
-          "role": "STRATEGIC_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
         }
       ]
     },
@@ -2550,26 +2463,7 @@
           "source": "Riot LoL Global Contract Database (GCD)"
         }
       ],
-      "staff": [
-        {
-          "name": "Pad",
-          "realName": "Patrick Suckow-Breum",
-          "role": "HEAD_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Arvindir",
-          "realName": "Danusch Fischer",
-          "role": "STRATEGIC_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        },
-        {
-          "name": "Hansen",
-          "realName": "Bjørn-Vegar Skauvold Hansen",
-          "role": "STRATEGIC_COACH",
-          "source": "Riot LoL Global Contract Database (GCD)"
-        }
-      ]
+      "staff": []
     },
     "THUNDERTALKGAMING": {
       "name": "THUNDER TALK GAMING",
