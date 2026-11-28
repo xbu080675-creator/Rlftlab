@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-28T09:34:15Z",
+  "updatedAt": "2026-11-28T17:51:11Z",
   "sourceCount": 10,
   "freshEvidence": 0,
   "diagnostics": [
@@ -33,10 +33,10 @@
     "LCS: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng psm=11 size=561x106->561x106 words=11 text='498%, ce DSG scarra @ and 16 others followed you 2m'",
     "LCS: transport=x_syndication:posts=6",
     "LCP: browser_stage=LCP: browser_posts=0 cached_media=0",
-    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/16 images_per_post<=2 timeout=10s basis=LINEUP_MEDIA_FALLBACK,LINEUP_MEDIA_FALLBACK,LINEUP_MEDIA_FALLBACK",
-    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=31 text='ud | tae uN ! 站 oy レー “~~ => ‘6S = Vig @ a 개 能: Oy. の aA | 저 … Oe Ss a6 ^ 4 人 由 ん'",
+    "LCP: adapter=MATCH_TARGET_LINEUP ocr_budget posts=6/17 images_per_post<=2 timeout=10s basis=LINEUP_MEDIA_FALLBACK,LINEUP_MEDIA_FALLBACK,LINEUP_MEDIA_FALLBACK",
+    "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=26 text='= LCPALL-TIMEKILLS RANKING 00660 #2 | EDDIE ARTEMIS ae. 『~ 개 77 1) DIRE 개 HIZTO 人 BETTY FENG oh. KIAYA 1 련 MARBLE (Ee. GURY'",
     "LCP: trace ocr adapter=MATCH_TARGET_LINEUP lang=eng+chi_sim+jpn+kor psm=11 size=1080x1350->1080x1350 words=21 text='KYL) BiE AN レク = ren LW SW nh qs Sr 2 GAMING MADE FOR THIS LEGACY MADE FOR THIS HLCP'",
-    "LCP: trace teams=['IG', 'AL', 'BLG', 'TT', 'GEN', 'KT', 'NS', 'BRO', 'KC', 'SK', 'TH', 'TL', 'GAM', 'GZ']",
+    "LCP: trace teams=['IG', 'AL', 'TT', 'GEN', 'KT', 'NS', 'TH', 'TL', 'GAM', 'GZ']",
     "LCP: trace line_roles={}",
     "LCP: trace column_roles={'left': {}, 'right': {}}",
     "LCP: trace lineups=[]",
